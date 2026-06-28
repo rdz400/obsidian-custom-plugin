@@ -1,10 +1,26 @@
-import { Editor, MarkdownView, MarkdownFileInfo } from "obsidian"
 
+/** Cycles a list item through checkbox states: `[ ] → [x] → [o] → [-] → plain`. */
+export function toggleCheckbox(line: string): string {
+		const states = ['[ ]', '[x]', '[o]', '[-]'];
+		const checkboxMatch = line.match(/^(\s*[-*+]\s+)\[(.)\](\s+.*)?$/);
 
-export function listTasksCurrentEditor(editor: Editor, _ctx: MarkdownView | MarkdownFileInfo) {
-    const content = editor.getValue();
-    const tasks = content
-        .split("\n")
-        .filter(line => /^\s*[-*]\s+\[[ xX]\]/.test(line));
-    console.log(String(tasks.length));
+		if (checkboxMatch) {
+			const prefix = checkboxMatch[1];
+			const marker = checkboxMatch[2];
+			const rest = checkboxMatch[3] ?? '';
+			const current = `[${marker}]`;
+			const idx = states.indexOf(current);
+
+			if (idx >= 0) {
+				return `${prefix}${states[(idx + 1) % states.length]}${rest}`;
+			}
+			return `${prefix}${states[0]}${rest}`;
+		}
+
+		const listMatch = line.match(/^(\s*[-*+]\s+)(.*)?$/);
+		if (listMatch) {
+			return `${listMatch[1]}[ ] ${listMatch[2] ?? ''}`;
+		}
+
+		return line;
 }
