@@ -10,7 +10,7 @@ import { toggleCheckbox } from './functions';
 
 
 /** Open bestanden Obsidian */
-export async function leesBestanden(app: App) {
+export async function openTaakBestanden(app: App) {
 
 	const files = app.vault.getMarkdownFiles().filter(
 		file => {
