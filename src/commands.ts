@@ -2,7 +2,6 @@ import {
     App,
     Editor,
     EditorPosition,
-    FuzzySuggestModal,
     ListItemCache,
     MarkdownView,
     Notice,
@@ -10,6 +9,7 @@ import {
     normalizePath,
 } from 'obsidian';
 import { toggleCheckbox } from './functions';
+import { NoteSuggestModal, StringSuggestModal, TagSuggestModal } from './modals';
 
 
 
@@ -256,21 +256,50 @@ export function moveLinesToEnd(editor: Editor): void {
     removeLines(editor, from.line, to.line);
 }
 
-/** Toggle the `#nu` tag on selected list items. */
-export function toggleNuTag(editor: Editor): void {
+/** Tags offered by {@link insertTag}, inserted at the end of the current line. */
+const INSERT_TAGS = ['buiten', 'prio', 'vandaag', 'computer'];
+
+/** Open a modal to pick a tag and toggle it at the end of each selected list item. */
+export function insertTag(app: App, editor: Editor): void {
+    const from: EditorPosition = editor.getCursor('from');
+    const to: EditorPosition = editor.getCursor('to');
+
+    new TagSuggestModal(app, INSERT_TAGS, (tag: string) => {
+        const tagRe = new RegExp(`(?<!\\w)#${tag}\\b`);
+        for (let i = from.line; i <= to.line; i++) {
+            const line = editor.getLine(i);
+            if (!/^\s*[-*]\s/.test(line)) continue;
+            if (tagRe.test(line)) {
+                editor.setLine(i, line.replace(new RegExp(` ?#${tag}\\b ?`, 'g'), (m, offset, str: string) => {
+                    if (offset === 0) return '';
+                    if (offset + m.length === str.length) return '';
+                    return ' ';
+                }));
+            } else {
+                const separator = line.endsWith(' ') ? '' : ' ';
+                editor.setLine(i, line + separator + `#${tag}`);
+            }
+        }
+    }).open();
+}
+
+/** Toggle a `#tag` on each selected list item. */
+export function toggleTag(editor: Editor, tag: string): void {
+    const present = new RegExp(`(?<!\\w)#${tag}\\b`);
+    const strip = new RegExp(` ?#${tag}\\b ?`, 'g');
     const from: EditorPosition = editor.getCursor('from');
     const to: EditorPosition = editor.getCursor('to');
     for (let i = from.line; i <= to.line; i++) {
         const line = editor.getLine(i);
         if (!/^\s*[-*]\s/.test(line)) continue;
-        if (/(?<!\w)#nu\b/.test(line)) {
-            editor.setLine(i, line.replace(/ ?#nu\b ?/g, (m, offset, str: string) => {
+        if (present.test(line)) {
+            editor.setLine(i, line.replace(strip, (m, offset, str: string) => {
                 if (offset === 0) return '';
                 if (offset + m.length === str.length) return '';
                 return ' ';
             }));
         } else {
-            editor.setLine(i, line + ' #nu');
+            editor.setLine(i, line + ` #${tag}`);
         }
     }
 }
@@ -292,6 +321,85 @@ export function moveLinesToNote(app: App, editor: Editor): void {
     }).open();
 }
 
+/** Insert an internal link to a chosen active project at the cursor via a fuzzy-search modal. */
+export function insertProjectLink(app: App, editor: Editor): void {
+    const projects = app.vault.getMarkdownFiles().filter((file) => {
+        const fm = app.metadataCache.getFileCache(file)?.frontmatter;
+        if (fm?.type !== 'project') return false;
+        return fm.status !== 'klaar' && fm.status !== 'geannuleerd';
+    });
+
+    new NoteSuggestModal(
+        app,
+        (file: TFile) => {
+            const link = app.fileManager.generateMarkdownLink(file, file.path);
+            editor.replaceSelection(link);
+        },
+        projects,
+    ).open();
+}
+
+/** Project statuses, in Dutch. */
+const PROJECT_STATUSES = ['actief', 'klaar', 'backlog', 'misschien', 'geannuleerd'];
+
+/**
+ * Pick an active project via a fuzzy-search modal and append a link to it to the
+ * active note's `project` frontmatter list.
+ */
+export function addProjectToFrontmatter(app: App): void {
+    const view = app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view?.file) {
+        new Notice('No active note');
+        return;
+    }
+    const file = view.file;
+
+    const projects = app.vault.getMarkdownFiles().filter((f) => {
+        const fm = app.metadataCache.getFileCache(f)?.frontmatter;
+        if (fm?.type !== 'project') return false;
+        return fm.status !== 'klaar' && fm.status !== 'geannuleerd';
+    });
+
+    new NoteSuggestModal(
+        app,
+        (project: TFile) => {
+            const link = app.fileManager.generateMarkdownLink(project, file.path);
+            app.fileManager.processFrontMatter(file, (fm) => {
+                const current = fm.project;
+                const list = Array.isArray(current)
+                    ? current
+                    : current != null
+                        ? [current]
+                        : [];
+                if (!list.includes(link)) list.push(link);
+                fm.project = list;
+            });
+            new Notice(`Added project ${project.basename}`);
+        },
+        projects,
+    ).open();
+}
+
+/**
+ * Pick a project status via a modal and set it as the active note's `status`
+ * frontmatter field.
+ */
+export function setStatusInFrontmatter(app: App): void {
+    const view = app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view?.file) {
+        new Notice('No active note');
+        return;
+    }
+    const file = view.file;
+
+    new StringSuggestModal(app, PROJECT_STATUSES, (status: string) => {
+        app.fileManager.processFrontMatter(file, (fm) => {
+            fm.status = status;
+        });
+        new Notice(`Set status to ${status}`);
+    }).open();
+}
+
 /** Cycle the checkbox state of the current line, preserving the cursor/selection position. */
 export function toggleCheckBoxAdvanced(editor: Editor): void {
     const cursor = editor.getCursor();
@@ -308,26 +416,5 @@ export function toggleCheckBoxAdvanced(editor: Editor): void {
     } else {
         const distFromEnd = line.length - cursor.ch;
         editor.setCursor({ line: cursor.line, ch: Math.max(0, toggled.length - distFromEnd) });
-    }
-}
-
-class NoteSuggestModal extends FuzzySuggestModal<TFile> {
-    private onChoose: (file: TFile) => void;
-
-    constructor(app: App, onChoose: (file: TFile) => void) {
-        super(app);
-        this.onChoose = onChoose;
-    }
-
-    getItems(): TFile[] {
-        return this.app.vault.getMarkdownFiles();
-    }
-
-    getItemText(item: TFile): string {
-        return item.path;
-    }
-
-    onChooseItem(item: TFile): void {
-        this.onChoose(item);
     }
 }
