@@ -3,6 +3,7 @@ import {
     MarkdownView,
     Notice,
     Plugin,
+    TFile,
     debounce,
 } from 'obsidian';
 
@@ -12,13 +13,15 @@ import {
     moveLinesToNote,
     toggleCheckBoxAdvanced,
     openTaakBestanden,
-	getMyCache,
     moveFinishedTasksToKlaar,
     moveTakenNotesToFolder,
+    moveProjectNotesToFolder,
     insertProjectLink,
     insertTag,
     addProjectToFrontmatter,
     setStatusInFrontmatter,
+    mergeTakenNotes,
+    openMostRecentTaakNote,
 } from './commands';
 
 export default class RonaldPlugin extends Plugin {
@@ -34,20 +37,9 @@ export default class RonaldPlugin extends Plugin {
                 if (!view.file) return;
                 console.log("Hello world");
 
-                // hoe bestanden vinden
-
                 const files = this.app.vault.getMarkdownFiles();
-
                 const filtered = files.map((file, index) => {return file.basename});
-
                 const content = filtered.join('\n');
-
-                // invoegen op einde
-                editor.replaceRange(`\n${content}`, {line: editor.lastLine(), ch: editor.getLine(editor.lastLine()).length});
-
-                // this.app.metadataCache.
-
-                // hoe cache van bestanden vinden
 
             },
         });
@@ -77,13 +69,35 @@ export default class RonaldPlugin extends Plugin {
 
         this.addRibbonIcon('folder-open', 'Open projecten', openProjecten);
 
+        const openNoteByName = async (name: string) => {
+            const note = this.app.metadataCache.getFirstLinkpathDest(name, '');
+            if (!note) {
+                new Notice(`Note "${name}" not found`);
+                return;
+            }
+            const leaf =
+                this.app.workspace.getMostRecentLeaf(
+                    this.app.workspace.rootSplit,
+                ) ?? this.app.workspace.getLeaf(false);
+            await leaf.openFile(note);
+        };
 
         this.addCommand({
-            id: 'test-cache',
-            name: 'Test cache',
-            icon: 'database',
-            callback: () => getMyCache(this.app),
+            id: 'open-klaar',
+            name: 'Open klaar',
+            icon: 'check-check',
+            callback: () => openNoteByName('klaar'),
         });
+
+        this.addCommand({
+            id: 'open-inbox',
+            name: 'Open inbox',
+            icon: 'inbox',
+            callback: () => openNoteByName('inbox'),
+        });
+
+        this.addRibbonIcon('check-check', 'Open klaar', () => openNoteByName('klaar'));
+        this.addRibbonIcon('inbox', 'Open inbox', () => openNoteByName('inbox'));
 
         this.addCommand({
             id: 'open-taken',
@@ -137,6 +151,13 @@ export default class RonaldPlugin extends Plugin {
         });
 
         this.addCommand({
+            id: 'move-project-notes-to-folder',
+            name: 'Move "project" notes to 1-projecten folder',
+            icon: 'folder-input',
+            callback: () => moveProjectNotesToFolder(this.app),
+        });
+
+        this.addCommand({
             id: 'insert-project-link',
             name: 'Insert link to active project',
             icon: 'link',
@@ -163,6 +184,22 @@ export default class RonaldPlugin extends Plugin {
             icon: 'circle-dot',
             callback: () => setStatusInFrontmatter(this.app),
         });
+
+        this.addCommand({
+            id: 'merge-taken-notes',
+            name: 'Merge "taken" notes into one note',
+            icon: 'merge',
+            callback: () => mergeTakenNotes(this.app),
+        });
+
+        this.addCommand({
+            id: 'open-most-recent-taak-note',
+            name: 'Open most recent "taken" note',
+            icon: 'clock',
+            callback: () => openMostRecentTaakNote(this.app),
+        });
+
+        this.addRibbonIcon('clock', 'Open most recent "taken" note', () => openMostRecentTaakNote(this.app));
 
         this.registerStatusBar();
 

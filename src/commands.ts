@@ -14,15 +14,6 @@ import { NoteSuggestModal, StringSuggestModal, TagSuggestModal } from './modals'
 
 
 
-/** Open a fuzzy-search modal to pick a note, then log its metadata cache to the console. */
-export function getMyCache(app: App): void {
-    new NoteSuggestModal(app, (file: TFile) => {
-        const cache = app.metadataCache.getFileCache(file);
-        console.log(`Metadata cache for ${file.path}:`, cache);
-    }).open();
-}
-
-
 /** Remove the lines [from.line, to.line] from the editor, including a surrounding newline. */
 function removeLines(editor: Editor, from: number, to: number): void {
     if (from === 0 && to < editor.lastLine()) {
@@ -73,6 +64,26 @@ export async function openTaakBestanden(app: App): Promise<void> {
     }
 }
 
+/** Open the most recently created note whose frontmatter `type` is "taken". */
+export async function openMostRecentTaakNote(app: App): Promise<void> {
+    const files = app.vault.getMarkdownFiles().filter((file) => {
+        const cache = app.metadataCache.getFileCache(file);
+        return cache?.frontmatter?.type === 'taken';
+    });
+
+    if (files.length === 0) {
+        new Notice('No "taken" notes found');
+        return;
+    }
+
+    const mostRecent = files.reduce((a, b) => (b.stat.ctime > a.stat.ctime ? b : a));
+
+    const leaf =
+        app.workspace.getMostRecentLeaf(app.workspace.rootSplit) ??
+        app.workspace.getLeaf(false);
+    await leaf.openFile(mostRecent);
+}
+
 /** Folder configured in the core "Templates" plugin, or null if unset/disabled. */
 function getTemplatesFolder(app: App): string | null {
     const instance = (app as any).internalPlugins?.getPluginById('templates')?.instance;
@@ -103,6 +114,35 @@ export async function moveTakenNotesToFolder(app: App): Promise<void> {
     for (const file of files) {
         const dest = `${targetFolder}/${file.name}`;
         if (file.path === dest) continue;
+        if (app.vault.getAbstractFileByPath(dest)) {
+            new Notice(`Skipped "${file.name}": already exists in ${targetFolder}`);
+            continue;
+        }
+        await app.fileManager.renameFile(file, dest);
+        moved++;
+    }
+
+    new Notice(`Moved ${moved} note(s) to ${targetFolder}`);
+}
+
+/** Move every note in "0-inbox" whose frontmatter `type` is "project" into "1-projecten". */
+export async function moveProjectNotesToFolder(app: App): Promise<void> {
+    const sourceFolder = '0-inbox';
+    const targetFolder = '1-projecten';
+
+    if (!app.vault.getFolderByPath(targetFolder)) {
+        await app.vault.createFolder(targetFolder);
+    }
+
+    const files = app.vault.getMarkdownFiles().filter((file) => {
+        if (!file.path.startsWith(`${sourceFolder}/`)) return false;
+        const cache = app.metadataCache.getFileCache(file);
+        return cache?.frontmatter?.type === 'project';
+    });
+
+    let moved = 0;
+    for (const file of files) {
+        const dest = `${targetFolder}/${file.name}`;
         if (app.vault.getAbstractFileByPath(dest)) {
             new Notice(`Skipped "${file.name}": already exists in ${targetFolder}`);
             continue;
@@ -398,6 +438,73 @@ export function setStatusInFrontmatter(app: App): void {
         });
         new Notice(`Set status to ${status}`);
     }).open();
+}
+
+/** Zero-pad a number to two digits. */
+function pad2(n: number): string {
+    return String(n).padStart(2, '0');
+}
+
+/**
+ * Merge every note in "1-taken" with frontmatter `type: taken` into a single new
+ * note, most recent content first, then delete the originals.
+ */
+export async function mergeTakenNotes(app: App): Promise<void> {
+    const sourceFolder = '1-taken';
+
+    const files = app.vault.getMarkdownFiles().filter((file) => {
+        if (!file.path.startsWith(`${sourceFolder}/`)) return false;
+        const cache = app.metadataCache.getFileCache(file);
+        return cache?.frontmatter?.type === 'taken';
+    });
+
+    if (files.length === 0) {
+        new Notice('No "taken" notes found');
+        return;
+    }
+
+    // Most recent creation date first.
+    files.sort((a, b) => b.stat.ctime - a.stat.ctime);
+
+    const sections: string[] = [];
+    for (const file of files) {
+        const cache = app.metadataCache.getFileCache(file);
+        const raw = await app.vault.cachedRead(file);
+        const bodyStart = cache?.frontmatterPosition
+            ? cache.frontmatterPosition.end.line + 1
+            : 0;
+        const lines = raw.split('\n');
+        const body = lines.slice(bodyStart).join('\n').replace(/^\n+/, '').trimEnd();
+
+        sections.push(`## ${file.basename}\n\n${body}`);
+    }
+
+    const now = new Date();
+    const noteName =
+        `${String(now.getFullYear()).slice(2)}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}` +
+        `-${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}`;
+
+    const datum = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+
+    const frontmatter =
+        `---\n` +
+        `datum: ${datum}\n` +
+        `type: taken\n` +
+        `cssclasses:\n` +
+        `  - kleiner\n` +
+        `  - kleur\n` +
+        `---\n\n`;
+
+    const content = frontmatter + sections.join('\n\n');
+
+    const dest = `${sourceFolder}/${noteName}.md`;
+    await app.vault.create(dest, content);
+
+    for (const file of files) {
+        await app.vault.delete(file);
+    }
+
+    new Notice(`Merged ${files.length} note(s) into ${noteName}`);
 }
 
 /** Cycle the checkbox state of the current line, preserving the cursor/selection position. */
