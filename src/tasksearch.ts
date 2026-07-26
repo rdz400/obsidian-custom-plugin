@@ -7,6 +7,7 @@ import {
     setIcon,
 } from 'obsidian';
 
+import { addKeyboardDismissButton } from './keyboarddismiss';
 import { FilterTag, TagFilterBar } from './tagfilterbar';
 
 /**
@@ -262,6 +263,7 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
         this.items = items;
         this.setPlaceholder('Search tasks…');
         this.modalEl.addClass('ronald-task-search');
+        addKeyboardDismissButton(this);
 
         this.filters = new TagFilterBar({
             tags: FILTER_TAGS,
