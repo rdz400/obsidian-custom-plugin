@@ -112,3 +112,183 @@
     width: 12px;
     height: 12px;
 }
+
+/* Task search modal ("Search tasks" command). */
+
+.ronald-task-search .prompt-results {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ronald-task-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.ronald-task-filter {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--font-smallest);
+    padding: 2px 6px 2px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--background-modifier-border);
+    color: var(--text-muted);
+}
+
+.ronald-task-filter:hover {
+    background: var(--background-modifier-hover);
+}
+
+.ronald-task-filter.is-active {
+    background: rgba(var(--color-blue-rgb), 0.15);
+    border-color: var(--color-blue);
+    color: var(--color-blue);
+}
+
+/*
+ * Types also differ in silhouette, not just colour, so the grouping still
+ * reads when the chips are inactive (and without relying on colour alone).
+ */
+.ronald-task-filter-type-time {
+    border-radius: 4px;
+    border-style: dashed;
+}
+
+/* Context tags ("buiten", "thuis"): where the task happens. */
+.ronald-task-filter-type-context.is-active {
+    background: rgba(var(--color-green-rgb), 0.15);
+    border-color: var(--color-green);
+    color: var(--color-green);
+}
+
+/* Time tags ("vandaag", "week"): when the task is due. */
+.ronald-task-filter-type-time.is-active {
+    background: rgba(var(--color-orange-rgb), 0.15);
+    border-color: var(--color-orange);
+    color: var(--color-orange);
+}
+
+/* The digit of the Mod+<n> shortcut that toggles this chip. */
+.ronald-task-filter-key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    background: var(--background-modifier-border);
+    color: var(--text-faint);
+    font-family: var(--font-monospace);
+    font-size: 10px;
+    line-height: 1;
+}
+
+.ronald-task-filter.is-active .ronald-task-filter-key {
+    background: rgba(var(--color-blue-rgb), 0.25);
+    color: var(--color-blue);
+}
+
+.ronald-task-filter-type-context.is-active .ronald-task-filter-key {
+    background: rgba(var(--color-green-rgb), 0.25);
+    color: var(--color-green);
+}
+
+.ronald-task-filter-type-time.is-active .ronald-task-filter-key {
+    background: rgba(var(--color-orange-rgb), 0.25);
+    color: var(--color-orange);
+}
+
+.ronald-task-search .suggestion-item.ronald-task-match {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: var(--background-secondary);
+    border-radius: 8px;
+    padding: 10px 14px;
+}
+
+.ronald-task-search .suggestion-item.ronald-task-match.is-selected {
+    background: var(--background-modifier-hover);
+}
+
+.ronald-task-checkbox {
+    margin: 2px 0 0 0;
+    flex-shrink: 0;
+}
+
+/*
+ * Nesting level: 1 is a top-level item, 2 sits under it, and so on. Rendered
+ * after the body, which takes the leftover width, so it ends up in the empty
+ * space at the right edge of the row.
+ */
+.ronald-task-depth {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-top: 1px;
+    border-radius: 4px;
+    background: var(--background-modifier-border);
+    color: var(--text-muted);
+    font-size: var(--font-smallest);
+    line-height: 1;
+}
+
+.ronald-task-body {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    flex: 1;
+}
+
+.ronald-task-text {
+    overflow-wrap: anywhere;
+}
+
+/* Not clickable, but recognisable as a link. */
+.ronald-task-inline-link {
+    color: var(--link-color);
+}
+
+.ronald-task-match.is-done .ronald-task-text {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
+.ronald-task-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.ronald-task-tag {
+    font-size: var(--font-smallest);
+    padding: 2px 8px;
+    border-radius: 8px;
+    background: rgba(var(--color-blue-rgb), 0.15);
+    color: var(--color-blue);
+}
+
+.ronald-task-link {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--font-smallest);
+    color: var(--text-muted);
+}
+
+.ronald-task-link .svg-icon {
+    width: 12px;
+    height: 12px;
+}
