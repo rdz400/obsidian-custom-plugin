@@ -23,9 +23,9 @@ import {
     setStatusInFrontmatter,
     mergeTakenNotes,
     openMostRecentTaakNote,
-    searchProjects,
 } from './commands';
 import { registerPostProcessors } from './postprocessors';
+import { searchProjects } from './projectsearch';
 import { searchTasks } from './tasksearch';
 
 export default class RonaldPlugin extends Plugin {
@@ -233,6 +233,8 @@ export default class RonaldPlugin extends Plugin {
         });
 
         this.addRibbonIcon('list-checks', 'Search tasks', () => void searchTasks(this.app));
+
+        this.addRibbonIcon('search', 'Search projects', () => searchProjects(this.app));
 
         this.registerStatusBar();
 
