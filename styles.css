@@ -167,6 +167,26 @@
     flex-shrink: 0;
 }
 
+/*
+ * Nesting level: 1 is a top-level item, 2 sits under it, and so on. Rendered
+ * after the body, which takes the leftover width, so it ends up in the empty
+ * space at the right edge of the row.
+ */
+.ronald-task-depth {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-top: 1px;
+    border-radius: 4px;
+    background: var(--background-modifier-border);
+    color: var(--text-muted);
+    font-size: var(--font-smallest);
+    line-height: 1;
+}
+
 .ronald-task-body {
     display: flex;
     flex-direction: column;
@@ -177,6 +197,11 @@
 
 .ronald-task-text {
     overflow-wrap: anywhere;
+}
+
+/* Not clickable, but recognisable as a link. */
+.ronald-task-inline-link {
+    color: var(--link-color);
 }
 
 .ronald-task-match.is-done .ronald-task-text {

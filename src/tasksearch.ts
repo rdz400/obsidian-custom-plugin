@@ -17,10 +17,12 @@ export interface TaskItem {
     line: number;
     /** The full raw source line, used to verify the line hint still points at this task. */
     raw: string;
-    /** The task text with list marker, checkbox, tags and links stripped out. */
+    /** The task text with list marker, checkbox and tags stripped out. */
     text: string;
     /** True when the checkbox is ticked. */
     done: boolean;
+    /** How deeply the task is nested: 1 for a top-level item, 2 under it, etc. */
+    depth: number;
     /** Own tags first, then those inherited from ancestors. */
     tags: string[];
     /** Own links first, then those inherited from ancestors. */
@@ -49,24 +51,53 @@ function linksOnLine(raw: string): string[] {
 }
 
 /**
- * The readable part of a list line: marker, checkbox, tags and wikilinks
- * removed, since those are rendered as their own chips beside the text.
+ * The readable part of a list line: marker, checkbox and tags removed, since
+ * tags are rendered as their own chips beside the text.
  *
- * A task written as nothing but a link ("- [ ] [[Some note]]") would be left
- * blank by that, so it falls back to the link text.
+ * Wikilinks are kept in place: they also get a chip, but stripping them here
+ * mangles sentences built around them ("- [ ] Bel [[Jan]] over de tuin") and
+ * empties a task that is nothing but a link. They are displayed with their
+ * brackets so they stay recognisable as links, see `textParts`.
  */
 function taskText(raw: string): string {
-    const stripped = strip(raw);
-    return stripped.length > 0 ? stripped : linksOnLine(raw).join(' ');
-}
-
-function strip(raw: string): string {
     return raw
         .replace(/^\s*[-*+]\s+(?:\[[^\]]\]\s?)?/, '')
-        .replace(LINK_RE, '')
         .replace(TAG_RE, '')
         .replace(/\s+/g, ' ')
         .trim();
+}
+
+/** A run of task text: either plain words or a single wikilink. */
+export interface TextPart {
+    text: string;
+    link: boolean;
+}
+
+/**
+ * Split task text into plain runs and wikilinks, so the links can be given
+ * their own styling while keeping their position in the sentence.
+ *
+ * A link is shown by its display text where the source gives one, wrapped back
+ * in "[[…]]" so it reads as a link without being clickable.
+ */
+export function textParts(text: string): TextPart[] {
+    const parts: TextPart[] = [];
+    let at = 0;
+
+    for (const match of text.matchAll(LINK_RE)) {
+        const start = match.index;
+        const plain = text.slice(at, start);
+        if (plain.length > 0) parts.push({ text: plain, link: false });
+
+        const label = (match[2] ?? match[1] ?? '').trim();
+        parts.push({ text: `[[${label}]]`, link: true });
+        at = start + match[0].length;
+    }
+
+    const rest = text.slice(at);
+    if (rest.length > 0) parts.push({ text: rest, link: false });
+
+    return parts;
 }
 
 /** Append the entries of `extra` that `into` doesn't already have. */
@@ -82,17 +113,22 @@ function addMissing(into: string[], extra: string[]): string[] {
  * the section instead). Since a parent always appears before its children, one
  * forward pass indexed by start line is enough to accumulate each line's own
  * tags and links on top of everything its ancestors carry — which is how a
- * subtask inherits the context of the bullet or task it hangs under.
+ * subtask inherits the context of the bullet or task it hangs under. The same
+ * pass counts the depth: one more than the depth of the parent item.
  *
  * Plain bullets take part in that inheritance but are not collected themselves:
- * only checkboxes are tasks.
+ * only checkboxes are tasks. They do count towards the depth, so a subtask of a
+ * plain bullet is at depth 2 just like a subtask of a task.
  */
 function collectFileTasks(
     items: ListItemCache[],
     lines: string[],
     file: TFile,
 ): TaskItem[] {
-    const inherited = new Map<number, { tags: string[]; links: string[] }>();
+    const inherited = new Map<
+        number,
+        { tags: string[]; links: string[]; depth: number }
+    >();
     const tasks: TaskItem[] = [];
 
     for (const item of items) {
@@ -103,7 +139,8 @@ function collectFileTasks(
         const parent = item.parent < 0 ? undefined : inherited.get(item.parent);
         const tags = addMissing(tagsOnLine(raw), parent?.tags ?? []);
         const links = addMissing(linksOnLine(raw), parent?.links ?? []);
-        inherited.set(line, { tags, links });
+        const depth = (parent?.depth ?? 0) + 1;
+        inherited.set(line, { tags, links, depth });
 
         const marker = TASK_LINE_RE.exec(raw)?.[2];
         if (marker === undefined) continue;
@@ -114,6 +151,7 @@ function collectFileTasks(
             raw,
             text: taskText(raw),
             done: marker === 'x' || marker === 'X',
+            depth,
             tags,
             links,
         });
@@ -250,8 +288,9 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
     }
 
     getSuggestions(query: string): TaskItem[] {
-        // Match the tags and links too: they are stripped out of the text and
-        // shown as chips, so they would otherwise be unsearchable.
+        // Match the tags and links too: tags are stripped out of the text, and
+        // a link inherited from an ancestor never appears in it, so both would
+        // otherwise be unsearchable.
         const q = query.toLowerCase().replace(/^#/, '');
         return this.items.filter(
             (task) =>
@@ -274,7 +313,14 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
         this.wireCheckbox(checkbox, el, task);
 
         const body = el.createDiv({ cls: 'ronald-task-body' });
-        body.createDiv({ cls: 'ronald-task-text', text: task.text });
+
+        // Wikilinks keep their place in the sentence and are styled as links,
+        // rather than being pulled out into the chips below.
+        const line = body.createDiv({ cls: 'ronald-task-text' });
+        for (const part of textParts(task.text)) {
+            if (part.link) line.createSpan({ cls: 'ronald-task-inline-link', text: part.text });
+            else line.appendText(part.text);
+        }
 
         if (task.tags.length > 0 || task.links.length > 0) {
             const meta = body.createDiv({ cls: 'ronald-task-meta' });
@@ -291,6 +337,13 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
         }
 
         body.createDiv({ cls: 'ronald-task-note', text: task.file.basename });
+
+        // Last, so it sits in the empty space at the right edge of the row.
+        el.createSpan({
+            cls: 'ronald-task-depth',
+            text: String(task.depth),
+            attr: { 'aria-label': `Nesting level ${task.depth}` },
+        });
     }
 
     /**
