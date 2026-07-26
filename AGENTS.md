@@ -63,6 +63,28 @@ npm run build
 - Keep the plugin small. Avoid large dependencies. Prefer browser-compatible packages.
 - Generated output should be placed at the plugin root or `dist/` depending on your build setup. Release artifacts must end up at the top level of the plugin folder in the vault (`main.js`, `manifest.json`, `styles.css`).
 
+
+## Definitions
+
+## Task hierarchy terminology
+
+- A **task hierarchy** is a top-level task and all of its nested subtasks.
+- A task hierarchy always starts with a **top-level task**.
+- A **subtask** cannot be the root of a task hierarchy.
+- A **subtree** refers to any task and all of its descendants, including subtasks.
+
+Example:
+
+```markdown
+- [ ] test        ← top-level task / root of task hierarchy
+  - [ ] abc      ← subtask
+    - [ ] def    ← nested subtask
+```
+In this example:
+`test` + `abc` + `def` = the task hierarchy rooted at test
+`abc` + `def` = a subtree, but not a task hierarchy
+`def` = a leaf task
+
 ## Manifest rules (`manifest.json`)
 
 - Must include (non-exhaustive):
@@ -77,13 +99,18 @@ npm run build
 - Keep `minAppVersion` accurate when using newer APIs.
 - Canonical requirements are coded here: https://github.com/obsidianmd/obsidian-releases/blob/master/.github/workflows/validate-plugin-entry.yml
 
-## Testing
+## Testing & deployment
 
-- Manual install for testing: copy `main.js`, `manifest.json`, `styles.css` (if any) to:
+- Use `to-vault.sh` to test and deploy. It builds the plugin, copies `main.js`, `manifest.json`, and `styles.css` into the vault's plugin folder, and reloads the plugin in Obsidian:
+    ```bash
+    ./to-vault.sh
     ```
-    <Vault>/.obsidian/plugins/<plugin-id>/
+- If `manifest.json` changed, run it with the `restart` argument so Obsidian restarts and picks up the new manifest:
+    ```bash
+    ./to-vault.sh restart
     ```
-- Reload Obsidian and enable the plugin in **Settings → Community plugins**.
+- The script expects `$VAULT_OBSIDIAN` to point at the vault and deploys to `<Vault>/.obsidian/plugins/plugin-van-ronald/`.
+- Enable the plugin once in **Settings → Community plugins**.
 
 ## Commands & settings
 
