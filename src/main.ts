@@ -26,6 +26,7 @@ import {
     searchProjects,
 } from './commands';
 import { registerPostProcessors } from './postprocessors';
+import { searchTasks } from './tasksearch';
 
 export default class RonaldPlugin extends Plugin {
 
@@ -222,6 +223,13 @@ export default class RonaldPlugin extends Plugin {
             name: 'Search projects',
             icon: 'search',
             callback: () => searchProjects(this.app),
+        });
+
+        this.addCommand({
+            id: 'search-tasks',
+            name: 'Search tasks',
+            icon: 'list-checks',
+            callback: () => void searchTasks(this.app),
         });
 
         this.registerStatusBar();
