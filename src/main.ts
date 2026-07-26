@@ -232,6 +232,8 @@ export default class RonaldPlugin extends Plugin {
             callback: () => void searchTasks(this.app),
         });
 
+        this.addRibbonIcon('list-checks', 'Search tasks', () => void searchTasks(this.app));
+
         this.registerStatusBar();
 
         registerPostProcessors(this);

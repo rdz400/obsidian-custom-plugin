@@ -7,8 +7,26 @@ import {
     setIcon,
 } from 'obsidian';
 
-/** Tag chips offered as one-click filters under the search field. */
-const FILTER_TAGS = ['buiten', 'vandaag', 'thuis', 'week'];
+import { FilterTag, TagFilterBar } from './tagfilterbar';
+
+/**
+ * Tag chips offered as filters under the search field, clickable and reachable
+ * as Mod+1…Mod+9 in this order.
+ *
+ * `type` is purely presentational: chips of the same type are styled alike so
+ * a context tag ("buiten", "thuis") reads differently at a glance from a time
+ * tag ("vandaag", "week"). Edit this list to add tags, reorder them, or invent
+ * a new type — the styling for a type lives in `styles.css` under
+ * `.ronald-task-filter-type-<type>`.
+ */
+const FILTER_TAGS: FilterTag[] = [
+    { tag: 'nu', type: 'time' },
+    { tag: 'vandaag', type: 'time' },
+    { tag: 'week', type: 'time' },
+    { tag: 'buiten', type: 'context' },
+    { tag: 'thuis', type: 'context' },
+    { tag: 'project', type: 'other' },
+];
 
 /** One task line found in a "taken" note, with everything shown for it. */
 export interface TaskItem {
@@ -237,36 +255,43 @@ function openTask(app: App, task: TaskItem): void {
  */
 export class TaskSearchModal extends SuggestModal<TaskItem> {
     private items: TaskItem[];
-    private activeTags = new Set<string>();
+    private readonly filters: TagFilterBar;
 
     constructor(app: App, items: TaskItem[]) {
         super(app);
         this.items = items;
         this.setPlaceholder('Search tasks…');
         this.modalEl.addClass('ronald-task-search');
-        this.renderTagFilters();
+
+        this.filters = new TagFilterBar({
+            tags: FILTER_TAGS,
+            onChange: () => this.rerunSearch(),
+        });
+        this.mountFilters();
     }
 
-    /** The tag chips under the search field, toggling their filter on click. */
-    private renderTagFilters(): void {
-        const bar = createDiv({ cls: 'ronald-task-filters' });
+    /**
+     * Place the tag chips and give them their keyboard shortcuts.
+     *
+     * The bar sits between the search field and the results, so it stays
+     * visible while typing rather than scrolling away with the matches.
+     *
+     * Shortcuts are listened for on the modal rather than the input so they
+     * work wherever focus sits, in the capture phase so Obsidian's own Mod+digit
+     * bindings never see a press meant for a chip.
+     */
+    private mountFilters(): void {
+        this.inputEl.parentElement?.insertAdjacentElement('afterend', this.filters.el);
 
-        for (const tag of FILTER_TAGS) {
-            const chip = bar.createSpan({
-                cls: 'ronald-task-filter',
-                text: `#${tag}`,
-            });
-            chip.addEventListener('click', () => {
-                if (this.activeTags.has(tag)) this.activeTags.delete(tag);
-                else this.activeTags.add(tag);
-                chip.toggleClass('is-active', this.activeTags.has(tag));
-                this.rerunSearch();
-            });
-        }
-
-        // Sits between the search field and the results, so it stays visible
-        // while typing rather than scrolling away with the matches.
-        this.inputEl.parentElement?.insertAdjacentElement('afterend', bar);
+        this.modalEl.addEventListener(
+            'keydown',
+            (event) => {
+                if (!this.filters.handleKeyDown(event)) return;
+                event.preventDefault();
+                event.stopPropagation();
+            },
+            { capture: true },
+        );
     }
 
     /**
@@ -282,7 +307,7 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
 
     /** True when the task carries every active filter tag (nested tags count). */
     private matchesTags(task: TaskItem): boolean {
-        return [...this.activeTags].every((wanted) =>
+        return [...this.filters.activeTags].every((wanted) =>
             task.tags.some((tag) => tag === wanted || tag.startsWith(`${wanted}/`)),
         );
     }
@@ -335,8 +360,6 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
                 pill.createSpan({ text: link });
             }
         }
-
-        body.createDiv({ cls: 'ronald-task-note', text: task.file.basename });
 
         // Last, so it sits in the empty space at the right edge of the row.
         el.createSpan({
