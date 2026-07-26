@@ -6,10 +6,17 @@ import {
     MarkdownView,
     Notice,
     TFile,
+    getAllTags,
     normalizePath,
 } from 'obsidian';
 import { toggleCheckbox } from './functions';
-import { NoteSuggestModal, StringSuggestModal, TagSuggestModal } from './modals';
+import {
+    NoteSuggestModal,
+    ProjectItem,
+    ProjectSearchModal,
+    StringSuggestModal,
+    TagSuggestModal,
+} from './modals';
 
 
 
@@ -491,6 +498,72 @@ export function setStatusInFrontmatter(app: App): void {
             fm.status = status;
         });
         new Notice(`Set status to ${status}`);
+    }).open();
+}
+
+/** Statuses that mark a project as no longer running. */
+const CLOSED_PROJECT_STATUSES = ['klaar', 'geannuleerd'];
+
+/** Order in which open projects are listed in the search modal. */
+const PROJECT_STATUS_ORDER = ['actief', 'backlog', 'wachten', 'misschien'];
+
+/** Sort rank for a status; unknown or missing statuses sort last. */
+function projectStatusRank(status: string): number {
+    const index = PROJECT_STATUS_ORDER.indexOf(status);
+    return index === -1 ? PROJECT_STATUS_ORDER.length : index;
+}
+
+/** Collect the metadata shown for a project in the search modal. */
+function toProjectItem(app: App, file: TFile): ProjectItem {
+    const cache = app.metadataCache.getFileCache(file);
+    const status: unknown = cache?.frontmatter?.status;
+
+    const tags = cache ? [...new Set(getAllTags(cache) ?? [])] : [];
+    const links = [
+        ...new Set((cache?.links ?? []).map((link) => link.displayText ?? link.link)),
+    ];
+
+    return {
+        file,
+        status: typeof status === 'string' ? status : '',
+        tags,
+        links,
+    };
+}
+
+/**
+ * Search open projects by note name in a modal that shows their status, tags
+ * and wikilinks, and open the chosen note.
+ */
+export function searchProjects(app: App): void {
+    const projects = app.vault
+        .getMarkdownFiles()
+        .filter((file) => {
+            const fm = app.metadataCache.getFileCache(file)?.frontmatter;
+            if (fm?.type !== 'project') return false;
+            const status: unknown = fm.status;
+            return (
+                typeof status !== 'string' ||
+                !CLOSED_PROJECT_STATUSES.includes(status)
+            );
+        })
+        .map((file) => toProjectItem(app, file))
+        .sort(
+            (a, b) =>
+                projectStatusRank(a.status) - projectStatusRank(b.status) ||
+                a.file.basename.localeCompare(b.file.basename),
+        );
+
+    if (projects.length === 0) {
+        new Notice('No open projects found');
+        return;
+    }
+
+    new ProjectSearchModal(app, projects, (item: ProjectItem) => {
+        const leaf =
+            app.workspace.getMostRecentLeaf(app.workspace.rootSplit) ??
+            app.workspace.getLeaf(false);
+        void leaf.openFile(item.file);
     }).open();
 }
 

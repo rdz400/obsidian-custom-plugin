@@ -1,8 +1,114 @@
-/*
+/* Project search modal ("Search projects" command). */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.ronald-project-search .prompt-results {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
 
-If your plugin does not need CSS, delete this file.
+.ronald-project-search .suggestion-item.ronald-project-match {
+    background: var(--background-secondary);
+    border-radius: 8px;
+    padding: 12px 14px;
+}
 
-*/
+.ronald-project-search .suggestion-item.ronald-project-match.is-selected {
+    background: var(--background-modifier-hover);
+}
+
+.ronald-project-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ronald-project-title .ronald-project-icon {
+    display: flex;
+    color: var(--text-muted);
+}
+
+.ronald-project-title .ronald-project-icon .svg-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.ronald-project-status {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--font-smallest);
+    font-weight: var(--font-medium);
+    padding: 2px 8px;
+    border-radius: 8px;
+    background: var(--background-modifier-border);
+    color: var(--text-muted);
+    text-transform: lowercase;
+}
+
+.ronald-project-status .svg-icon {
+    width: 12px;
+    height: 12px;
+}
+
+.ronald-project-status-actief {
+    background: rgba(var(--color-blue-rgb), 0.15);
+    color: var(--color-blue);
+}
+
+.ronald-project-status-wachten {
+    background: rgba(var(--color-yellow-rgb), 0.15);
+    color: var(--color-yellow);
+}
+
+.ronald-project-status-misschien {
+    background: rgba(var(--color-purple-rgb), 0.15);
+    color: var(--color-purple);
+}
+
+.ronald-project-status-klaar {
+    background: rgba(var(--color-green-rgb), 0.15);
+    color: var(--color-green);
+}
+
+.ronald-project-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.ronald-project-tags,
+.ronald-project-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.ronald-project-links {
+    padding-top: 6px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.ronald-project-tag {
+    font-size: var(--font-smallest);
+    padding: 2px 8px;
+    border-radius: 8px;
+    background: rgba(var(--color-blue-rgb), 0.15);
+    color: var(--color-blue);
+}
+
+.ronald-project-link {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--font-smallest);
+    color: var(--text-muted);
+    padding: 2px 4px;
+}
+
+.ronald-project-link .svg-icon {
+    width: 12px;
+    height: 12px;
+}
