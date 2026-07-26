@@ -136,10 +136,10 @@
 /* Task search modal ("Search tasks" command). */
 
 .ronald-task-search .prompt-results {
-    padding: 10px;
+    padding: 6px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 3px;
 }
 
 .ronald-task-filters {
@@ -228,18 +228,29 @@
 .ronald-task-search .suggestion-item.ronald-task-match {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
+    gap: 8px;
     background: var(--background-secondary);
-    border-radius: 8px;
-    padding: 10px 14px;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: var(--font-small);
 }
 
 .ronald-task-search .suggestion-item.ronald-task-match.is-selected {
     background: var(--background-modifier-hover);
 }
 
+/*
+ * Obsidian sizes its checkbox and the tick it draws from --checkbox-size.
+ *
+ * The right margin is set with !important because Obsidian's own checkbox rule
+ * re-applies one at higher specificity; without it the box carries 6px of dead
+ * space on top of the row's flex gap.
+ */
 .ronald-task-checkbox {
-    margin: 2px 0 0 0;
+    --checkbox-size: 14px;
+    margin: 2px 0 0 0 !important;
+    width: var(--checkbox-size);
+    height: var(--checkbox-size);
     flex-shrink: 0;
 }
 
@@ -266,13 +277,14 @@
 .ronald-task-body {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 2px;
     min-width: 0;
     flex: 1;
 }
 
 .ronald-task-text {
     overflow-wrap: anywhere;
+    line-height: 1.35;
 }
 
 /* Not clickable, but recognisable as a link. */
@@ -289,13 +301,14 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
+    line-height: 1.2;
 }
 
 .ronald-task-tag {
     font-size: var(--font-smallest);
-    padding: 2px 8px;
-    border-radius: 8px;
+    padding: 1px 6px;
+    border-radius: 6px;
     background: rgba(var(--color-blue-rgb), 0.15);
     color: var(--color-blue);
 }
