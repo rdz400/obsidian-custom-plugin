@@ -4,6 +4,7 @@ import {
     Notice,
     Plugin,
     TFile,
+    WorkspaceLeaf,
     debounce,
 } from 'obsidian';
 
@@ -22,7 +23,9 @@ import {
     setStatusInFrontmatter,
     mergeTakenNotes,
     openMostRecentTaakNote,
+    searchProjects,
 } from './commands';
+import { registerPostProcessors } from './postprocessors';
 
 export default class RonaldPlugin extends Plugin {
 
@@ -53,6 +56,19 @@ export default class RonaldPlugin extends Plugin {
                 new Notice('Note "projecten" not found');
                 return;
             }
+
+            let existing: WorkspaceLeaf | null = null;
+            this.app.workspace.iterateAllLeaves((leaf) => {
+                const file = (leaf.view as { file?: TFile }).file;
+                if (file?.path === projecten.path) {
+                    existing = leaf;
+                }
+            });
+            if (existing) {
+                await this.app.workspace.revealLeaf(existing);
+                return;
+            }
+
             const leaf =
                 this.app.workspace.getMostRecentLeaf(
                     this.app.workspace.rootSplit,
@@ -201,7 +217,16 @@ export default class RonaldPlugin extends Plugin {
 
         this.addRibbonIcon('clock', 'Open most recent "taken" note', () => openMostRecentTaakNote(this.app));
 
+        this.addCommand({
+            id: 'search-projects',
+            name: 'Search projects',
+            icon: 'search',
+            callback: () => searchProjects(this.app),
+        });
+
         this.registerStatusBar();
+
+        registerPostProcessors(this);
 
     }
 
