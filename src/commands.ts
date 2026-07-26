@@ -159,6 +159,58 @@ function isDoneTask(item: ListItemCache): boolean {
     return item.task === 'x' || item.task === 'X';
 }
 
+/** Date format of the daily note, taken from the core "Daily notes" plugin. */
+const DEFAULT_DAILY_FORMAT = 'YYYYMMDD';
+
+function getDailyNoteFormat(app: App): string {
+    const instance = (app as any).internalPlugins?.getPluginById('daily-notes')?.instance;
+    const format = instance?.options?.format;
+    return typeof format === 'string' && format.length > 0 ? format : DEFAULT_DAILY_FORMAT;
+}
+
+/**
+ * Format `date` with the subset of moment tokens used by daily-note formats.
+ * Longest tokens first so `YYYY` wins over `YY`, `MM` over `M`, etc.
+ */
+function formatDate(date: Date, format: string): string {
+    const tokens: Record<string, string> = {
+        YYYY: String(date.getFullYear()),
+        YY: String(date.getFullYear()).slice(2),
+        MM: pad2(date.getMonth() + 1),
+        M: String(date.getMonth() + 1),
+        DD: pad2(date.getDate()),
+        D: String(date.getDate()),
+        HH: pad2(date.getHours()),
+        mm: pad2(date.getMinutes()),
+        ss: pad2(date.getSeconds()),
+    };
+    // `[...]` escapes literal text in moment formats; leave its contents alone.
+    return format.replace(
+        /\[([^\]]*)\]|YYYY|YY|MM|M|DD|D|HH|mm|ss/g,
+        (match: string, literal?: string) =>
+            literal !== undefined ? literal : tokens[match] ?? match,
+    );
+}
+
+/** The `## [[20260725]]` heading that finished tasks of today belong under. */
+function todayHeading(app: App): string {
+    return `## [[${formatDate(new Date(), getDailyNoteFormat(app))}]]`;
+}
+
+/**
+ * Return `content` guaranteed to end with a heading for today: if the last `##`
+ * heading isn't today's, append a new one.
+ */
+function ensureTodayHeading(content: string, heading: string): string {
+    const headings = content.match(/^##\s+.*$/gm);
+    const last = headings?.[headings.length - 1];
+    // Compare loosely so trailing whitespace in the file doesn't force a duplicate.
+    if (last?.trim() === heading) return content;
+
+    const separator = content.length === 0 || content.endsWith('\n\n') ? '' : content.endsWith('\n') ? '\n' : '\n\n';
+    return content + separator + heading + '\n\n';
+}
+
 /**
  * Move every finished top-level task to the end of the note named "klaar".
  *
@@ -269,9 +321,11 @@ export async function moveFinishedTasksToKlaar(app: App): Promise<void> {
     const moved = blocks.map((b) => b.text).join('\n');
 
     // Append to "klaar" first; only remove from the source if that succeeds.
+    // Tasks go under a `## [[<daily note>]]` heading for today, which is added
+    // when the note doesn't already end with one.
     const content = await app.vault.read(target);
-    const separator = content.length > 0 && !content.endsWith('\n') ? '\n' : '';
-    await app.vault.modify(target, content + separator + moved + '\n');
+    const withHeading = ensureTodayHeading(content, todayHeading(app));
+    await app.vault.modify(target, withHeading + moved + '\n');
 
     // Remove from bottom to top so earlier ranges stay valid.
     for (const block of [...blocks].reverse()) {
