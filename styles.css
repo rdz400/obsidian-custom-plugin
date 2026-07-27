@@ -93,46 +93,6 @@
     color: var(--color-blue);
 }
 
-/*
- * "Hide keyboard" button, added on mobile only. Suggest modals have no close
- * cross, so it is pinned to the prompt's own top-right corner instead of being
- * placed in flow, since the prompt header is not a flex row.
- */
-
-.ronald-keyboard-dismiss {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    cursor: pointer;
-    color: var(--text-muted);
-    background: var(--background-modifier-hover);
-}
-
-.ronald-keyboard-dismiss .svg-icon {
-    width: 18px;
-    height: 18px;
-}
-
-/*
- * The button floats over the prompt's corner, so keep the search field and its
- * clear cross clear of it.
- */
-
-.ronald-keyboard-dismiss ~ .prompt-input-container .prompt-input {
-    padding-right: 76px;
-}
-
-.ronald-keyboard-dismiss ~ .prompt-input-container .search-input-clear-button {
-    right: 44px;
-}
-
 /* Task search modal ("Search tasks" command). */
 
 .ronald-task-search .prompt-results {
