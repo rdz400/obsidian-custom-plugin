@@ -11,7 +11,8 @@ import { FilterTag, TagFilterBar } from './tagfilterbar';
 
 /**
  * Tag chips offered as filters under the search field, clickable and reachable
- * as Mod+1…Mod+9 in this order.
+ * as Mod+1…Mod+9 in this order. Each chip shows how many tasks it matches, so
+ * the shortcut is a tooltip rather than printed on the chip.
  *
  * `type` is purely presentational: chips of the same type are styled alike so
  * a context tag ("buiten", "thuis") reads differently at a glance from a time
@@ -237,6 +238,11 @@ async function writeTaskMarker(
     return written;
 }
 
+/** The comparable form of a query: lowercased, with a leading "#" dropped. */
+function normaliseQuery(query: string): string {
+    return query.toLowerCase().replace(/^#/, '');
+}
+
 /** Open the note `task` lives in and put the cursor on its line. */
 function openTask(app: App, task: TaskItem): void {
     const leaf =
@@ -268,6 +274,10 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
             onChange: () => this.rerunSearch(),
         });
         this.mountFilters();
+
+        // `getSuggestions` keeps the counts current from the first keystroke
+        // on, but the bar is on screen before that, so seed it here.
+        this.filters.setCounts(this.tagCounts(''));
     }
 
     /**
@@ -305,25 +315,62 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
         (this as unknown as { onInput(): void }).onInput();
     }
 
-    /** True when the task carries every active filter tag (nested tags count). */
-    private matchesTags(task: TaskItem): boolean {
-        return [...this.filters.activeTags].every((wanted) =>
-            task.tags.some((tag) => tag === wanted || tag.startsWith(`${wanted}/`)),
+    /** True when the task carries every tag in `wanted` (nested tags count). */
+    private matchesTags(task: TaskItem, wanted: Iterable<string>): boolean {
+        return [...wanted].every((want) =>
+            task.tags.some((tag) => tag === want || tag.startsWith(`${want}/`)),
+        );
+    }
+
+    /** True when the query appears in the task's text, tags or links. */
+    private matchesQuery(task: TaskItem, q: string): boolean {
+        // Match the tags and links too: tags are stripped out of the text, and
+        // a link inherited from an ancestor never appears in it, so both would
+        // otherwise be unsearchable.
+        return (
+            task.text.toLowerCase().includes(q) ||
+            task.tags.some((tag) => tag.includes(q)) ||
+            task.links.some((link) => link.toLowerCase().includes(q))
         );
     }
 
     getSuggestions(query: string): TaskItem[] {
-        // Match the tags and links too: tags are stripped out of the text, and
-        // a link inherited from an ancestor never appears in it, so both would
-        // otherwise be unsearchable.
-        const q = query.toLowerCase().replace(/^#/, '');
-        return this.items.filter(
+        const q = normaliseQuery(query);
+        const matches = this.items.filter(
             (task) =>
-                this.matchesTags(task) &&
-                (task.text.toLowerCase().includes(q) ||
-                    task.tags.some((tag) => tag.includes(q)) ||
-                    task.links.some((link) => link.toLowerCase().includes(q))),
+                this.matchesTags(task, this.filters.activeTags) &&
+                this.matchesQuery(task, q),
         );
+
+        this.filters.setCounts(this.tagCounts(q));
+        return matches;
+    }
+
+    /**
+     * How many tasks each chip stands for, given the query and the other chips.
+     *
+     * The number answers "what happens if I press this?", so a chip is counted
+     * against the filters *other* than itself: an inactive chip shows what
+     * turning it on would leave, and an active one shows how many tasks it is
+     * currently letting through — which for the only active chip is simply the
+     * result count. Counting against all active filters instead would make
+     * every inactive chip read as its own intersection with the selection, but
+     * an active chip would then always equal the result count, which tells the
+     * reader nothing.
+     */
+    private tagCounts(q: string): Map<string, number> {
+        const counts = new Map<string, number>();
+
+        for (const { tag } of FILTER_TAGS) {
+            const others = [...this.filters.activeTags].filter((active) => active !== tag);
+            const total = this.items.filter(
+                (task) =>
+                    this.matchesTags(task, [...others, tag]) && this.matchesQuery(task, q),
+            ).length;
+            counts.set(tag, total);
+        }
+
+        return counts;
     }
 
     renderSuggestion(task: TaskItem, el: HTMLElement): void {

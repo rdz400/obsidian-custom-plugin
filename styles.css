@@ -195,32 +195,42 @@
     color: var(--color-orange);
 }
 
-/* The digit of the Mod+<n> shortcut that toggles this chip. */
-.ronald-task-filter-key {
+/*
+ * How many tasks carry this tag. Sized off the digits rather than fixed, so a
+ * three-figure count still fits, but with a floor so single digits stay round.
+ */
+.ronald-task-filter-count {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-width: 14px;
     height: 14px;
-    border-radius: 4px;
+    padding: 0 4px;
+    border-radius: 7px;
     background: var(--background-modifier-border);
     color: var(--text-faint);
     font-family: var(--font-monospace);
     font-size: 10px;
     line-height: 1;
+    font-variant-numeric: tabular-nums;
 }
 
-.ronald-task-filter.is-active .ronald-task-filter-key {
+/* A chip that would empty the results: still pressable, visibly pointless. */
+.ronald-task-filter.is-empty:not(.is-active) {
+    opacity: 0.45;
+}
+
+.ronald-task-filter.is-active .ronald-task-filter-count {
     background: rgba(var(--color-blue-rgb), 0.25);
     color: var(--color-blue);
 }
 
-.ronald-task-filter-type-context.is-active .ronald-task-filter-key {
+.ronald-task-filter-type-context.is-active .ronald-task-filter-count {
     background: rgba(var(--color-green-rgb), 0.25);
     color: var(--color-green);
 }
 
-.ronald-task-filter-type-time.is-active .ronald-task-filter-key {
+.ronald-task-filter-type-time.is-active .ronald-task-filter-count {
     background: rgba(var(--color-orange-rgb), 0.25);
     color: var(--color-orange);
 }
