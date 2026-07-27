@@ -7,7 +7,7 @@ import {
     setIcon,
 } from 'obsidian';
 
-import { FilterTag, TagFilterBar } from './tagfilterbar';
+import { FilterBar, FilterChip } from './filterbar';
 
 /**
  * Tag chips offered as filters under the search field, clickable and reachable
@@ -20,13 +20,13 @@ import { FilterTag, TagFilterBar } from './tagfilterbar';
  * a new type — the styling for a type lives in `styles.css` under
  * `.ronald-task-filter-type-<type>`.
  */
-const FILTER_TAGS: FilterTag[] = [
-    { tag: 'nu', type: 'time' },
-    { tag: 'vandaag', type: 'time' },
-    { tag: 'week', type: 'time' },
-    { tag: 'buiten', type: 'context' },
-    { tag: 'thuis', type: 'context' },
-    { tag: 'project', type: 'other' },
+const FILTER_TAGS: FilterChip[] = [
+    { value: 'nu', type: 'time' },
+    { value: 'vandaag', type: 'time' },
+    { value: 'week', type: 'time' },
+    { value: 'buiten', type: 'context' },
+    { value: 'thuis', type: 'context' },
+    { value: 'project', type: 'other' },
 ];
 
 /** One task line found in a "taken" note, with everything shown for it. */
@@ -261,7 +261,7 @@ function openTask(app: App, task: TaskItem): void {
  */
 export class TaskSearchModal extends SuggestModal<TaskItem> {
     private items: TaskItem[];
-    private readonly filters: TagFilterBar;
+    private readonly filters: FilterBar;
 
     constructor(app: App, items: TaskItem[]) {
         super(app);
@@ -269,8 +269,8 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
         this.setPlaceholder('Search tasks…');
         this.modalEl.addClass('ronald-task-search');
 
-        this.filters = new TagFilterBar({
-            tags: FILTER_TAGS,
+        this.filters = new FilterBar({
+            chips: FILTER_TAGS,
             onChange: () => this.rerunSearch(),
         });
         this.mountFilters();
@@ -338,7 +338,7 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
         const q = normaliseQuery(query);
         const matches = this.items.filter(
             (task) =>
-                this.matchesTags(task, this.filters.activeTags) &&
+                this.matchesTags(task, this.filters.activeValues) &&
                 this.matchesQuery(task, q),
         );
 
@@ -361,8 +361,8 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
     private tagCounts(q: string): Map<string, number> {
         const counts = new Map<string, number>();
 
-        for (const { tag } of FILTER_TAGS) {
-            const others = [...this.filters.activeTags].filter((active) => active !== tag);
+        for (const { value: tag } of FILTER_TAGS) {
+            const others = [...this.filters.activeValues].filter((active) => active !== tag);
             const total = this.items.filter(
                 (task) =>
                     this.matchesTags(task, [...others, tag]) && this.matchesQuery(task, q),

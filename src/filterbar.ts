@@ -1,118 +1,121 @@
 import { Platform } from 'obsidian';
 
-/** Modifier used for the tag shortcuts, so the hint matches the platform. */
+/** Modifier used for the chip shortcuts, so the hint matches the platform. */
 const SHORTCUT_MODIFIER = Platform.isMacOS ? 'Cmd' : 'Ctrl';
 
 /** How many chips can be reached by a shortcut: Mod+1 … Mod+9. */
 const MAX_SHORTCUTS = 9;
 
 /**
- * One filter chip: the tag it toggles, and the "type" it belongs to.
+ * One filter chip: the value it toggles, and the "type" it belongs to.
  *
  * The type is purely presentational (see `renderChip`) so callers can group
  * chips like "buiten"/"thuis" (context) apart from "vandaag"/"week" (time)
  * without the bar needing to know what the types mean.
  */
-export interface FilterTag {
-    tag: string;
+export interface FilterChip {
+    value: string;
     type: string;
+    /** Chip text, if not the value itself prefixed with "#". */
+    label?: string;
 }
 
 /** Everything the bar needs to know about the world it is placed in. */
-export interface TagFilterBarOptions {
+export interface FilterBarOptions {
     /** The chips offered, in the order they are shown and numbered. */
-    tags: readonly FilterTag[];
-    /** Called after every change, with the tags that are now active. */
+    chips: readonly FilterChip[];
+    /** Called after every change, with the values that are now active. */
     onChange: (active: ReadonlySet<string>) => void;
 }
 
-/** How many results each tag stands for, keyed by tag; missing means zero. */
-export type TagCounts = ReadonlyMap<string, number>;
+/** How many results each value stands for, keyed by value; missing means zero. */
+export type FilterCounts = ReadonlyMap<string, number>;
 
 /**
- * A row of toggleable tag chips.
+ * A row of toggleable filter chips.
  *
  * The bar owns nothing but its own element and selection: it never touches the
  * modal it is dropped into, and reports changes through `onChange` only. That
- * keeps it reusable for any search surface that wants tag filtering, and keeps
+ * keeps it reusable for any search surface that wants chip filtering, and keeps
  * the keyboard handling (see `handleKeyDown`) a decision of the host, which is
  * the one that knows which element receives keys.
  *
- * The badge on each chip shows how many results that tag stands for, which only
- * the host can know; it hands them over with `setCounts`. Until it does, the
- * chips carry no badge at all rather than a misleading zero.
+ * The badge on each chip shows how many results that value stands for, which
+ * only the host can know; it hands them over with `setCounts`. Until it does,
+ * the chips carry no badge at all rather than a misleading zero.
  */
-export class TagFilterBar {
+export class FilterBar {
     readonly el: HTMLElement;
 
-    private readonly tags: readonly FilterTag[];
+    private readonly chips: readonly FilterChip[];
     private readonly onChange: (active: ReadonlySet<string>) => void;
-    private readonly chips = new Map<string, HTMLElement>();
+    private readonly chipEls = new Map<string, HTMLElement>();
     private readonly counts = new Map<string, HTMLElement>();
     private readonly active = new Set<string>();
 
-    constructor({ tags, onChange }: TagFilterBarOptions) {
-        this.tags = tags;
+    constructor({ chips, onChange }: FilterBarOptions) {
+        this.chips = chips;
         this.onChange = onChange;
         this.el = createDiv({ cls: 'ronald-task-filters' });
 
-        tags.forEach((filterTag, index) => this.renderChip(filterTag, index));
+        chips.forEach((chip, index) => this.renderChip(chip, index));
     }
 
-    /** The tags currently switched on. */
-    get activeTags(): ReadonlySet<string> {
+    /** The values currently switched on. */
+    get activeValues(): ReadonlySet<string> {
         return this.active;
     }
 
-    private renderChip({ tag, type }: FilterTag, index: number): void {
+    private renderChip({ value, type, label }: FilterChip, index: number): void {
         const chip = this.el.createSpan({
             cls: `ronald-task-filter ronald-task-filter-type-${type}`,
         });
-        chip.createSpan({ cls: 'ronald-task-filter-label', text: `#${tag}` });
+        const text = label ?? `#${value}`;
+        chip.createSpan({ cls: 'ronald-task-filter-label', text });
 
         // The badge slot doubles as the count display, so it is created empty
         // and hidden until `setCounts` fills it.
         const count = chip.createSpan({ cls: 'ronald-task-filter-count' });
         count.hide();
-        this.counts.set(tag, count);
+        this.counts.set(value, count);
 
         // The count has the only badge, so the shortcut is not written on the
         // chip: it lives in the tooltip and in the label read out instead.
         const shortcut = shortcutFor(index);
         if (shortcut !== undefined) {
             chip.setAttribute('aria-keyshortcuts', `${SHORTCUT_MODIFIER}+${shortcut}`);
-            chip.setAttribute('aria-label', `#${tag} (${SHORTCUT_MODIFIER}+${shortcut})`);
+            chip.setAttribute('aria-label', `${text} (${SHORTCUT_MODIFIER}+${shortcut})`);
             chip.setAttribute('title', `${SHORTCUT_MODIFIER}+${shortcut}`);
         }
 
-        chip.addEventListener('click', () => this.toggle(tag));
-        this.chips.set(tag, chip);
+        chip.addEventListener('click', () => this.toggle(value));
+        this.chipEls.set(value, chip);
     }
 
     /**
-     * Show how many results each tag stands for.
+     * Show how many results each value stands for.
      *
-     * A tag missing from `counts` reads as zero: such a chip would narrow the
+     * A value missing from `counts` reads as zero: such a chip would narrow the
      * results to nothing, so it is dimmed rather than hidden — the row keeps
      * its layout and its shortcut numbering while typing.
      */
-    setCounts(counts: TagCounts): void {
-        for (const [tag, badge] of this.counts) {
-            const total = counts.get(tag) ?? 0;
+    setCounts(counts: FilterCounts): void {
+        for (const [value, badge] of this.counts) {
+            const total = counts.get(value) ?? 0;
             badge.setText(String(total));
             badge.show();
-            this.chips.get(tag)?.toggleClass('is-empty', total === 0);
+            this.chipEls.get(value)?.toggleClass('is-empty', total === 0);
         }
     }
 
-    /** Flip one tag on or off, ignoring tags this bar does not offer. */
-    toggle(tag: string): void {
-        if (!this.chips.has(tag)) return;
+    /** Flip one value on or off, ignoring values this bar does not offer. */
+    toggle(value: string): void {
+        if (!this.chipEls.has(value)) return;
 
-        if (this.active.has(tag)) this.active.delete(tag);
-        else this.active.add(tag);
+        if (this.active.has(value)) this.active.delete(value);
+        else this.active.add(value);
 
-        this.chips.get(tag)?.toggleClass('is-active', this.active.has(tag));
+        this.chipEls.get(value)?.toggleClass('is-active', this.active.has(value));
         this.onChange(this.active);
     }
 
@@ -132,17 +135,17 @@ export class TagFilterBar {
         const otherHeld = Platform.isMacOS ? event.ctrlKey : event.metaKey;
         if (!commandHeld || otherHeld || event.altKey || event.shiftKey) return false;
 
-        const tag = this.tagForShortcut(event.key);
-        if (tag === undefined) return false;
+        const value = this.valueForShortcut(event.key);
+        if (value === undefined) return false;
 
-        this.toggle(tag);
+        this.toggle(value);
         return true;
     }
 
-    /** The tag a shortcut digit selects, if the bar has a chip at that spot. */
-    private tagForShortcut(key: string): string | undefined {
+    /** The value a shortcut digit selects, if the bar has a chip at that spot. */
+    private valueForShortcut(key: string): string | undefined {
         if (!/^[1-9]$/.test(key)) return undefined;
-        return this.tags[Number(key) - 1]?.tag;
+        return this.chips[Number(key) - 1]?.value;
     }
 }
 
