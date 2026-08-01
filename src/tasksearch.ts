@@ -358,6 +358,10 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
         el.addClass('ronald-task-match');
         if (task.done) el.addClass('is-done');
 
+        // Drives the depth mark in CSS. Nesting has no fixed limit but the
+        // shades run out, so anything deeper is styled as the last level.
+        el.dataset.depth = String(Math.min(task.depth, 3));
+
         const checkbox = el.createEl('input', {
             type: 'checkbox',
             cls: 'ronald-task-checkbox',
