@@ -34,7 +34,6 @@
 }
 
 .ronald-project-status {
-    margin-left: auto;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -70,6 +69,32 @@
 .ronald-project-status-klaar {
     background: rgba(var(--color-green-rgb), 0.15);
     color: var(--color-green);
+}
+
+/*
+ * Open-task count, sitting between the project name and the status pill and
+ * carrying the `margin-left: auto` that pushes both to the right edge.
+ *
+ * The slot is rendered on every project, empty ones included, and given a fixed
+ * width: were it left out when a project has no open tasks, the status pill
+ * beside it would slide right to fill the gap and no longer line up with the
+ * statuses of the rows that do have a count.
+ */
+.ronald-project-tasks {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    width: 3.5em;
+    font-size: var(--font-smallest);
+    font-weight: var(--font-medium);
+    color: var(--color-orange);
+}
+
+.ronald-project-tasks .svg-icon {
+    width: 12px;
+    height: 12px;
 }
 
 .ronald-project-meta {

@@ -230,7 +230,7 @@ export default class RonaldPlugin extends Plugin {
             id: 'search-projects',
             name: 'Search projects',
             icon: 'search',
-            callback: () => searchProjects(this.app),
+            callback: () => void searchProjects(this.app),
         });
 
         this.addCommand({
@@ -244,7 +244,7 @@ export default class RonaldPlugin extends Plugin {
             void searchTasks(this.app, this.settings.taskFilterTags),
         );
 
-        this.addRibbonIcon('search', 'Search projects', () => searchProjects(this.app));
+        this.addRibbonIcon('search', 'Search projects', () => void searchProjects(this.app));
 
         this.registerStatusBar();
 

@@ -1,5 +1,6 @@
 import {
     App,
+    ListItemCache,
     Notice,
     SuggestModal,
     TFile,
@@ -45,6 +46,88 @@ export interface ProjectItem {
     file: TFile;
     status: string;
     tags: string[];
+    /** Open tasks in "taken" notes that link to this project. */
+    openTasks: number;
+}
+
+const TASK_LINE_RE = /^(\s*[-*+]\s+)\[([^\]])\]\s?/;
+const LINK_RE = /\[\[([^\]|#^]+?)(?:[#^][^\]|]*)?(?:\|([^\]]*))?\]\]/g;
+
+/** The wikilink targets on one line, using the display text where given. */
+function linksOnLine(raw: string): string[] {
+    return Array.from(raw.matchAll(LINK_RE)).map((m) => (m[2] ?? m[1] ?? '').trim());
+}
+
+/** Append the entries of `extra` that `into` doesn't already have. */
+function addMissing(into: string[], extra: string[]): string[] {
+    return [...into, ...extra.filter((entry) => !into.includes(entry))];
+}
+
+/**
+ * Count the open checkbox lines in one note against the project each links to.
+ *
+ * `listItems` is flat and ordered by position, with `parent` holding the start
+ * line of the containing item (negative for a top-level item, where it encodes
+ * the section instead). Since a parent always appears before its children, one
+ * forward pass indexed by start line is enough to give every line the links its
+ * ancestors carry on top of its own — so a subtask under "- [ ] Bel [[Tuin]]"
+ * counts towards Tuin even though its own line names no project. Plain bullets
+ * take part in that inheritance without being tasks themselves.
+ *
+ * A task linking to several projects counts once for each of them.
+ */
+function countFileTasks(
+    items: ListItemCache[],
+    lines: string[],
+    counts: Map<string, number>,
+): void {
+    const inherited = new Map<number, string[]>();
+
+    for (const item of items) {
+        const line = item.position.start.line;
+        const raw = lines[line];
+        if (raw === undefined) continue;
+
+        const parent = item.parent < 0 ? undefined : inherited.get(item.parent);
+        const links = addMissing(linksOnLine(raw), parent ?? []);
+        inherited.set(line, links);
+
+        const marker = TASK_LINE_RE.exec(raw)?.[2];
+        if (marker === undefined || marker === 'x' || marker === 'X') continue;
+
+        for (const link of links) {
+            const key = link.toLowerCase();
+            counts.set(key, (counts.get(key) ?? 0) + 1);
+        }
+    }
+}
+
+/**
+ * How many open tasks each linked note has, keyed by lowercased link target.
+ *
+ * Only "taken" notes are scanned, matching where tasks are kept; the count is
+ * looked up per project by note name, so a link written as a path or with a
+ * display text only lands on the project when it reads as the note's name.
+ */
+async function collectOpenTaskCounts(app: App): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+
+    const files = app.vault
+        .getMarkdownFiles()
+        .filter(
+            (file) =>
+                app.metadataCache.getFileCache(file)?.frontmatter?.type === 'taken',
+        );
+
+    for (const file of files) {
+        const items = app.metadataCache.getFileCache(file)?.listItems ?? [];
+        if (items.length === 0) continue;
+
+        const lines = (await app.vault.cachedRead(file)).split('\n');
+        countFileTasks(items, lines, counts);
+    }
+
+    return counts;
 }
 
 /** Sort rank for a status; unknown or missing statuses sort last. */
@@ -54,7 +137,11 @@ function projectStatusRank(status: string): number {
 }
 
 /** Collect the metadata shown for a project in the search modal. */
-function toProjectItem(app: App, file: TFile): ProjectItem {
+function toProjectItem(
+    app: App,
+    file: TFile,
+    taskCounts: ReadonlyMap<string, number>,
+): ProjectItem {
     const cache = app.metadataCache.getFileCache(file);
     const status: unknown = cache?.frontmatter?.status;
 
@@ -62,11 +149,14 @@ function toProjectItem(app: App, file: TFile): ProjectItem {
         file,
         status: typeof status === 'string' ? status : '',
         tags: cache ? [...new Set(getAllTags(cache) ?? [])] : [],
+        openTasks: taskCounts.get(file.basename.toLowerCase()) ?? 0,
     };
 }
 
 /** Every project note that is still running, in display order. */
-export function collectOpenProjects(app: App): ProjectItem[] {
+export async function collectOpenProjects(app: App): Promise<ProjectItem[]> {
+    const taskCounts = await collectOpenTaskCounts(app);
+
     return app.vault
         .getMarkdownFiles()
         .filter((file) => {
@@ -78,7 +168,7 @@ export function collectOpenProjects(app: App): ProjectItem[] {
                 !CLOSED_PROJECT_STATUSES.includes(status)
             );
         })
-        .map((file) => toProjectItem(app, file))
+        .map((file) => toProjectItem(app, file, taskCounts))
         .sort(
             (a, b) =>
                 projectStatusRank(a.status) - projectStatusRank(b.status) ||
@@ -203,6 +293,20 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
         setIcon(title.createSpan({ cls: 'ronald-project-icon' }), 'file-text');
         title.createSpan({ text: item.file.basename });
 
+        // Before the status, so the status keeps the right edge of the row to
+        // itself and lines up from project to project. The slot is created
+        // either way and holds its width when empty, see `styles.css`; a
+        // project with nothing open shows no "0" to read past.
+        const tasks = title.createSpan({ cls: 'ronald-project-tasks' });
+        if (item.openTasks > 0) {
+            tasks.setAttr(
+                'aria-label',
+                `${item.openTasks} open ${item.openTasks === 1 ? 'task' : 'tasks'}`,
+            );
+            setIcon(tasks.createSpan(), 'list-checks');
+            tasks.createSpan({ text: String(item.openTasks) });
+        }
+
         if (item.status) {
             const status = title.createSpan({
                 cls: `ronald-project-status ronald-project-status-${item.status}`,
@@ -230,8 +334,8 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
  * Search open projects by note name in a modal that shows their status and
  * tags, and open the chosen note.
  */
-export function searchProjects(app: App): void {
-    const projects = collectOpenProjects(app);
+export async function searchProjects(app: App): Promise<void> {
+    const projects = await collectOpenProjects(app);
 
     if (projects.length === 0) {
         new Notice('No open projects found');
