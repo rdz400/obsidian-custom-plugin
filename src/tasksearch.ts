@@ -4,7 +4,6 @@ import {
     Notice,
     SuggestModal,
     TFile,
-    setIcon,
 } from 'obsidian';
 
 import { FilterBar, FilterChip } from './filterbar';
@@ -53,10 +52,10 @@ function linksOnLine(raw: string): string[] {
  * The readable part of a list line: marker, checkbox and tags removed, since
  * tags are rendered as their own chips beside the text.
  *
- * Wikilinks are kept in place: they also get a chip, but stripping them here
- * mangles sentences built around them ("- [ ] Bel [[Jan]] over de tuin") and
- * empties a task that is nothing but a link. They are displayed with their
- * brackets so they stay recognisable as links, see `textParts`.
+ * Wikilinks are kept in place: stripping them mangles sentences built around
+ * them ("- [ ] Bel [[Jan]] over de tuin") and empties a task that is nothing
+ * but a link. They are styled where they stand, with their brackets, so they
+ * stay recognisable as links, see `textParts`.
  */
 function taskText(raw: string): string {
     return raw
@@ -368,25 +367,19 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
 
         const body = el.createDiv({ cls: 'ronald-task-body' });
 
-        // Wikilinks keep their place in the sentence and are styled as links,
-        // rather than being pulled out into the chips below.
+        // Wikilinks keep their place in the sentence and are styled as links.
         const line = body.createDiv({ cls: 'ronald-task-text' });
         for (const part of textParts(task.text)) {
             if (part.link) line.createSpan({ cls: 'ronald-task-inline-link', text: part.text });
             else line.appendText(part.text);
         }
 
-        if (task.tags.length > 0 || task.links.length > 0) {
+        // Links are left out: they are already styled inline in the text above.
+        if (task.tags.length > 0) {
             const meta = body.createDiv({ cls: 'ronald-task-meta' });
 
             for (const tag of task.tags) {
                 meta.createSpan({ cls: 'ronald-task-tag', text: `#${tag}` });
-            }
-
-            for (const link of task.links) {
-                const pill = meta.createSpan({ cls: 'ronald-task-link' });
-                setIcon(pill.createSpan(), 'link');
-                pill.createSpan({ text: link });
             }
         }
 

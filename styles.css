@@ -283,19 +283,6 @@
     color: var(--color-blue);
 }
 
-.ronald-task-link {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: var(--font-smallest);
-    color: var(--text-muted);
-}
-
-.ronald-task-link .svg-icon {
-    width: 12px;
-    height: 12px;
-}
-
 /*
  * A tag row in the settings tab. Obsidian's list rows carry the drag handle and
  * delete button; the name column here holds only the shortcut hint, so it is
