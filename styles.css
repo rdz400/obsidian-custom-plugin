@@ -97,25 +97,14 @@
     height: 12px;
 }
 
-.ronald-project-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-top: 10px;
-}
-
-.ronald-project-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.ronald-project-tag {
-    font-size: var(--font-smallest);
-    padding: 2px 8px;
-    border-radius: 8px;
-    background: rgba(var(--color-blue-rgb), 0.15);
-    color: var(--color-blue);
+/*
+ * The project search stacks two chip rows. Only the lower one carries the
+ * separator, so the pair reads as one block rather than two banded strips,
+ * and the upper row loses the padding that would double the gap between them.
+ */
+.ronald-project-search .ronald-task-filters:has(+ .ronald-task-filters) {
+    border-bottom: none;
+    padding-bottom: 0;
 }
 
 /* Task search modal ("Search tasks" command). */
@@ -164,6 +153,23 @@
 .ronald-task-filter-type-time {
     border-radius: 4px;
     border-style: dashed;
+}
+
+/* Task chips ("met taken", "zonder taken"): whether the project has work open. */
+.ronald-task-filter-type-tasks {
+    border-radius: 4px;
+    border-style: dotted;
+}
+
+.ronald-task-filter-type-tasks.is-active {
+    background: rgba(var(--color-purple-rgb), 0.15);
+    border-color: var(--color-purple);
+    color: var(--color-purple);
+}
+
+.ronald-task-filter-type-tasks.is-active .ronald-task-filter-count {
+    background: rgba(var(--color-purple-rgb), 0.25);
+    color: var(--color-purple);
 }
 
 /* Context tags ("buiten", "thuis"): where the task happens. */

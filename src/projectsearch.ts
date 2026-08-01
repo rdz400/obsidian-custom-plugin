@@ -4,7 +4,6 @@ import {
     Notice,
     SuggestModal,
     TFile,
-    getAllTags,
     setIcon,
 } from 'obsidian';
 
@@ -41,11 +40,27 @@ const STATUS_FILTERS: FilterChip[] = [
     { value: 'wachten', type: 'status', label: 'wachten' },
 ];
 
+/**
+ * Task chips offered as a second filter row, on the open task count that
+ * `collectOpenTaskCounts` already works out for the badge on every row.
+ *
+ * The two values are exhaustive and mutually exclusive, so turning both on
+ * matches everything, exactly as turning neither on does.
+ */
+const TASK_FILTERS: FilterChip[] = [
+    { value: 'met-taken', type: 'tasks', label: 'met taken' },
+    { value: 'zonder-taken', type: 'tasks', label: 'zonder taken' },
+];
+
+/** True when a project's open task count fits the chip `value` stands for. */
+function matchesTaskFilter(item: ProjectItem, value: string): boolean {
+    return value === 'met-taken' ? item.openTasks > 0 : item.openTasks === 0;
+}
+
 /** A project note plus the metadata shown in the search modal. */
 export interface ProjectItem {
     file: TFile;
     status: string;
-    tags: string[];
     /** Open tasks in "taken" notes that link to this project. */
     openTasks: number;
 }
@@ -148,7 +163,6 @@ function toProjectItem(
     return {
         file,
         status: typeof status === 'string' ? status : '',
-        tags: cache ? [...new Set(getAllTags(cache) ?? [])] : [],
         openTasks: taskCounts.get(file.basename.toLowerCase()) ?? 0,
     };
 }
@@ -177,13 +191,14 @@ export async function collectOpenProjects(app: App): Promise<ProjectItem[]> {
 }
 
 /**
- * Search projects by note name and show their status and tags. Choosing a
- * project opens the note.
+ * Search projects by note name and show their status and open task count.
+ * Choosing a project opens the note.
  */
 export class ProjectSearchModal extends SuggestModal<ProjectItem> {
     private items: ProjectItem[];
     private onChoose: (item: ProjectItem) => void;
-    private readonly filters: FilterBar;
+    private readonly statusFilters: FilterBar;
+    private readonly taskFilters: FilterBar;
 
     constructor(
         app: App,
@@ -196,31 +211,48 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
         this.setPlaceholder('Search projects…');
         this.modalEl.addClass('ronald-project-search');
 
-        this.filters = new FilterBar({
+        this.statusFilters = new FilterBar({
             chips: STATUS_FILTERS,
             onChange: () => this.rerunSearch(),
+        });
+        this.taskFilters = new FilterBar({
+            chips: TASK_FILTERS,
+            onChange: () => this.rerunSearch(),
+            // Its own modifier, so both rows can number their chips from 1.
+            modifier: 'alt',
         });
         this.mountFilters();
 
         // `getSuggestions` keeps the counts current from the first keystroke
-        // on, but the bar is on screen before that, so seed it here.
-        this.filters.setCounts(this.statusCounts(''));
+        // on, but the bars are on screen before that, so seed them here.
+        this.statusFilters.setCounts(this.statusCounts(''));
+        this.taskFilters.setCounts(this.taskCounts(''));
     }
 
     /**
-     * Place the status chips and give them their keyboard shortcuts.
+     * Place both chip rows and give them their keyboard shortcuts.
      *
      * Shortcuts are listened for on the modal rather than the input so they
      * work wherever focus sits, in the capture phase so Obsidian's own Mod+digit
      * bindings never see a press meant for a chip.
+     *
+     * Each bar answers to its own modifier, so both number their chips from 1
+     * without colliding: the statuses are Mod+1…4, the task chips Alt+1…2. A
+     * press is offered to each in turn and at most one takes it.
      */
     private mountFilters(): void {
-        this.inputEl.parentElement?.insertAdjacentElement('afterend', this.filters.el);
+        const anchor = this.inputEl.parentElement;
+        anchor?.insertAdjacentElement('afterend', this.statusFilters.el);
+        this.statusFilters.el.insertAdjacentElement('afterend', this.taskFilters.el);
 
         this.modalEl.addEventListener(
             'keydown',
             (event) => {
-                if (!this.filters.handleKeyDown(event)) return;
+                const handled =
+                    this.statusFilters.handleKeyDown(event) ||
+                    this.taskFilters.handleKeyDown(event);
+                if (!handled) return;
+
                 event.preventDefault();
                 event.stopPropagation();
             },
@@ -251,15 +283,30 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
         return wanted.size === 0 || wanted.has(item.status);
     }
 
+    /**
+     * True when the project's open task count fits one of `wanted` (or
+     * `wanted` is empty, in which case every project matches).
+     *
+     * OR'd like the statuses, and for the same reason: a project either has
+     * open tasks or it does not, so an AND across both chips would match
+     * nothing at all.
+     */
+    private matchesTasks(item: ProjectItem, wanted: ReadonlySet<string>): boolean {
+        if (wanted.size === 0) return true;
+        return [...wanted].some((value) => matchesTaskFilter(item, value));
+    }
+
     getSuggestions(query: string): ProjectItem[] {
         const q = query.toLowerCase();
         const matches = this.items.filter(
             (item) =>
-                this.matchesStatus(item, this.filters.activeValues) &&
+                this.matchesStatus(item, this.statusFilters.activeValues) &&
+                this.matchesTasks(item, this.taskFilters.activeValues) &&
                 item.file.basename.toLowerCase().includes(q),
         );
 
-        this.filters.setCounts(this.statusCounts(q));
+        this.statusFilters.setCounts(this.statusCounts(q));
+        this.taskFilters.setCounts(this.taskCounts(q));
         return matches;
     }
 
@@ -268,19 +315,48 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
      *
      * Status chips are OR'd together (see `matchesStatus`), so turning one on
      * only ever adds its own matches to the result regardless of which other
-     * chips are active — the count for a chip is simply how many projects
+     * status chips are active — the count for a chip is how many projects
      * carry that status and match the query.
+     *
+     * The task bar ANDs with this one, though, so its active chips do narrow
+     * what turning a status on would yield, and the count honours them.
      */
     private statusCounts(q: string): Map<string, number> {
         const counts = new Map<string, number>();
+        const wantedTasks = this.taskFilters.activeValues;
 
         for (const { value: status } of STATUS_FILTERS) {
             const total = this.items.filter(
                 (item) =>
                     item.status === status &&
+                    this.matchesTasks(item, wantedTasks) &&
                     item.file.basename.toLowerCase().includes(q),
             ).length;
             counts.set(status, total);
+        }
+
+        return counts;
+    }
+
+    /**
+     * How many projects each task chip stands for, given the query.
+     *
+     * The mirror of `statusCounts`: OR'd within the bar, so a chip counts its
+     * own matches, and narrowed by the active statuses because the two bars
+     * AND together.
+     */
+    private taskCounts(q: string): Map<string, number> {
+        const counts = new Map<string, number>();
+        const wantedStatuses = this.statusFilters.activeValues;
+
+        for (const { value } of TASK_FILTERS) {
+            const total = this.items.filter(
+                (item) =>
+                    matchesTaskFilter(item, value) &&
+                    this.matchesStatus(item, wantedStatuses) &&
+                    item.file.basename.toLowerCase().includes(q),
+            ).length;
+            counts.set(value, total);
         }
 
         return counts;
@@ -315,14 +391,6 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
             if (icon) setIcon(status.createSpan(), icon);
             status.createSpan({ text: item.status });
         }
-
-        if (item.tags.length === 0) return;
-
-        const meta = el.createDiv({ cls: 'ronald-project-meta' });
-        const tags = meta.createDiv({ cls: 'ronald-project-tags' });
-        for (const tag of item.tags) {
-            tags.createSpan({ cls: 'ronald-project-tag', text: tag });
-        }
     }
 
     onChooseSuggestion(item: ProjectItem): void {
@@ -332,7 +400,7 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
 
 /**
  * Search open projects by note name in a modal that shows their status and
- * tags, and open the chosen note.
+ * open task count, and open the chosen note.
  */
 export async function searchProjects(app: App): Promise<void> {
     const projects = await collectOpenProjects(app);
