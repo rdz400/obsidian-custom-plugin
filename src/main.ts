@@ -26,11 +26,19 @@ import {
 } from './commands';
 import { registerPostProcessors } from './postprocessors';
 import { searchProjects } from './projectsearch';
+import {
+    DEFAULT_SETTINGS,
+    RonaldSettingTab,
+    type RonaldSettings,
+} from './settings';
 import { searchTasks } from './tasksearch';
 
 export default class RonaldPlugin extends Plugin {
+    settings!: RonaldSettings;
 
     async onload() {
+        await this.loadSettings();
+        this.addSettingTab(new RonaldSettingTab(this.app, this));
 
 
         this.addCommand({
@@ -229,10 +237,12 @@ export default class RonaldPlugin extends Plugin {
             id: 'search-tasks',
             name: 'Search tasks',
             icon: 'list-checks',
-            callback: () => void searchTasks(this.app),
+            callback: () => void searchTasks(this.app, this.settings.taskFilterTags),
         });
 
-        this.addRibbonIcon('list-checks', 'Search tasks', () => void searchTasks(this.app));
+        this.addRibbonIcon('list-checks', 'Search tasks', () =>
+            void searchTasks(this.app, this.settings.taskFilterTags),
+        );
 
         this.addRibbonIcon('search', 'Search projects', () => searchProjects(this.app));
 
@@ -243,6 +253,18 @@ export default class RonaldPlugin extends Plugin {
     }
 
     onunload() {}
+
+    async loadSettings(): Promise<void> {
+        this.settings = Object.assign(
+            {},
+            DEFAULT_SETTINGS,
+            (await this.loadData()) as Partial<RonaldSettings>,
+        );
+    }
+
+    async saveSettings(): Promise<void> {
+        await this.saveData(this.settings);
+    }
 
     /** Show the number of tasks in the active note in the status bar. */
     private registerStatusBar(): void {

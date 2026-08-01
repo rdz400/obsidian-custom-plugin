@@ -9,26 +9,6 @@ import {
 
 import { FilterBar, FilterChip } from './filterbar';
 
-/**
- * Tag chips offered as filters under the search field, clickable and reachable
- * as Mod+1…Mod+9 in this order. Each chip shows how many tasks it matches, so
- * the shortcut is a tooltip rather than printed on the chip.
- *
- * `type` is purely presentational: chips of the same type are styled alike so
- * a context tag ("buiten", "thuis") reads differently at a glance from a time
- * tag ("vandaag", "week"). Edit this list to add tags, reorder them, or invent
- * a new type — the styling for a type lives in `styles.css` under
- * `.ronald-task-filter-type-<type>`.
- */
-const FILTER_TAGS: FilterChip[] = [
-    { value: 'nu', type: 'time' },
-    { value: 'vandaag', type: 'time' },
-    { value: 'week', type: 'time' },
-    { value: 'buiten', type: 'context' },
-    { value: 'thuis', type: 'context' },
-    { value: 'project', type: 'other' },
-];
-
 /** One task line found in a "taken" note, with everything shown for it. */
 export interface TaskItem {
     file: TFile;
@@ -262,15 +242,17 @@ function openTask(app: App, task: TaskItem): void {
 export class TaskSearchModal extends SuggestModal<TaskItem> {
     private items: TaskItem[];
     private readonly filters: FilterBar;
+    private readonly filterTags: readonly FilterChip[];
 
-    constructor(app: App, items: TaskItem[]) {
+    constructor(app: App, items: TaskItem[], filterTags: readonly FilterChip[]) {
         super(app);
         this.items = items;
+        this.filterTags = filterTags;
         this.setPlaceholder('Search tasks…');
         this.modalEl.addClass('ronald-task-search');
 
         this.filters = new FilterBar({
-            chips: FILTER_TAGS,
+            chips: filterTags,
             onChange: () => this.rerunSearch(),
         });
         this.mountFilters();
@@ -361,7 +343,7 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
     private tagCounts(q: string): Map<string, number> {
         const counts = new Map<string, number>();
 
-        for (const { value: tag } of FILTER_TAGS) {
+        for (const { value: tag } of this.filterTags) {
             const others = [...this.filters.activeValues].filter((active) => active !== tag);
             const total = this.items.filter(
                 (task) =>
@@ -467,8 +449,16 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
     }
 }
 
-/** Collect the tasks in all "taken" notes and open the search modal. */
-export async function searchTasks(app: App): Promise<void> {
+/**
+ * Collect the tasks in all "taken" notes and open the search modal.
+ *
+ * A tag left blank in the settings would render a chip that filters on nothing,
+ * so half-finished rows are dropped rather than shown.
+ */
+export async function searchTasks(
+    app: App,
+    filterTags: readonly FilterChip[],
+): Promise<void> {
     const tasks = await collectTakenTasks(app);
 
     if (tasks.length === 0) {
@@ -476,5 +466,6 @@ export async function searchTasks(app: App): Promise<void> {
         return;
     }
 
-    new TaskSearchModal(app, tasks).open();
+    const chips = filterTags.filter((chip) => chip.value.length > 0);
+    new TaskSearchModal(app, tasks, chips).open();
 }

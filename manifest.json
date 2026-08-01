@@ -2,7 +2,7 @@
 	"id": "plugin-van-ronald",
 	"name": "Plugin van Ronald",
 	"version": "1.0.0",
-	"minAppVersion": "1.0.0",
+	"minAppVersion": "1.13.0",
 	"description": "Wat probeersels van Ronald.",
 	"author": "Ronald",
 	"authorUrl": "https://obsidian.md",

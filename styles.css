@@ -295,3 +295,30 @@
     width: 12px;
     height: 12px;
 }
+
+/*
+ * A tag row in the settings tab. Obsidian's list rows carry the drag handle and
+ * delete button; the name column here holds only the shortcut hint, so it is
+ * kept narrow and quiet and the two fields take the rest of the width.
+ */
+.ronald-setting-tag-row .setting-item-info {
+    flex: 0 0 auto;
+    margin-right: 0;
+}
+
+.ronald-setting-tag-row .setting-item-name {
+    color: var(--text-faint);
+    font-family: var(--font-monospace);
+    font-size: var(--font-smallest);
+    white-space: nowrap;
+}
+
+/* Empty on these rows, and it otherwise reserves a line of height. */
+.ronald-setting-tag-row .setting-item-description {
+    display: none;
+}
+
+/* The tag reads as the entry; its type is secondary, so it gets less room. */
+.ronald-setting-tag-row .setting-item-control input[placeholder='Type'] {
+    flex: 0 1 8em;
+}
