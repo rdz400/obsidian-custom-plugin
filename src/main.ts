@@ -24,7 +24,6 @@ import {
     mergeTakenNotes,
     openMostRecentTaakNote,
 } from './commands';
-import { registerPostProcessors } from './postprocessors';
 import { searchProjects } from './projectsearch';
 import {
     DEFAULT_SETTINGS,
@@ -247,9 +246,6 @@ export default class RonaldPlugin extends Plugin {
         this.addRibbonIcon('search', 'Search projects', () => void searchProjects(this.app));
 
         this.registerStatusBar();
-
-        registerPostProcessors(this);
-
     }
 
     onunload() {}
