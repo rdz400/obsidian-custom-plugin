@@ -8,6 +8,7 @@ import {
 } from 'obsidian';
 
 import { FilterBar, FilterChip } from './filterbar';
+import { openFileFromSearch, registerNewTabEnter } from './openfile';
 
 /** Statuses that mark a project as no longer running. */
 const CLOSED_PROJECT_STATUSES = ['klaar', 'geannuleerd'];
@@ -192,24 +193,26 @@ export async function collectOpenProjects(app: App): Promise<ProjectItem[]> {
 
 /**
  * Search projects by note name and show their status and open task count.
- * Choosing a project opens the note.
+ * Choosing a project opens the note, in a new tab with Mod+Enter.
  */
 export class ProjectSearchModal extends SuggestModal<ProjectItem> {
     private items: ProjectItem[];
-    private onChoose: (item: ProjectItem) => void;
+    /** Called with the chosen project and the press that chose it. */
+    private onChoose: (item: ProjectItem, event: MouseEvent | KeyboardEvent) => void;
     private readonly statusFilters: FilterBar;
     private readonly taskFilters: FilterBar;
 
     constructor(
         app: App,
         items: ProjectItem[],
-        onChoose: (item: ProjectItem) => void,
+        onChoose: (item: ProjectItem, event: MouseEvent | KeyboardEvent) => void,
     ) {
         super(app);
         this.items = items;
         this.onChoose = onChoose;
         this.setPlaceholder('Search projects…');
         this.modalEl.addClass('ronald-project-search');
+        registerNewTabEnter(this);
 
         this.statusFilters = new FilterBar({
             chips: STATUS_FILTERS,
@@ -393,14 +396,15 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
         }
     }
 
-    onChooseSuggestion(item: ProjectItem): void {
-        this.onChoose(item);
+    onChooseSuggestion(item: ProjectItem, event: MouseEvent | KeyboardEvent): void {
+        this.onChoose(item, event);
     }
 }
 
 /**
  * Search open projects by note name in a modal that shows their status and
- * open task count, and open the chosen note.
+ * open task count, and open the chosen note — in the active tab, or in a new
+ * one with Mod+Enter.
  */
 export async function searchProjects(app: App): Promise<void> {
     const projects = await collectOpenProjects(app);
@@ -410,10 +414,7 @@ export async function searchProjects(app: App): Promise<void> {
         return;
     }
 
-    new ProjectSearchModal(app, projects, (item: ProjectItem) => {
-        const leaf =
-            app.workspace.getMostRecentLeaf(app.workspace.rootSplit) ??
-            app.workspace.getLeaf(false);
-        void leaf.openFile(item.file);
+    new ProjectSearchModal(app, projects, (item, event) => {
+        openFileFromSearch(app, item.file, event);
     }).open();
 }

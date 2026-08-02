@@ -7,6 +7,7 @@ import {
 } from 'obsidian';
 
 import { FilterBar, FilterChip } from './filterbar';
+import { openFileFromSearch, registerNewTabEnter } from './openfile';
 
 /** One task line found in a "taken" note, with everything shown for it. */
 export interface TaskItem {
@@ -222,12 +223,12 @@ function normaliseQuery(query: string): string {
     return query.toLowerCase().replace(/^#/, '');
 }
 
-/** Open the note `task` lives in and put the cursor on its line. */
-function openTask(app: App, task: TaskItem): void {
-    const leaf =
-        app.workspace.getMostRecentLeaf(app.workspace.rootSplit) ??
-        app.workspace.getLeaf(false);
-    void leaf.openFile(task.file, {
+/**
+ * Open the note `task` lives in and put the cursor on its line, in a new tab
+ * when `event` carries the command modifier.
+ */
+function openTask(app: App, task: TaskItem, event?: MouseEvent | KeyboardEvent): void {
+    openFileFromSearch(app, task.file, event, {
         eState: { line: task.line, cursor: { from: { line: task.line, ch: 0 } } },
     });
 }
@@ -235,8 +236,9 @@ function openTask(app: App, task: TaskItem): void {
 /**
  * Search tasks across all "taken" notes by text, with clickable tag filters.
  *
- * Choosing a task opens its note at the right line; ticking its checkbox writes
- * the marker straight back to the note without leaving the modal.
+ * Choosing a task opens its note at the right line — in the active tab, or in a
+ * new one with Mod+Enter; ticking its checkbox writes the marker straight back
+ * to the note without leaving the modal.
  */
 export class TaskSearchModal extends SuggestModal<TaskItem> {
     private items: TaskItem[];
@@ -249,6 +251,7 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
         this.filterTags = filterTags;
         this.setPlaceholder('Search tasks…');
         this.modalEl.addClass('ronald-task-search');
+        registerNewTabEnter(this);
 
         this.filters = new FilterBar({
             chips: filterTags,
@@ -441,8 +444,8 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
         });
     }
 
-    onChooseSuggestion(task: TaskItem): void {
-        openTask(this.app, task);
+    onChooseSuggestion(task: TaskItem, event: MouseEvent | KeyboardEvent): void {
+        openTask(this.app, task, event);
     }
 }
 
