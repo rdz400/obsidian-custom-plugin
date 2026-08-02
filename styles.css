@@ -4,13 +4,14 @@
     padding: 10px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 
 .ronald-project-search .suggestion-item.ronald-project-match {
     background: var(--background-secondary);
-    border-radius: 8px;
-    padding: 12px 14px;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: var(--font-small);
 }
 
 .ronald-project-search .suggestion-item.ronald-project-match.is-selected {
@@ -381,4 +382,101 @@
 /* The tag reads as the entry; its type is secondary, so it gets less room. */
 .ronald-setting-tag-row .setting-item-control input[placeholder='Type'] {
     flex: 0 1 8em;
+}
+
+/* Backlink search modal ("Search notes linking to this note" command). */
+
+.ronald-backlink-search .prompt-results {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ronald-backlink-search .suggestion-item.ronald-backlink-match {
+    background: var(--background-secondary);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: var(--font-small);
+}
+
+.ronald-backlink-search .suggestion-item.ronald-backlink-match.is-selected {
+    background: var(--background-modifier-hover);
+}
+
+.ronald-backlink-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ronald-backlink-title .ronald-backlink-icon {
+    display: flex;
+    color: var(--text-muted);
+}
+
+.ronald-backlink-title .ronald-backlink-icon .svg-icon {
+    width: 16px;
+    height: 16px;
+}
+
+/*
+ * The folder the note sits in, under its name: two notes can share a basename,
+ * and the path is what tells them apart.
+ */
+.ronald-backlink-path {
+    margin-left: 24px;
+    font-size: var(--font-smallest);
+    color: var(--text-faint);
+}
+
+/*
+ * Link count, sitting between the note name and the type pill and carrying the
+ * `margin-left: auto` that pushes both to the right edge. Rendered on every
+ * row, single-link ones included, and given a fixed width so the pills beside
+ * them line up; see the project search for the same reasoning.
+ */
+.ronald-backlink-count {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    width: 3em;
+    font-size: var(--font-smallest);
+    font-weight: var(--font-medium);
+    color: var(--text-muted);
+}
+
+.ronald-backlink-count .svg-icon {
+    width: 12px;
+    height: 12px;
+}
+
+.ronald-backlink-type {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--font-smallest);
+    font-weight: var(--font-medium);
+    padding: 2px 8px;
+    border-radius: 8px;
+    background: var(--background-modifier-border);
+    color: var(--text-muted);
+    text-transform: lowercase;
+}
+
+.ronald-backlink-type .svg-icon {
+    width: 12px;
+    height: 12px;
+}
+
+.ronald-backlink-type-project {
+    background: rgba(var(--color-blue-rgb), 0.15);
+    color: var(--color-blue);
+}
+
+.ronald-backlink-type-taken {
+    background: rgba(var(--color-green-rgb), 0.15);
+    color: var(--color-green);
 }

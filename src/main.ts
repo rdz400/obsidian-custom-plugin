@@ -8,6 +8,7 @@ import {
     debounce,
 } from 'obsidian';
 
+import { searchBacklinks } from './backlinksearch';
 import {
     moveLinesToEnd,
     toggleTag,
@@ -244,6 +245,13 @@ export default class RonaldPlugin extends Plugin {
         );
 
         this.addRibbonIcon('search', 'Search projects', () => void searchProjects(this.app));
+
+        this.addCommand({
+            id: 'search-backlinks',
+            name: 'Search notes linking to this note',
+            icon: 'link',
+            callback: () => searchBacklinks(this.app),
+        });
 
         this.registerStatusBar();
     }
