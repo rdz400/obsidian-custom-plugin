@@ -59,3 +59,24 @@ export function registerNewTabEnter<T>(modal: SuggestModal<T>): void {
         return false;
     });
 }
+
+/**
+ * True when `event` asks for an alternate action tied to Alt — Option on
+ * macOS — rather than the default one.
+ */
+export function wantsAltAction(event?: MouseEvent | KeyboardEvent): boolean {
+    return event?.altKey ?? false;
+}
+
+/**
+ * Make Alt+Enter (Option+Enter on macOS) choose the highlighted suggestion,
+ * so `onChooseSuggestion` runs with a modified event and can branch on
+ * `wantsAltAction`. See `registerNewTabEnter` for why this is bound on the
+ * modal's scope rather than left to Obsidian's own keymap.
+ */
+export function registerAltEnter<T>(modal: SuggestModal<T>): void {
+    modal.scope.register(['Alt'], 'Enter', (event) => {
+        modal.selectActiveSuggestion(event);
+        return false;
+    });
+}

@@ -8,7 +8,12 @@ import {
 } from 'obsidian';
 
 import { FilterBar, FilterChip } from './filterbar';
-import { openFileFromSearch, registerNewTabEnter } from './openfile';
+import {
+    openFileFromSearch,
+    registerAltEnter,
+    registerNewTabEnter,
+    wantsAltAction,
+} from './openfile';
 
 /** Statuses that mark a project as no longer running. */
 const CLOSED_PROJECT_STATUSES = ['klaar', 'geannuleerd'];
@@ -193,7 +198,9 @@ export async function collectOpenProjects(app: App): Promise<ProjectItem[]> {
 
 /**
  * Search projects by note name and show their status and open task count.
- * Choosing a project opens the note, in a new tab with Mod+Enter.
+ * Choosing a project opens the note, in a new tab with Mod+Enter, or with
+ * Alt+Enter copies a wikilink to it instead — `onChoose` decides which from
+ * the event it's handed.
  */
 export class ProjectSearchModal extends SuggestModal<ProjectItem> {
     private items: ProjectItem[];
@@ -213,6 +220,7 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
         this.setPlaceholder('Search projects…');
         this.modalEl.addClass('ronald-project-search');
         registerNewTabEnter(this);
+        registerAltEnter(this);
 
         this.statusFilters = new FilterBar({
             chips: STATUS_FILTERS,
@@ -403,8 +411,9 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
 
 /**
  * Search open projects by note name in a modal that shows their status and
- * open task count, and open the chosen note — in the active tab, or in a new
- * one with Mod+Enter.
+ * open task count. Choosing a project opens its note — in the active tab, or
+ * in a new one with Mod+Enter — while Alt+Enter (Option+Enter on macOS)
+ * copies a wikilink to it to the clipboard instead.
  */
 export async function searchProjects(app: App): Promise<void> {
     const projects = await collectOpenProjects(app);
@@ -415,6 +424,13 @@ export async function searchProjects(app: App): Promise<void> {
     }
 
     new ProjectSearchModal(app, projects, (item, event) => {
+        if (wantsAltAction(event)) {
+            const sourcePath = app.workspace.getActiveFile()?.path ?? '';
+            const link = app.fileManager.generateMarkdownLink(item.file, sourcePath);
+            void navigator.clipboard.writeText(link);
+            new Notice(`Copied link to ${item.file.basename}`);
+            return;
+        }
         openFileFromSearch(app, item.file, event);
     }).open();
 }
