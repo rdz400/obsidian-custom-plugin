@@ -7,6 +7,7 @@ import {
     setIcon,
 } from 'obsidian';
 
+import { getTemplatesFolder } from './commands';
 import { FilterBar, FilterChip } from './filterbar';
 import {
     openFileFromSearch,
@@ -177,9 +178,15 @@ function toProjectItem(
 export async function collectOpenProjects(app: App): Promise<ProjectItem[]> {
     const taskCounts = await collectOpenTaskCounts(app);
 
+    const templatesFolder = getTemplatesFolder(app);
+    const isTemplate = (file: TFile): boolean =>
+        templatesFolder !== null &&
+        (file.path === templatesFolder || file.path.startsWith(`${templatesFolder}/`));
+
     return app.vault
         .getMarkdownFiles()
         .filter((file) => {
+            if (isTemplate(file)) return false;
             const fm = app.metadataCache.getFileCache(file)?.frontmatter;
             if (fm?.type !== 'project') return false;
             const status: unknown = fm.status;
