@@ -480,3 +480,14 @@
     background: rgba(var(--color-green-rgb), 0.15);
     color: var(--color-green);
 }
+
+/*
+ * Outgoing link search ("Search links in this note"), which borrows the
+ * backlink rows. A URL is far longer than a note name, so the name is cut off
+ * at the row's width instead of pushing the link count off the right edge.
+ */
+.ronald-outgoing-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
