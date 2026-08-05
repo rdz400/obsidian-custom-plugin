@@ -27,9 +27,17 @@ export interface OutgoingLinkItem {
     file?: TFile;
     /** The URL an external link points at; absent for the other kinds. */
     url?: string;
-    /** What the row is searched and sorted by: note name, URL, or link text. */
+    /**
+     * What the row is searched and sorted by: the note name, the link text of
+     * an external link that has one, and otherwise the URL or raw link text.
+     */
     name: string;
-    /** Second line under the name: the note's folder, or the URL's host. */
+    /**
+     * Second line under the name: the note's folder, or the URL. A labelled
+     * external link shows the whole address here, since the name no longer
+     * carries it; an unlabelled one shows just the host, which the name repeats
+     * in full anyway.
+     */
     detail: string;
     /** How many times the note links to this destination. */
     count: number;
@@ -51,37 +59,156 @@ const KIND_ICONS: Record<OutgoingLinkItem['kind'], string> = {
 /** Schemes treated as external links rather than as vault paths. */
 const EXTERNAL_LINK_RE = /^[a-z][a-z0-9+.-]*:\/\//i;
 
-/** A `mailto:` or `tel:` link has no `//` but is external all the same. */
+/**
+ * Schemes that carry no `//` but are external all the same. Matched as a whole
+ * scheme so a note called `tel: numbers` or a Windows-style `c:` is not caught.
+ */
 const SCHEME_ONLY_RE = /^(mailto|tel):/i;
+
+/**
+ * A protocol-relative URL, as pasted from a browser that hid the scheme. Two
+ * leading slashes never start a vault path, so this is always external.
+ */
+const PROTOCOL_RELATIVE_RE = /^\/\/[^/]/;
 
 /** True when a link's target is a URL rather than a note in the vault. */
 function isExternal(link: string): boolean {
-    return EXTERNAL_LINK_RE.test(link) || SCHEME_ONLY_RE.test(link);
+    return (
+        EXTERNAL_LINK_RE.test(link) ||
+        SCHEME_ONLY_RE.test(link) ||
+        PROTOCOL_RELATIVE_RE.test(link)
+    );
 }
 
 /**
- * Bare URLs written straight into the text, which the metadata cache does not
- * record: only `[text](url)` and `<url>` reach `cache.links`, so an autolinked
- * `https://…` in a paragraph would otherwise be missed.
+ * The host of a URL, lowercased, or '' when it has none or does not parse.
  *
- * Trailing punctuation is trimmed because a URL at the end of a sentence
- * usually swallows the period, and the closing paren of "(see https://x)" is
- * not part of the address.
+ * A scheme-only link has no host, so its target is shown instead: `mailto:` and
+ * `tel:` rows would otherwise carry a blank second line.
  */
-const BARE_URL_RE = /(?<![(<[]|\]\()\bhttps?:\/\/[^\s<>()[\]"'`]+/gi;
-
-/** The host of a URL, or '' when it has none or does not parse. */
 function urlHost(url: string): string {
     try {
-        return new URL(url).host;
+        const parsed = new URL(url);
+        if (parsed.host) return parsed.host.toLowerCase();
+        // `mailto:a@b.com` → `a@b.com`, `tel:+31…` → `+31…`.
+        return parsed.pathname || '';
     } catch {
         return '';
+    }
+}
+
+/**
+ * The key a URL is counted under, so the same destination written two ways
+ * folds into one row: the scheme and host are case-insensitive per RFC 3986,
+ * while the path is not and is left alone. A trailing slash on an empty path is
+ * dropped, since `https://x.com` and `https://x.com/` are the same page.
+ */
+function urlKey(url: string): string {
+    try {
+        const parsed = new URL(url);
+        parsed.protocol = parsed.protocol.toLowerCase();
+        parsed.host = parsed.host.toLowerCase();
+        if (parsed.pathname === '/') parsed.pathname = '';
+        return parsed.href;
+    } catch {
+        return url;
     }
 }
 
 /** Strip the `#heading`/`^block` and `|display` tails from a wikilink target. */
 function linkPath(link: string): string {
     return link.split('#')[0]?.split('|')[0]?.trim() ?? '';
+}
+
+/**
+ * Markdown links and autolinks, which the metadata cache does not record when
+ * they point outside the vault: Obsidian puts only internal links in
+ * `cache.links`, so a note whose sole link is `[Google](https://google.nl/)`
+ * has no `links` field at all. These have to be read from the text.
+ *
+ * Three shapes, in one pass so their positions interleave correctly:
+ *
+ * - `[label](target)`, with the label group allowing one level of nesting so
+ *   an image link `[![alt](img)](href)` is seen as a link to `href`.
+ * - `[label](<target>)`, where the angle brackets let a target hold spaces.
+ * - `<https://…>`, a bare autolink.
+ *
+ * An optional `"title"` after the target is matched so it is not mistaken for
+ * part of the address.
+ */
+const MD_LINK_RE = new RegExp(
+    [
+        // [label](<target> "title")
+        /(?<bangA>!?)\[(?<labelA>(?:[^[\]]|\[[^[\]]*\])*)\]\(\s*<(?<angled>[^<>]*)>(?:\s+(?:"[^"]*"|'[^']*'|\([^()]*\)))?\s*\)/
+            .source,
+        // [label](target "title") — target runs to whitespace or the closing
+        // paren, with balanced pairs allowed so Wikipedia's `Foo_(bar)` survives.
+        /(?<bangB>!?)\[(?<labelB>(?:[^[\]]|\[[^[\]]*\])*)\]\(\s*(?<plain>(?:[^\s()\\]|\\.|\([^()]*\))+)(?:\s+(?:"[^"]*"|'[^']*'|\([^()]*\)))?\s*\)/
+            .source,
+        // <https://…>
+        /<(?<auto>[a-z][a-z0-9+.-]*:[^<>\s]+)>/.source,
+    ].join('|'),
+    'gi',
+);
+
+/**
+ * Spans the link scan must not look inside, blanked to spaces so every offset
+ * after them still lines up with the original text.
+ *
+ * Code is masked because a link inside it is being shown, not followed, and
+ * Obsidian does not render it as a link. Fenced and indented code come from the
+ * section cache — the same parse Obsidian itself did — while inline spans have
+ * no section of their own and are matched here.
+ *
+ * Wikilinks are masked too: they are already counted from `cache.links`, and
+ * `[[Note]]` would otherwise also read as a markdown link to `Note`.
+ */
+function maskUnlinkedSpans(
+    content: string,
+    cache: CachedMetadata | null,
+    bodyStart: number,
+): string {
+    const chars = [...content];
+    const blank = (from: number, to: number): void => {
+        for (let i = Math.max(from, bodyStart); i < Math.min(to, chars.length); i++) {
+            // Newlines survive so line numbers stay correct after masking.
+            if (chars[i] !== '\n') chars[i] = ' ';
+        }
+    };
+
+    for (const section of cache?.sections ?? []) {
+        if (section.type === 'code') {
+            blank(section.position.start.offset, section.position.end.offset);
+        }
+    }
+
+    for (const link of [...(cache?.links ?? []), ...(cache?.embeds ?? [])]) {
+        const start = link.position.start.offset;
+        blank(start, start + (link.original?.length ?? 0));
+    }
+
+    // Inline code spans. Matched with a backtick run of equal length on both
+    // sides, as CommonMark requires, so a stray backtick in prose does not open
+    // a span that swallows the rest of the note.
+    //
+    // A span used as a link label — ``[`code`](https://…)`` — is left alone:
+    // blanking it would hide the label from the scan and cost the row its name,
+    // while the link itself is still a link and must be found. A span holding a
+    // whole link — ``` `[L](https://…)` ``` — is still blanked, since there the
+    // link is being shown rather than followed.
+    const text = chars.join('');
+    return text.replace(/(?<!`)(`+)(?!`)[\s\S]*?(?<!`)\1(?!`)/g, (whole, _t, at: number) => {
+        const open = text.lastIndexOf('[', at);
+        const isLabel =
+            open !== -1 &&
+            // Nothing between the `[` and this span may close the label, and
+            // the span must have no brackets of its own — otherwise the link
+            // lives inside the code rather than the code inside the label.
+            !/[\][]/.test(text.slice(open + 1, at)) &&
+            !/[[\]]/.test(whole) &&
+            /^\]\(/.test(text.slice(at + whole.length));
+        return isLabel ? whole : whole.replace(/[^\n]/g, ' ');
+    });
 }
 
 /**
@@ -112,6 +239,59 @@ function addLink(
     }
 }
 
+/**
+ * The plain text of a link label, so `[**Google** docs](…)` reads as
+ * "Google docs" rather than carrying its markup into the list.
+ *
+ * A label that is only an image, as in `[![logo](logo.png)](https://…)`, gives
+ * '' rather than the alt text: the link is wrapping a picture, and "logo"
+ * names the image rather than the destination, so the row keeps its URL.
+ */
+function labelText(label: string): string {
+    const text = label
+        .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+        .replace(/[*_~`]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    return text;
+}
+
+/**
+ * Record one URL, folded in with any other spelling of the same address.
+ *
+ * A protocol-relative `//host/path` is opened with https, since that is what a
+ * browser does for a page served over https and there is no scheme to inherit.
+ *
+ * `label` is the link text of a markdown link, shown in place of the address:
+ * a row reading "Google" is easier to pick out than one reading the URL. The
+ * first label wins when the same URL is linked twice under different words, so
+ * the row keeps the name it was listed under rather than changing on a later
+ * mention.
+ */
+function addExternal(
+    items: Map<string, OutgoingLinkItem>,
+    target: string,
+    line?: number,
+    label?: string,
+): void {
+    const url = PROTOCOL_RELATIVE_RE.test(target) ? `https:${target}` : target;
+    const text = label !== undefined ? labelText(label) : '';
+    addLink(
+        items,
+        `url:${urlKey(url)}`,
+        () => ({
+            kind: 'external',
+            url,
+            // Shown as written, so the row reads the way the note does even
+            // though same-address rows were folded together by their key.
+            name: text || target,
+            detail: text ? url : urlHost(url),
+            count: 1,
+        }),
+        line,
+    );
+}
+
 /** Record one cached reference — internal or external — under its destination. */
 function addReference(
     app: App,
@@ -124,18 +304,7 @@ function addReference(
     if (target === '') return;
 
     if (isExternal(target)) {
-        addLink(
-            items,
-            `url:${target}`,
-            () => ({
-                kind: 'external',
-                url: target,
-                name: target,
-                detail: urlHost(target),
-                count: 1,
-            }),
-            line,
-        );
+        addExternal(items, target, line);
         return;
     }
 
@@ -184,8 +353,13 @@ const KIND_ORDER: OutgoingLinkItem['kind'][] = ['note', 'external', 'unresolved'
  * frontmatter links are included too but have no position, so a destination
  * linked only from the frontmatter opens at the top of the note.
  *
- * Bare URLs are found by scanning `content`, since the cache does not record
- * them. Their line comes from counting newlines up to the match.
+ * Internal links come from the metadata cache. External ones are scanned out of
+ * `content`, because Obsidian caches only links that stay inside the vault: a
+ * note whose one link is `[Google](https://google.nl/)` has no cached links at
+ * all, so the cache cannot be the source for those.
+ *
+ * A bare `https://…` typed into a paragraph is deliberately not listed — only
+ * links written as `[text](url)`, `<url>` or `[[wikilink]]` count.
  */
 export function collectOutgoingLinks(
     app: App,
@@ -203,28 +377,39 @@ export function collectOutgoingLinks(
         addReference(app, items, link, file.path);
     }
 
+    // Reference-link definitions, `[ref]: https://…`. Obsidian does record
+    // these, with a position, so they carry a line to jump to.
+    for (const ref of cache?.referenceLinks ?? []) {
+        const target = ref.link.trim();
+        if (target !== '' && isExternal(target)) {
+            addExternal(items, target, ref.position?.start.line);
+        }
+    }
+
     // Frontmatter is skipped: a `source: https://…` property is a value, not a
     // link, and counting it here would list every note's own metadata.
     const bodyStart = cache?.frontmatterPosition
         ? cache.frontmatterPosition.end.offset
         : 0;
 
-    for (const match of content.slice(bodyStart).matchAll(BARE_URL_RE)) {
-        const url = match[0].replace(/[.,;:!?]+$/, '');
+    const body = maskUnlinkedSpans(content, cache, bodyStart);
+
+    for (const match of body.slice(bodyStart).matchAll(MD_LINK_RE)) {
+        const groups = match.groups ?? {};
+        const raw = groups['angled'] ?? groups['plain'] ?? groups['auto'] ?? '';
+        // A markdown link may also point inside the vault — `[text](Note.md)` —
+        // so only the external ones are taken here; the cache already holds the
+        // internal ones, with the resolution that turns them into notes.
+        const target = raw.replace(/\\([()[\]\\])/g, '$1').trim();
+        if (target === '' || !isExternal(target)) continue;
         const offset = bodyStart + (match.index ?? 0);
         const line = content.slice(0, offset).split('\n').length - 1;
-        addLink(
-            items,
-            `url:${url}`,
-            () => ({
-                kind: 'external',
-                url,
-                name: url,
-                detail: urlHost(url),
-                count: 1,
-            }),
-            line,
-        );
+        // An image is shown, not named: `![alt](…)` has alt text rather than a
+        // label, and an autolink has none at all, so both keep the URL as their
+        // name. Only a real `[label](…)` renames the row.
+        const bang = groups['bangA'] ?? groups['bangB'] ?? '';
+        const label = groups['labelA'] ?? groups['labelB'];
+        addExternal(items, target, line, bang === '' ? label : undefined);
     }
 
     return [...items.values()].sort(
