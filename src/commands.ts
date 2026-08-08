@@ -1,13 +1,13 @@
 import {
     App,
     Editor,
-    EditorPosition,
     ListItemCache,
     MarkdownView,
     Notice,
     TFile,
     normalizePath,
 } from 'obsidian';
+import { selectedLineRange } from './editorcommands';
 import { toggleCheckbox } from './functions';
 import {
     NoteSuggestModal,
@@ -46,11 +46,10 @@ function removeLines(editor: Editor, from: number, to: number): void {
 
 /** Return the text of the currently selected lines (full lines, not partial selections). */
 function getSelectedLinesText(editor: Editor): string {
-    const from = editor.getCursor('from');
-    const to = editor.getCursor('to');
+    const { from, to } = selectedLineRange(editor);
     return editor.getRange(
-        { line: from.line, ch: 0 },
-        { line: to.line, ch: editor.getLine(to.line).length },
+        { line: from, ch: 0 },
+        { line: to, ch: editor.getLine(to).length },
     );
 }
 
@@ -341,17 +340,32 @@ export async function moveFinishedTasksToKlaar(app: App): Promise<void> {
 
 /** Move the selected lines to the end of the document. */
 export function moveLinesToEnd(editor: Editor): void {
-    const from = editor.getCursor('from');
-    const to = editor.getCursor('to');
+    const { from, to } = selectedLineRange(editor);
     const text = getSelectedLinesText(editor);
 
     const lastLine = editor.lastLine();
+    // Append after the last line that has content, so a trailing empty line
+    // (notes usually end with a newline) doesn't become a blank gap above the
+    // moved text — and isn't consumed either.
+    const endsEmpty = editor.getLine(lastLine).length === 0 && lastLine > to;
+    const anchor = endsEmpty ? lastLine - 1 : lastLine;
     editor.replaceRange(
         '\n' + text,
-        { line: lastLine, ch: editor.getLine(lastLine).length },
+        { line: anchor, ch: editor.getLine(anchor).length },
     );
 
-    removeLines(editor, from.line, to.line);
+    removeLines(editor, from, to);
+
+    // Keep the moved lines selected. After the removal the block sits at the
+    // end of the document, so count back from the last line that has content
+    // (a trailing newline leaves an empty line below the block).
+    let end = editor.lastLine();
+    if (editor.getLine(end).length === 0 && end > 0) end--;
+    const start = end - (to - from);
+    editor.setSelection(
+        { line: start, ch: 0 },
+        { line: end, ch: editor.getLine(end).length },
+    );
 }
 
 /** Tags offered by {@link insertTag}, inserted at the end of the current line. */
@@ -359,12 +373,11 @@ const INSERT_TAGS = ['buiten', 'prio', 'vandaag', 'computer'];
 
 /** Open a modal to pick a tag and toggle it at the end of each selected list item. */
 export function insertTag(app: App, editor: Editor): void {
-    const from: EditorPosition = editor.getCursor('from');
-    const to: EditorPosition = editor.getCursor('to');
+    const { from, to } = selectedLineRange(editor);
 
     new TagSuggestModal(app, INSERT_TAGS, (tag: string) => {
         const tagRe = new RegExp(`(?<!\\w)#${tag}\\b`);
-        for (let i = from.line; i <= to.line; i++) {
+        for (let i = from; i <= to; i++) {
             const line = editor.getLine(i);
             if (!/^\s*[-*]\s/.test(line)) continue;
             if (tagRe.test(line)) {
@@ -385,9 +398,8 @@ export function insertTag(app: App, editor: Editor): void {
 export function toggleTag(editor: Editor, tag: string): void {
     const present = new RegExp(`(?<!\\w)#${tag}\\b`);
     const strip = new RegExp(` ?#${tag}\\b ?`, 'g');
-    const from: EditorPosition = editor.getCursor('from');
-    const to: EditorPosition = editor.getCursor('to');
-    for (let i = from.line; i <= to.line; i++) {
+    const { from, to } = selectedLineRange(editor);
+    for (let i = from; i <= to; i++) {
         const line = editor.getLine(i);
         if (!/^\s*[-*]\s/.test(line)) continue;
         if (present.test(line)) {
@@ -404,8 +416,7 @@ export function toggleTag(editor: Editor, tag: string): void {
 
 /** Move the selected lines to a chosen note via a fuzzy-search modal. */
 export function moveLinesToNote(app: App, editor: Editor): void {
-    const from = editor.getCursor('from');
-    const to = editor.getCursor('to');
+    const { from, to } = selectedLineRange(editor);
     const text = getSelectedLinesText(editor);
 
     new NoteSuggestModal(app, async (file: TFile) => {
@@ -413,7 +424,7 @@ export function moveLinesToNote(app: App, editor: Editor): void {
         const separator = content.length > 0 && !content.endsWith('\n') ? '\n' : '';
         await app.vault.modify(file, content + separator + text + '\n');
 
-        removeLines(editor, from.line, to.line);
+        removeLines(editor, from, to);
 
         new Notice(`Moved to ${file.basename}`);
     }).open();

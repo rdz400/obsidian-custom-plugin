@@ -25,6 +25,11 @@ import {
     mergeTakenNotes,
     openMostRecentTaakNote,
 } from './commands';
+import {
+    extendSelectionByLine,
+    moveLinesToTop,
+    selectLine,
+} from './editorcommands';
 import { searchOutgoingLinks } from './outgoinglinksearch';
 import { searchProjects } from './projectsearch';
 import {
@@ -137,6 +142,34 @@ export default class RonaldPlugin extends Plugin {
             name: 'Move line(s) to end of file',
             icon: 'chevrons-down',
             editorCallback: (editor: Editor) => moveLinesToEnd(editor),
+        });
+
+        this.addCommand({
+            id: 'select-line',
+            name: 'Select whole line',
+            icon: 'text-cursor-input',
+            editorCallback: (editor: Editor) => selectLine(editor),
+        });
+
+        this.addCommand({
+            id: 'extend-selection-line-up',
+            name: 'Extend selection to line above',
+            icon: 'chevron-up',
+            editorCallback: (editor: Editor) => extendSelectionByLine(editor, -1),
+        });
+
+        this.addCommand({
+            id: 'extend-selection-line-down',
+            name: 'Extend selection to line below',
+            icon: 'chevron-down',
+            editorCallback: (editor: Editor) => extendSelectionByLine(editor, 1),
+        });
+
+        this.addCommand({
+            id: 'move-lines-to-top',
+            name: 'Move line(s) to top of file',
+            icon: 'chevrons-up',
+            editorCallback: (editor: Editor) => moveLinesToTop(editor),
         });
 
         for (const tag of ['nu', 'misschien', 'vandaag']) {
