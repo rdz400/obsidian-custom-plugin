@@ -1,4 +1,4 @@
-import { Editor, EditorPosition, Notice } from 'obsidian';
+import { Editor, EditorChange, EditorPosition, Notice } from 'obsidian';
 
 /**
  * Editor conveniences: line selection and moving lines around.
@@ -132,16 +132,27 @@ export function moveLinesToTop(editor: Editor): void {
 
     const text = editor.getRange(lineStart(from), lineEnd(editor, to));
 
-    // Remove first, from the bottom, so the insert position stays valid: the
-    // removed block sits entirely below `target`.
-    if (to < editor.lastLine()) {
-        editor.replaceRange('', lineStart(from), lineStart(to + 1));
-    } else {
-        // Last line of the note: drop the newline before the block instead.
-        editor.replaceRange('', lineEnd(editor, from - 1), lineEnd(editor, to));
-    }
+    // The removal drops a surrounding newline so no blank line is left behind:
+    // the one after the block, or — when the block ends the note — the one
+    // before it.
+    const removal: EditorChange =
+        to < editor.lastLine()
+            ? { from: lineStart(from), to: lineStart(to + 1), text: '' }
+            : {
+                  from: lineEnd(editor, from - 1),
+                  to: lineEnd(editor, to),
+                  text: '',
+              };
 
-    editor.replaceRange(text + '\n', lineStart(target));
+    // Both changes are applied as one transaction so a single undo reverts the
+    // whole move. Their positions are relative to the document as it is now, so
+    // the removal does not shift the insertion point.
+    editor.transaction({
+        changes: [
+            removal,
+            { from: lineStart(target), to: lineStart(target), text: text + '\n' },
+        ],
+    });
 
     selectLines(editor, target, target + (to - from));
 }
