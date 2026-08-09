@@ -277,45 +277,37 @@
 }
 
 /*
- * Depth mark: a nested task is marked so it reads as a subtask at a glance,
- * without having to look at the number.
+ * Depth badge: the number carries the nesting on its own — the row itself is
+ * left unmarked, so nothing shifts or stripes as tasks nest.
  *
- * This stays in the badge's own greyscale — border background, muted text — and
- * separates the levels by weight rather than by hue: level 2 lifts to the theme's
- * stronger border, level 3 to its hover shade with normal-weight text. A colour
- * here would read as a category and would clash with the tag chips, which are
- * the only thing in the row that is allowed to be blue.
+ * It stays in the badge's own greyscale and separates the levels by weight
+ * rather than by hue: a top-level task is the quiet common case, level 2 lifts
+ * to the theme's stronger border with normal-weight text, level 3 to its hover
+ * shade in full contrast and bold. A colour here would read as a category and
+ * would clash with the tag chips, which are the only thing in the row that is
+ * allowed to be blue.
  *
- * Top-level tasks are left unmarked: they are the common case, and marking them
- * would make the mark mean "task" rather than "nested". Only levels 2 and 3 are
- * styled; `renderSuggestion` clamps to 3, so anything deeper — rare in practice
- * — shares the level 3 mark.
- *
- * The bar is an inset shadow rather than a border so it costs no layout: a
- * border would shift the row's text by its width and follow the padding box,
- * while the shadow sits inside the existing border-radius.
+ * `renderSuggestion` clamps to 3, so anything deeper — rare in practice —
+ * shares the level 3 badge.
  */
-.ronald-task-match[data-depth]:not([data-depth='1']) {
-    box-shadow: inset 2px 0 0 var(--background-modifier-border-hover);
-}
-
 .ronald-task-match[data-depth='2'] .ronald-task-depth {
     background: var(--background-modifier-border-hover);
+    color: var(--text-normal);
 }
 
 .ronald-task-match[data-depth='3'] .ronald-task-depth {
     background: var(--background-modifier-hover);
     color: var(--text-normal);
+    font-weight: var(--font-bold);
+    box-shadow: inset 0 0 0 1px var(--background-modifier-border-hover);
 }
 
-/* A finished task is muted everywhere else, so the mark steps back too. */
-.ronald-task-match.is-done[data-depth]:not([data-depth='1']) {
-    box-shadow: inset 2px 0 0 var(--background-modifier-border);
-}
-
+/* A finished task is muted everywhere else, so the badge steps back too. */
 .ronald-task-match.is-done[data-depth]:not([data-depth='1']) .ronald-task-depth {
     background: var(--background-modifier-border);
     color: var(--text-muted);
+    font-weight: inherit;
+    box-shadow: none;
 }
 
 .ronald-task-body {

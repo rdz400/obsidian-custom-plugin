@@ -233,6 +233,19 @@ function openTask(app: App, task: TaskItem, event?: MouseEvent | KeyboardEvent):
     });
 }
 
+/** How the modal treats tasks that are already ticked off. */
+export interface TaskSearchOptions {
+    /**
+     * Whether finished tasks take part in the search at all.
+     *
+     * There is deliberately no chip for this: the answer is nearly always "no",
+     * and a chip would spend a shortcut on a switch that is never flipped. It
+     * stays a parameter so showing them again is a one-line change at the call
+     * site rather than a rewrite here.
+     */
+    showDone?: boolean;
+}
+
 /**
  * Search tasks across all "taken" notes by text, with clickable tag filters.
  *
@@ -245,9 +258,17 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
     private readonly filters: FilterBar;
     private readonly filterTags: readonly FilterChip[];
 
-    constructor(app: App, items: TaskItem[], filterTags: readonly FilterChip[]) {
+    constructor(
+        app: App,
+        items: TaskItem[],
+        filterTags: readonly FilterChip[],
+        options: TaskSearchOptions = {},
+    ) {
         super(app);
-        this.items = items;
+        // Filtered once here rather than on every keystroke: a task ticked
+        // inside the modal stays on screen until it is reopened, so the row the
+        // user just clicked does not vanish from under the cursor.
+        this.items = options.showDone === true ? items : items.filter((task) => !task.done);
         this.filterTags = filterTags;
         this.setPlaceholder('Search tasks…');
         this.modalEl.addClass('ronald-task-search');
@@ -361,7 +382,7 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
         el.addClass('ronald-task-match');
         if (task.done) el.addClass('is-done');
 
-        // Drives the depth mark in CSS. Nesting has no fixed limit but the
+        // Drives the depth badge in CSS. Nesting has no fixed limit but the
         // shades run out, so anything deeper is styled as the last level.
         el.dataset.depth = String(Math.min(task.depth, 3));
 
@@ -458,6 +479,7 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
 export async function searchTasks(
     app: App,
     filterTags: readonly FilterChip[],
+    options: TaskSearchOptions = {},
 ): Promise<void> {
     const tasks = await collectTakenTasks(app);
 
@@ -467,5 +489,5 @@ export async function searchTasks(
     }
 
     const chips = filterTags.filter((chip) => chip.value.length > 0);
-    new TaskSearchModal(app, tasks, chips).open();
+    new TaskSearchModal(app, tasks, chips, options).open();
 }
