@@ -244,6 +244,10 @@ export interface TaskSearchOptions {
      * site rather than a rewrite here.
      */
     showDone?: boolean;
+    /** Text to put in the search field, as if the user had typed it. */
+    query?: string;
+    /** Tag values to switch on up front; values with no chip are ignored. */
+    activeTags?: readonly string[];
 }
 
 /**
@@ -257,6 +261,7 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
     private items: TaskItem[];
     private readonly filters: FilterBar;
     private readonly filterTags: readonly FilterChip[];
+    private readonly initialQuery: string;
 
     constructor(
         app: App,
@@ -280,9 +285,36 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
         });
         this.mountFilters();
 
+        // Toggled before the modal is on screen, so the first render already
+        // shows the preset selection; `toggle` drops values with no chip.
+        for (const tag of options.activeTags ?? []) {
+            this.filters.toggle(tag);
+        }
+
+        this.initialQuery = options.query ?? '';
+
         // `getSuggestions` keeps the counts current from the first keystroke
         // on, but the bar is on screen before that, so seed it here.
-        this.filters.setCounts(this.tagCounts(''));
+        this.filters.setCounts(this.tagCounts(normaliseQuery(this.initialQuery)));
+    }
+
+    /**
+     * Seed the search field once the modal is up.
+     *
+     * The value has to be written after `super.onOpen` has run: Obsidian renders
+     * the empty result list on open, and setting the text before that would be
+     * overwritten by it. `rerunSearch` then produces the matches, which typing
+     * would otherwise be needed for.
+     */
+    onOpen(): void {
+        void super.onOpen();
+        if (this.initialQuery.length === 0) return;
+
+        this.inputEl.value = this.initialQuery;
+        // Leaves the cursor at the end so the query reads as typed and can be
+        // edited or cleared straight away.
+        this.inputEl.setSelectionRange(this.initialQuery.length, this.initialQuery.length);
+        this.rerunSearch();
     }
 
     /**

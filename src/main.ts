@@ -38,6 +38,7 @@ import {
     type RonaldSettings,
 } from './settings';
 import { searchTasks } from './tasksearch';
+import { buildTasksUri, registerTasksUriHandler } from './urihandler';
 
 export default class RonaldPlugin extends Plugin {
     settings!: RonaldSettings;
@@ -292,6 +293,19 @@ export default class RonaldPlugin extends Plugin {
             name: 'Search links in this note',
             icon: 'external-link',
             callback: () => void searchOutgoingLinks(this.app),
+        });
+
+        registerTasksUriHandler(this, () => this.settings.taskFilterTags);
+
+        this.addCommand({
+            id: 'copy-task-search-uri',
+            name: 'Copy link to task search',
+            icon: 'link-2',
+            callback: () => {
+                const uri = buildTasksUri();
+                void navigator.clipboard.writeText(uri);
+                new Notice(`Copied ${uri}`);
+            },
         });
 
         this.registerStatusBar();
