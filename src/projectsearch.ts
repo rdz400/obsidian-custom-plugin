@@ -12,6 +12,7 @@ import { FilterBar, FilterChip } from './filterbar';
 import {
     openFileFromSearch,
     registerAltEnter,
+    registerLongPressShift,
     registerNewTabEnter,
     registerShiftEnter,
     wantsAltAction,
@@ -231,6 +232,9 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
         registerNewTabEnter(this);
         registerAltEnter(this);
         registerShiftEnter(this);
+        // The touch equivalent of Shift+Enter, for mobile where no modifier
+        // key can be held; it arrives as a shift-flagged click either way.
+        registerLongPressShift(this);
 
         this.statusFilters = new FilterBar({
             chips: STATUS_FILTERS,

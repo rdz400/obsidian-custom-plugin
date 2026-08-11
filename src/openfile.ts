@@ -101,3 +101,90 @@ export function registerShiftEnter<T>(modal: SuggestModal<T>): void {
         return false;
     });
 }
+
+/** How long a touch must be held before it counts as a long press. */
+const LONG_PRESS_MS = 500;
+
+/** How far a touch may drift and still count as a press rather than a scroll. */
+const LONG_PRESS_SLOP_PX = 10;
+
+/**
+ * Make a long press on a suggestion do what Shift+Enter does, for touch devices
+ * where no modifier key can be held.
+ *
+ * The press is turned into a synthetic shift-flagged `click` on the row, so it
+ * travels the same path a real click does and reaches `onChooseSuggestion` as a
+ * `MouseEvent` that `wantsShiftAction` recognises. Nothing else has to know a
+ * touch was involved: a modal that branches on the shift modifier gets the
+ * gesture for free, and one that doesn't is unaffected.
+ *
+ * The listener is delegated from the result container rather than bound per row,
+ * so it survives the list being rebuilt on every keystroke.
+ *
+ * A press is abandoned when the finger drifts more than `LONG_PRESS_SLOP_PX`,
+ * so scrolling the results never fires it, and the timer is cleared on `touchend`
+ * and `touchcancel` so a quick tap stays an ordinary open.
+ */
+export function registerLongPressShift<T>(modal: SuggestModal<T>): void {
+    const container = modal.resultContainerEl;
+    let timer: number | undefined;
+    let startX = 0;
+    let startY = 0;
+
+    const cancel = (): void => {
+        if (timer === undefined) return;
+        window.clearTimeout(timer);
+        timer = undefined;
+    };
+
+    container.addEventListener(
+        'touchstart',
+        (event) => {
+            cancel();
+
+            const touch = event.touches[0];
+            // Only a single-finger press is a long press; a second finger means
+            // a pinch or scroll gesture the list should keep for itself.
+            if (!touch || event.touches.length !== 1) return;
+
+            const row = (event.target as HTMLElement | null)?.closest<HTMLElement>(
+                '.suggestion-item',
+            );
+            if (!row) return;
+
+            startX = touch.clientX;
+            startY = touch.clientY;
+
+            timer = window.setTimeout(() => {
+                timer = undefined;
+                row.dispatchEvent(
+                    new MouseEvent('click', {
+                        bubbles: true,
+                        cancelable: true,
+                        shiftKey: true,
+                    }),
+                );
+            }, LONG_PRESS_MS);
+        },
+        // Passive: the handler never calls `preventDefault`, so the list keeps
+        // scrolling at full speed while a press is being timed.
+        { passive: true },
+    );
+
+    container.addEventListener(
+        'touchmove',
+        (event) => {
+            const touch = event.touches[0];
+            if (!touch) return;
+
+            const moved =
+                Math.abs(touch.clientX - startX) > LONG_PRESS_SLOP_PX ||
+                Math.abs(touch.clientY - startY) > LONG_PRESS_SLOP_PX;
+            if (moved) cancel();
+        },
+        { passive: true },
+    );
+
+    container.addEventListener('touchend', cancel, { passive: true });
+    container.addEventListener('touchcancel', cancel, { passive: true });
+}
