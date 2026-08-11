@@ -265,7 +265,7 @@ export default class RonaldPlugin extends Plugin {
             id: 'search-projects',
             name: 'Search projects',
             icon: 'search',
-            callback: () => void searchProjects(this.app),
+            callback: () => void this.searchProjects(),
         });
 
         this.addCommand({
@@ -279,7 +279,7 @@ export default class RonaldPlugin extends Plugin {
             void searchTasks(this.app, this.settings.taskFilterTags),
         );
 
-        this.addRibbonIcon('search', 'Search projects', () => void searchProjects(this.app));
+        this.addRibbonIcon('search', 'Search projects', () => void this.searchProjects());
 
         this.addCommand({
             id: 'search-backlinks',
@@ -312,6 +312,22 @@ export default class RonaldPlugin extends Plugin {
     }
 
     onunload() {}
+
+    /**
+     * Open the project search, with Shift+Enter handing the chosen project's
+     * name to the task search as its query.
+     *
+     * The chips come from the settings and are read here rather than captured,
+     * so a tag added in settings reaches the next search without a reload.
+     */
+    private searchProjects(): Promise<void> {
+        return searchProjects(this.app, {
+            onSearchTasks: (name) =>
+                void searchTasks(this.app, this.settings.taskFilterTags, {
+                    query: name,
+                }),
+        });
+    }
 
     async loadSettings(): Promise<void> {
         this.settings = Object.assign(

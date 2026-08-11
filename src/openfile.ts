@@ -80,3 +80,24 @@ export function registerAltEnter<T>(modal: SuggestModal<T>): void {
         return false;
     });
 }
+
+/**
+ * True when `event` asks for the secondary action tied to Shift rather than
+ * the default one.
+ */
+export function wantsShiftAction(event?: MouseEvent | KeyboardEvent): boolean {
+    return event?.shiftKey ?? false;
+}
+
+/**
+ * Make Shift+Enter choose the highlighted suggestion, so `onChooseSuggestion`
+ * runs with a modified event and can branch on `wantsShiftAction`. See
+ * `registerNewTabEnter` for why this is bound on the modal's scope rather than
+ * left to Obsidian's own keymap.
+ */
+export function registerShiftEnter<T>(modal: SuggestModal<T>): void {
+    modal.scope.register(['Shift'], 'Enter', (event) => {
+        modal.selectActiveSuggestion(event);
+        return false;
+    });
+}

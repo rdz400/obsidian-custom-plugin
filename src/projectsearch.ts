@@ -13,7 +13,9 @@ import {
     openFileFromSearch,
     registerAltEnter,
     registerNewTabEnter,
+    registerShiftEnter,
     wantsAltAction,
+    wantsShiftAction,
 } from './openfile';
 
 /** Statuses that mark a project as no longer running. */
@@ -228,6 +230,7 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
         this.modalEl.addClass('ronald-project-search');
         registerNewTabEnter(this);
         registerAltEnter(this);
+        registerShiftEnter(this);
 
         this.statusFilters = new FilterBar({
             chips: STATUS_FILTERS,
@@ -416,13 +419,29 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
     }
 }
 
+/** Hooks a caller can supply for the project search's secondary actions. */
+export interface ProjectSearchOptions {
+    /**
+     * Called with the chosen project's note name on Shift+Enter, instead of
+     * opening the note.
+     *
+     * Left to the caller so this module stays unaware of what the name is
+     * handed to; the command wiring decides that.
+     */
+    onSearchTasks?: (name: string) => void;
+}
+
 /**
  * Search open projects by note name in a modal that shows their status and
  * open task count. Choosing a project opens its note — in the active tab, or
  * in a new one with Mod+Enter — while Alt+Enter (Option+Enter on macOS)
- * copies a wikilink to it to the clipboard instead.
+ * copies a wikilink to it to the clipboard instead. Shift+Enter hands the
+ * project's name to `onSearchTasks` where the caller supplies one.
  */
-export async function searchProjects(app: App): Promise<void> {
+export async function searchProjects(
+    app: App,
+    options: ProjectSearchOptions = {},
+): Promise<void> {
     const projects = await collectOpenProjects(app);
 
     if (projects.length === 0) {
@@ -431,6 +450,11 @@ export async function searchProjects(app: App): Promise<void> {
     }
 
     new ProjectSearchModal(app, projects, (item, event) => {
+        const searchTasks = options.onSearchTasks;
+        if (searchTasks && wantsShiftAction(event)) {
+            searchTasks(item.file.basename);
+            return;
+        }
         if (wantsAltAction(event)) {
             const sourcePath = app.workspace.getActiveFile()?.path ?? '';
             const link = app.fileManager.generateMarkdownLink(item.file, sourcePath);
