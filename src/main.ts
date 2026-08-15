@@ -228,7 +228,8 @@ export default class RonaldPlugin extends Plugin {
             id: 'insert-tag',
             name: 'Insert tag at end of line',
             icon: 'tag',
-            editorCallback: (editor: Editor) => insertTag(this.app, editor),
+            editorCallback: (editor: Editor) =>
+                insertTag(this.app, editor, this.settings.insertTags),
         });
 
         this.addCommand({

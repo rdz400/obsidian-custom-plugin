@@ -15,6 +15,9 @@ export interface RonaldSettings {
      * shown and numbered as Mod+1…Mod+9.
      */
     taskFilterTags: FilterChip[];
+
+    /** Tags offered by the "Insert tag at end of line" command, in order. */
+    insertTags: string[];
 }
 
 export const DEFAULT_SETTINGS: RonaldSettings = {
@@ -26,6 +29,7 @@ export const DEFAULT_SETTINGS: RonaldSettings = {
         { value: 'thuis', type: 'context' },
         { value: 'project', type: 'other' },
     ],
+    insertTags: ['buiten', 'prio', 'vandaag', 'computer'],
 };
 
 export class RonaldSettingTab extends PluginSettingTab {
@@ -35,6 +39,10 @@ export class RonaldSettingTab extends PluginSettingTab {
 
     private get tags(): FilterChip[] {
         return this.plugin.settings.taskFilterTags;
+    }
+
+    private get insertTags(): string[] {
+        return this.plugin.settings.insertTags;
     }
 
     /**
@@ -75,7 +83,51 @@ export class RonaldSettingTab extends PluginSettingTab {
                     render: (setting: Setting) => this.renderTagRow(setting, chip, index),
                 })),
             },
+            {
+                type: 'list',
+                heading: 'Tags to insert at end of line',
+                cls: 'ronald-setting-tag-list',
+                emptyState: 'No insert tags yet.',
+                addItem: {
+                    name: 'Add tag',
+                    action: () => {
+                        this.insertTags.push('');
+                        void this.save();
+                    },
+                },
+                onReorder: (oldIndex, newIndex) => {
+                    const [moved] = this.insertTags.splice(oldIndex, 1);
+                    if (moved !== undefined) this.insertTags.splice(newIndex, 0, moved);
+                    void this.save();
+                },
+                onDelete: (index) => {
+                    this.insertTags.splice(index, 1);
+                    void this.save();
+                },
+                items: this.insertTags.map((tag, index) => ({
+                    name: tag.length > 0 ? `#${tag}` : 'New tag',
+                    searchable: false,
+                    render: (setting: Setting) => this.renderInsertTagRow(setting, index),
+                })),
+            },
         ];
+    }
+
+    /**
+     * One insert-tag entry. The name column stays empty: unlike the filter
+     * chips there is no shortcut tied to the position, and the tag itself is
+     * already visible in its field.
+     */
+    private renderInsertTagRow(setting: Setting, index: number): void {
+        setting.setName('').setClass('ronald-setting-tag-row').addText((text) =>
+            text
+                .setPlaceholder('Tag')
+                .setValue(this.insertTags[index] ?? '')
+                .onChange((value) => {
+                    this.insertTags[index] = value.trim().replace(/^#/, '').toLowerCase();
+                    void this.plugin.saveSettings();
+                }),
+        );
     }
 
     /**

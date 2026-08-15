@@ -389,14 +389,17 @@ export function moveLinesToEnd(editor: Editor): void {
     );
 }
 
-/** Tags offered by {@link insertTag}, inserted at the end of the current line. */
-const INSERT_TAGS = ['buiten', 'prio', 'vandaag', 'computer'];
-
-/** Open a modal to pick a tag and toggle it at the end of each selected list item. */
-export function insertTag(app: App, editor: Editor): void {
+/**
+ * Open a modal to pick a tag and toggle it at the end of each selected list item.
+ *
+ * `tags` comes from the settings, where a row left blank would otherwise offer a
+ * choice that tags nothing, so empty entries are dropped here.
+ */
+export function insertTag(app: App, editor: Editor, tags: string[]): void {
     const { from, to } = selectedLineRange(editor);
+    const choices = tags.map((t) => t.trim()).filter((t) => t.length > 0);
 
-    new TagSuggestModal(app, INSERT_TAGS, (tag: string) => {
+    new TagSuggestModal(app, choices, (tag: string) => {
         const tagRe = new RegExp(`(?<!\\w)#${tag}\\b`);
         for (let i = from; i <= to; i++) {
             const line = editor.getLine(i);
