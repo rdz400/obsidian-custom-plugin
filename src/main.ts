@@ -24,6 +24,7 @@ import {
     setStatusInFrontmatter,
     mergeTakenNotes,
     openMostRecentTaakNote,
+    removeTagFromTakenNotes,
 } from './commands';
 import {
     extendSelectionByLine,
@@ -179,6 +180,19 @@ export default class RonaldPlugin extends Plugin {
                 name: `Toggle #${tag} tag`,
                 icon: 'hash',
                 editorCallback: (editor: Editor) => toggleTag(editor, tag),
+            });
+        }
+
+        // One command per tag rather than one command that asks which tag: this
+        // way each can carry its own hotkey. Reading the list at load means an
+        // added tag needs a reload, which the setting's description says.
+        for (const tag of this.settings.clearTags) {
+            if (tag.length === 0) continue;
+            this.addCommand({
+                id: `remove-${tag}-tag-from-taken-notes`,
+                name: `Remove #${tag} tag from all "taken" notes`,
+                icon: 'eraser',
+                callback: () => void removeTagFromTakenNotes(this.app, tag),
             });
         }
 

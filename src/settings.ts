@@ -18,6 +18,14 @@ export interface RonaldSettings {
 
     /** Tags offered by the "Insert tag at end of line" command, in order. */
     insertTags: string[];
+
+    /**
+     * Tags that get a "Remove #tag from all taken notes" command, in order.
+     *
+     * Each entry becomes its own command so it can be bound to a hotkey; the
+     * list is a setting because which tags need clearing changes over time.
+     */
+    clearTags: string[];
 }
 
 export const DEFAULT_SETTINGS: RonaldSettings = {
@@ -30,6 +38,7 @@ export const DEFAULT_SETTINGS: RonaldSettings = {
         { value: 'project', type: 'other' },
     ],
     insertTags: ['buiten', 'prio', 'vandaag', 'computer'],
+    clearTags: ['vandaag'],
 };
 
 export class RonaldSettingTab extends PluginSettingTab {
@@ -43,6 +52,10 @@ export class RonaldSettingTab extends PluginSettingTab {
 
     private get insertTags(): string[] {
         return this.plugin.settings.insertTags;
+    }
+
+    private get clearTags(): string[] {
+        return this.plugin.settings.clearTags;
     }
 
     /**
@@ -107,24 +120,55 @@ export class RonaldSettingTab extends PluginSettingTab {
                 items: this.insertTags.map((tag, index) => ({
                     name: tag.length > 0 ? `#${tag}` : 'New tag',
                     searchable: false,
-                    render: (setting: Setting) => this.renderInsertTagRow(setting, index),
+                    render: (setting: Setting) =>
+                        this.renderPlainTagRow(setting, this.insertTags, index),
+                })),
+            },
+            {
+                type: 'list',
+                // Each entry becomes its own command at load time, so a change
+                // here needs a plugin reload before the command shows up.
+                heading: 'Tags to clear from "taken" notes (reload after changing)',
+                cls: 'ronald-setting-tag-list',
+                emptyState: 'No tags to clear yet.',
+                addItem: {
+                    name: 'Add tag',
+                    action: () => {
+                        this.clearTags.push('');
+                        void this.save();
+                    },
+                },
+                onReorder: (oldIndex, newIndex) => {
+                    const [moved] = this.clearTags.splice(oldIndex, 1);
+                    if (moved !== undefined) this.clearTags.splice(newIndex, 0, moved);
+                    void this.save();
+                },
+                onDelete: (index) => {
+                    this.clearTags.splice(index, 1);
+                    void this.save();
+                },
+                items: this.clearTags.map((tag, index) => ({
+                    name: tag.length > 0 ? `#${tag}` : 'New tag',
+                    searchable: false,
+                    render: (setting: Setting) =>
+                        this.renderPlainTagRow(setting, this.clearTags, index),
                 })),
             },
         ];
     }
 
     /**
-     * One insert-tag entry. The name column stays empty: unlike the filter
-     * chips there is no shortcut tied to the position, and the tag itself is
-     * already visible in its field.
+     * One bare-tag entry, used by every list that is just tags. The name column
+     * stays empty: unlike the filter chips there is no shortcut tied to the
+     * position, and the tag itself is already visible in its field.
      */
-    private renderInsertTagRow(setting: Setting, index: number): void {
+    private renderPlainTagRow(setting: Setting, tags: string[], index: number): void {
         setting.setName('').setClass('ronald-setting-tag-row').addText((text) =>
             text
                 .setPlaceholder('Tag')
-                .setValue(this.insertTags[index] ?? '')
+                .setValue(tags[index] ?? '')
                 .onChange((value) => {
-                    this.insertTags[index] = value.trim().replace(/^#/, '').toLowerCase();
+                    tags[index] = value.trim().replace(/^#/, '').toLowerCase();
                     void this.plugin.saveSettings();
                 }),
         );

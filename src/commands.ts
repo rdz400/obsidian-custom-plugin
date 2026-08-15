@@ -418,24 +418,79 @@ export function insertTag(app: App, editor: Editor, tags: string[]): void {
     }).open();
 }
 
+/** Matches an occurrence of `#tag`, not preceded by a word character. */
+function tagPresence(tag: string): RegExp {
+    return new RegExp(`(?<!\\w)#${tag}\\b`);
+}
+
+/**
+ * The line with every `#tag` removed, collapsing the space it leaves behind so
+ * no double space or trailing space remains.
+ */
+function stripTag(line: string, tag: string): string {
+    const strip = new RegExp(` ?(?<!\\w)#${tag}\\b ?`, 'g');
+    return line.replace(strip, (m, offset: number, str: string) => {
+        if (offset === 0) return '';
+        if (offset + m.length === str.length) return '';
+        return ' ';
+    });
+}
+
 /** Toggle a `#tag` on each selected list item. */
 export function toggleTag(editor: Editor, tag: string): void {
-    const present = new RegExp(`(?<!\\w)#${tag}\\b`);
-    const strip = new RegExp(` ?#${tag}\\b ?`, 'g');
+    const present = tagPresence(tag);
     const { from, to } = selectedLineRange(editor);
     for (let i = from; i <= to; i++) {
         const line = editor.getLine(i);
         if (!/^\s*[-*]\s/.test(line)) continue;
         if (present.test(line)) {
-            editor.setLine(i, line.replace(strip, (m, offset, str: string) => {
-                if (offset === 0) return '';
-                if (offset + m.length === str.length) return '';
-                return ' ';
-            }));
+            editor.setLine(i, stripTag(line, tag));
         } else {
             editor.setLine(i, line + ` #${tag}`);
         }
     }
+}
+
+/**
+ * Remove a `#tag` from every list item in every note whose frontmatter `type`
+ * is "taken".
+ *
+ * Only list items are touched, matching {@link toggleTag}: the tag is a marker
+ * on a task, and an occurrence in prose or in frontmatter is not one.
+ */
+export async function removeTagFromTakenNotes(app: App, tag: string): Promise<void> {
+    const present = tagPresence(tag);
+
+    const files = app.vault.getMarkdownFiles().filter((file) => {
+        const cache = app.metadataCache.getFileCache(file);
+        return cache?.frontmatter?.type === 'taken';
+    });
+
+    let notes = 0;
+    let lines = 0;
+
+    for (const file of files) {
+        let changed = 0;
+        await app.vault.process(file, (content) => {
+            const result = content.split('\n').map((line) => {
+                if (!/^\s*[-*]\s/.test(line)) return line;
+                if (!present.test(line)) return line;
+                changed++;
+                return stripTag(line, tag);
+            });
+            return changed > 0 ? result.join('\n') : content;
+        });
+        if (changed > 0) {
+            notes++;
+            lines += changed;
+        }
+    }
+
+    new Notice(
+        notes === 0
+            ? `No #${tag} tags found in "taken" notes`
+            : `Removed ${lines} #${tag} tag(s) from ${notes} note(s)`,
+    );
 }
 
 /** Move the selected lines to a chosen note via a fuzzy-search modal. */
