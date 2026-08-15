@@ -173,6 +173,42 @@
     color: var(--color-purple);
 }
 
+/*
+ * Note-type chips ("project", "taken", …) in the two link searches: which kind
+ * of note the link is to. Pill-shaped like the type pills they filter on.
+ */
+.ronald-task-filter-type-note.is-active {
+    background: rgba(var(--color-cyan-rgb), 0.15);
+    border-color: var(--color-cyan);
+    color: var(--color-cyan);
+}
+
+.ronald-task-filter-type-note.is-active .ronald-task-filter-count {
+    background: rgba(var(--color-cyan-rgb), 0.25);
+    color: var(--color-cyan);
+}
+
+/*
+ * The "extern" chip, which sits in the same row as the note types but filters
+ * on something else entirely: links that leave the vault. Squared off and in
+ * its own colour so it reads as the odd one out even before it is pressed.
+ */
+.ronald-task-filter-type-external {
+    border-radius: 4px;
+    border-style: dashed;
+}
+
+.ronald-task-filter-type-external.is-active {
+    background: rgba(var(--color-red-rgb), 0.15);
+    border-color: var(--color-red);
+    color: var(--color-red);
+}
+
+.ronald-task-filter-type-external.is-active .ronald-task-filter-count {
+    background: rgba(var(--color-red-rgb), 0.25);
+    color: var(--color-red);
+}
+
 /* Context tags ("buiten", "thuis"): where the task happens. */
 .ronald-task-filter-type-context.is-active {
     background: rgba(var(--color-green-rgb), 0.15);
@@ -471,6 +507,27 @@
 .ronald-backlink-type-taken {
     background: rgba(var(--color-green-rgb), 0.15);
     color: var(--color-green);
+}
+
+.ronald-backlink-type-dagnotitie {
+    background: rgba(var(--color-orange-rgb), 0.15);
+    color: var(--color-orange);
+}
+
+.ronald-backlink-type-boek {
+    background: rgba(var(--color-purple-rgb), 0.15);
+    color: var(--color-purple);
+}
+
+.ronald-backlink-type-persoon {
+    background: rgba(var(--color-cyan-rgb), 0.15);
+    color: var(--color-cyan);
+}
+
+/* Not a note type: what the outgoing link search pills a website with. */
+.ronald-backlink-type-extern {
+    background: rgba(var(--color-red-rgb), 0.15);
+    color: var(--color-red);
 }
 
 /*

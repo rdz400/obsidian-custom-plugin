@@ -1,5 +1,11 @@
 import { App, Loc, Notice, Reference, SuggestModal, TFile, setIcon } from 'obsidian';
 
+import { FilterBar } from './filterbar';
+import {
+    NOTE_TYPE_FILTERS,
+    matchesNoteType,
+    renderTypePill,
+} from './notetype';
 import { openFileFromSearch, registerNewTabEnter } from './openfile';
 
 /** A note linking to the target note, plus what is shown for it. */
@@ -16,12 +22,6 @@ export interface BacklinkItem {
      */
     line?: number;
 }
-
-/** Lucide icon per note type; used for the type pill. */
-const TYPE_ICONS: Record<string, string> = {
-    project: 'folder',
-    taken: 'list-checks',
-};
 
 /**
  * True when `link` resolves to `target` when written in `sourcePath`.
@@ -130,6 +130,7 @@ function openBacklink(
  */
 export class BacklinkSearchModal extends SuggestModal<BacklinkItem> {
     private items: BacklinkItem[];
+    private readonly typeFilters: FilterBar;
 
     constructor(app: App, target: TFile, items: BacklinkItem[]) {
         super(app);
@@ -137,13 +138,93 @@ export class BacklinkSearchModal extends SuggestModal<BacklinkItem> {
         this.setPlaceholder(`Search notes linking to ${target.basename}…`);
         this.modalEl.addClass('ronald-backlink-search');
         registerNewTabEnter(this);
+
+        this.typeFilters = new FilterBar({
+            chips: NOTE_TYPE_FILTERS,
+            onChange: () => this.rerunSearch(),
+        });
+        this.mountFilters();
+
+        // `getSuggestions` keeps the counts current from the first keystroke
+        // on, but the bar is on screen before that, so seed it here.
+        this.typeFilters.setCounts(this.typeCounts(''));
+    }
+
+    /**
+     * Place the type chips and give them their keyboard shortcuts.
+     *
+     * The bar sits between the search field and the results, so it stays
+     * visible while typing rather than scrolling away with the matches.
+     *
+     * Shortcuts are listened for on the modal rather than the input so they
+     * work wherever focus sits, in the capture phase so Obsidian's own Mod+digit
+     * bindings never see a press meant for a chip.
+     */
+    private mountFilters(): void {
+        this.inputEl.parentElement?.insertAdjacentElement('afterend', this.typeFilters.el);
+
+        this.modalEl.addEventListener(
+            'keydown',
+            (event) => {
+                if (!this.typeFilters.handleKeyDown(event)) return;
+                event.preventDefault();
+                event.stopPropagation();
+            },
+            { capture: true },
+        );
+    }
+
+    /**
+     * Re-run the current query so the results reflect a changed type filter.
+     *
+     * `onInput` is what Obsidian's own input listener calls; it replaces the
+     * result list in place. Dispatching an `input` event instead appends a
+     * second set of results on top of the old ones, so it is not an option.
+     */
+    private rerunSearch(): void {
+        (this as unknown as { onInput(): void }).onInput();
+    }
+
+    /** True when the query appears in the note's path. */
+    private matchesQuery(item: BacklinkItem, q: string): boolean {
+        // The folder is matched too, so a query can narrow to one part of the
+        // vault when several notes share a name-ish prefix.
+        return item.file.path.toLowerCase().includes(q);
     }
 
     getSuggestions(query: string): BacklinkItem[] {
         const q = query.toLowerCase();
-        // The folder is matched too, so a query can narrow to one part of the
-        // vault when several notes share a name-ish prefix.
-        return this.items.filter((item) => item.file.path.toLowerCase().includes(q));
+        const matches = this.items.filter(
+            (item) =>
+                matchesNoteType(item.type, this.typeFilters.activeValues) &&
+                this.matchesQuery(item, q),
+        );
+
+        this.typeFilters.setCounts(this.typeCounts(q));
+        return matches;
+    }
+
+    /**
+     * How many notes each type chip stands for, given the query.
+     *
+     * The chips are OR'd together (see `matchesNoteType`), so turning one on
+     * only ever adds its own matches regardless of which others are active —
+     * the count for a chip is how many notes carry that type and match the
+     * query.
+     */
+    private typeCounts(q: string): Map<string, number> {
+        const counts = new Map<string, number>();
+
+        for (const { value } of NOTE_TYPE_FILTERS) {
+            counts.set(
+                value,
+                this.items.filter(
+                    (item) => item.type === value && this.matchesQuery(item, q),
+                ).length,
+            );
+        }
+
+        return counts;
     }
 
     renderSuggestion(item: BacklinkItem, el: HTMLElement): void {
@@ -174,14 +255,7 @@ export class BacklinkSearchModal extends SuggestModal<BacklinkItem> {
             links.createSpan({ text: String(item.count) });
         }
 
-        if (item.type) {
-            const type = title.createSpan({
-                cls: `ronald-backlink-type ronald-backlink-type-${item.type}`,
-            });
-            const icon = TYPE_ICONS[item.type];
-            if (icon) setIcon(type.createSpan(), icon);
-            type.createSpan({ text: item.type });
-        }
+        renderTypePill(title, item.type);
     }
 
     onChooseSuggestion(item: BacklinkItem, event: MouseEvent | KeyboardEvent): void {

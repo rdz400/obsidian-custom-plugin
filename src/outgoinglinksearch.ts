@@ -8,6 +8,8 @@ import {
     setIcon,
 } from 'obsidian';
 
+import { FilterBar, FilterChip } from './filterbar';
+import { NOTE_TYPE_FILTERS, noteType, renderTypePill } from './notetype';
 import {
     openFileFromSearch,
     registerAltEnter,
@@ -27,6 +29,12 @@ export interface OutgoingLinkItem {
     file?: TFile;
     /** The URL an external link points at; absent for the other kinds. */
     url?: string;
+    /**
+     * Frontmatter `type` of the note an internal link resolves to, shown as a
+     * pill; '' for a note without one and for the other kinds, which have no
+     * frontmatter to read.
+     */
+    type: string;
     /**
      * What the row is searched and sorted by: the note name, the link text of
      * an external link that has one, and otherwise the URL or raw link text.
@@ -282,6 +290,7 @@ function addExternal(
         () => ({
             kind: 'external',
             url,
+            type: '',
             // Shown as written, so the row reads the way the note does even
             // though same-address rows were folded together by their key.
             name: text || target,
@@ -320,6 +329,7 @@ function addReference(
             () => ({
                 kind: 'note',
                 file,
+                type: noteType(app, file),
                 name: file.basename,
                 detail: folder && folder !== '/' ? folder : '',
                 count: 1,
@@ -334,12 +344,46 @@ function addReference(
         `unresolved:${path.toLowerCase()}`,
         () => ({
             kind: 'unresolved',
+            type: '',
             name: path,
             detail: 'not created yet',
             count: 1,
         }),
         line,
     );
+}
+
+/**
+ * The chip value standing for "points at a website", which no note type can
+ * collide with: a frontmatter `type` is a bare word, never a URL scheme.
+ */
+const EXTERNAL_FILTER = 'extern:';
+
+/**
+ * The filter row under the search field: the marked note types, plus one chip
+ * for the links that leave the vault altogether.
+ *
+ * One bar rather than two, so all six chips number from 1 under a single
+ * modifier — the values are alternatives to one another (a destination is a
+ * project *or* a website, never both), which is exactly what one OR'd bar is.
+ * The external chip keeps its own presentational type so it reads as the odd
+ * one out that it is.
+ */
+const DESTINATION_FILTERS: FilterChip[] = [
+    ...NOTE_TYPE_FILTERS,
+    { value: EXTERNAL_FILTER, type: 'external', label: 'extern' },
+];
+
+/**
+ * The chip value a row answers to: the external chip for a link that leaves
+ * the vault, and otherwise the note's own type.
+ *
+ * An unresolved link matches no chip at all — it has no note to read a type
+ * from — so it is filtered out as soon as any chip is on, which is right: it
+ * is neither a typed note nor a website.
+ */
+function filterValue(item: OutgoingLinkItem): string {
+    return item.kind === 'external' ? EXTERNAL_FILTER : item.type;
 }
 
 /** Sort rank per kind, so notes come before URLs and unresolved links last. */
@@ -472,6 +516,7 @@ function openMention(
 export class OutgoingLinkSearchModal extends SuggestModal<OutgoingLinkItem> {
     private items: OutgoingLinkItem[];
     private onChoose: (item: OutgoingLinkItem, event: MouseEvent | KeyboardEvent) => void;
+    private readonly filters: FilterBar;
 
     constructor(
         app: App,
@@ -486,17 +531,95 @@ export class OutgoingLinkSearchModal extends SuggestModal<OutgoingLinkItem> {
         this.modalEl.addClass('ronald-backlink-search');
         registerNewTabEnter(this);
         registerAltEnter(this);
+
+        this.filters = new FilterBar({
+            chips: DESTINATION_FILTERS,
+            onChange: () => this.rerunSearch(),
+        });
+        this.mountFilters();
+
+        // `getSuggestions` keeps the counts current from the first keystroke
+        // on, but the bar is on screen before that, so seed it here.
+        this.filters.setCounts(this.filterCounts(''));
+    }
+
+    /**
+     * Place the chips and give them their keyboard shortcuts.
+     *
+     * The bar sits between the search field and the results, so it stays
+     * visible while typing rather than scrolling away with the matches.
+     *
+     * Shortcuts are listened for on the modal rather than the input so they
+     * work wherever focus sits, in the capture phase so Obsidian's own Mod+digit
+     * bindings never see a press meant for a chip.
+     */
+    private mountFilters(): void {
+        this.inputEl.parentElement?.insertAdjacentElement('afterend', this.filters.el);
+
+        this.modalEl.addEventListener(
+            'keydown',
+            (event) => {
+                if (!this.filters.handleKeyDown(event)) return;
+                event.preventDefault();
+                event.stopPropagation();
+            },
+            { capture: true },
+        );
+    }
+
+    /**
+     * Re-run the current query so the results reflect a changed filter.
+     *
+     * `onInput` is what Obsidian's own input listener calls; it replaces the
+     * result list in place. Dispatching an `input` event instead appends a
+     * second set of results on top of the old ones, so it is not an option.
+     */
+    private rerunSearch(): void {
+        (this as unknown as { onInput(): void }).onInput();
+    }
+
+    /** True when the query appears in the row's name or its detail line. */
+    private matchesQuery(item: OutgoingLinkItem, q: string): boolean {
+        // The detail line is matched too, so a query can narrow to one folder
+        // or to a host without having to name the note or the full URL.
+        return (
+            item.name.toLowerCase().includes(q) || item.detail.toLowerCase().includes(q)
+        );
     }
 
     getSuggestions(query: string): OutgoingLinkItem[] {
+        const wanted = this.filters.activeValues;
         const q = query.toLowerCase();
-        // The detail line is matched too, so a query can narrow to one folder
-        // or to a host without having to name the note or the full URL.
-        return this.items.filter(
+        const matches = this.items.filter(
             (item) =>
-                item.name.toLowerCase().includes(q) ||
-                item.detail.toLowerCase().includes(q),
+                (wanted.size === 0 || wanted.has(filterValue(item))) &&
+                this.matchesQuery(item, q),
         );
+
+        this.filters.setCounts(this.filterCounts(q));
+        return matches;
+    }
+
+    /**
+     * How many destinations each chip stands for, given the query.
+     *
+     * The chips are OR'd together, so turning one on only ever adds its own
+     * matches regardless of which others are active — the count for a chip is
+     * how many rows answer to it and match the query.
+     */
+    private filterCounts(q: string): Map<string, number> {
+        const counts = new Map<string, number>();
+
+        for (const { value } of DESTINATION_FILTERS) {
+            counts.set(
+                value,
+                this.items.filter(
+                    (item) => filterValue(item) === value && this.matchesQuery(item, q),
+                ).length,
+            );
+        }
+
+        return counts;
     }
 
     renderSuggestion(item: OutgoingLinkItem, el: HTMLElement): void {
@@ -519,6 +642,20 @@ export class OutgoingLinkSearchModal extends SuggestModal<OutgoingLinkItem> {
             setIcon(links.createSpan(), 'link');
             links.createSpan({ text: String(item.count) });
         }
+
+        // A website has no frontmatter to carry a type, so it is pilled by what
+        // it is instead — otherwise the external rows would be the only ones
+        // with nothing at the right edge, which reads as missing data.
+        if (item.kind === 'external') {
+            const pill = title.createSpan({
+                cls: 'ronald-backlink-type ronald-backlink-type-extern',
+            });
+            setIcon(pill.createSpan(), 'globe');
+            pill.createSpan({ text: 'extern' });
+            return;
+        }
+
+        renderTypePill(title, item.type);
     }
 
     onChooseSuggestion(item: OutgoingLinkItem, event: MouseEvent | KeyboardEvent): void {
