@@ -367,7 +367,8 @@ function addReference(
 const EXTERNAL_FILTER = 'extern:';
 
 /**
- * The second filter row: the one chip that reveals the links leaving the vault.
+ * The second filter row: the one chip that narrows to the links leaving the
+ * vault.
  *
  * Its own bar rather than a sixth chip in the first, because it does not
  * compete with the type chips the way they compete with each other — a
@@ -628,14 +629,14 @@ export class OutgoingLinkSearchModal extends SuggestModal<OutgoingLinkItem> {
     /**
      * True unless the "extern" chip is filtering the row away.
      *
-     * The chip reveals rather than narrows: with it off, external links are
-     * hidden — they are addresses rather than notes, and mostly in the way when
-     * looking for where a note leads inside the vault — and with it on, they
-     * are shown alongside whatever the type row is already showing.
+     * The chip narrows, like the type chips do, and starts off: the whole list
+     * is shown until it is switched on, and switching it on cuts the list down
+     * to the links that leave the vault — for when the question is which sites
+     * a note points at and the notes are in the way.
      */
     private matchesExternal(item: OutgoingLinkItem): boolean {
-        if (item.kind !== 'external') return true;
-        return this.externalFilters.activeValues.has(EXTERNAL_FILTER);
+        if (!this.externalFilters.activeValues.has(EXTERNAL_FILTER)) return true;
+        return item.kind === 'external';
     }
 
     getSuggestions(query: string): OutgoingLinkItem[] {
@@ -659,9 +660,9 @@ export class OutgoingLinkSearchModal extends SuggestModal<OutgoingLinkItem> {
      * matches regardless of which others are active — the count for a chip is
      * how many rows answer to it and match the query.
      *
-     * External links are counted only while their own chip is on, so the
-     * numbers add up to what the list actually shows: with "extern" off, a
-     * website is not among the rows "overige" would bring back.
+     * The "extern" chip is applied first, so the numbers add up to what the
+     * list actually shows: with it on, "overige" counts only the websites,
+     * which is all that chip could bring back while the list is narrowed.
      */
     private typeCounts(q: string): Map<string, number> {
         const counts = new Map<string, number>();
@@ -682,10 +683,10 @@ export class OutgoingLinkSearchModal extends SuggestModal<OutgoingLinkItem> {
     }
 
     /**
-     * How many websites the "extern" chip would reveal, given the query.
+     * How many websites the "extern" chip stands for, given the query.
      *
-     * Counted against the type row as it stands, since that is what pressing
-     * the chip would actually add to the list.
+     * Counted against the type row as it stands, since that is what the list
+     * would be cut down to were the chip pressed.
      */
     private externalCounts(q: string): Map<string, number> {
         return new Map([
