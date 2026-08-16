@@ -300,14 +300,18 @@ export default class RonaldPlugin extends Plugin {
             id: 'search-backlinks',
             name: 'Search notes linking to this note',
             icon: 'link',
-            callback: () => searchBacklinks(this.app),
+            // The types come from the settings and are read here rather than
+            // captured, so a type added in settings reaches the next search
+            // without a reload.
+            callback: () => searchBacklinks(this.app, this.settings.linkNoteTypes),
         });
 
         this.addCommand({
             id: 'search-outgoing-links',
             name: 'Search links in this note',
             icon: 'external-link',
-            callback: () => void searchOutgoingLinks(this.app),
+            callback: () =>
+                void searchOutgoingLinks(this.app, this.settings.linkNoteTypes),
         });
 
         registerTasksUriHandler(this, () => this.settings.taskFilterTags);

@@ -8,6 +8,7 @@ import {
 
 import type { FilterChip } from './filterbar';
 import type RonaldPlugin from './main';
+import type { NoteTypeSetting } from './notetype';
 
 export interface RonaldSettings {
     /**
@@ -26,6 +27,16 @@ export interface RonaldSettings {
      * list is a setting because which tags need clearing changes over time.
      */
     clearTags: string[];
+
+    /**
+     * Frontmatter `type` values called out in the two link searches, in the
+     * order their chips are shown and numbered.
+     *
+     * These get an icon, a colour and a filter chip; every other type is still
+     * shown as a plain pill and is filtered by the "overige" chip, which the
+     * bar adds after these.
+     */
+    linkNoteTypes: NoteTypeSetting[];
 }
 
 export const DEFAULT_SETTINGS: RonaldSettings = {
@@ -39,6 +50,13 @@ export const DEFAULT_SETTINGS: RonaldSettings = {
     ],
     insertTags: ['buiten', 'prio', 'vandaag', 'computer'],
     clearTags: ['vandaag'],
+    linkNoteTypes: [
+        { value: 'project', icon: 'folder' },
+        { value: 'taken', icon: 'list-checks' },
+        { value: 'dagnotitie', icon: 'calendar-days' },
+        { value: 'boek', icon: 'book' },
+        { value: 'persoon', icon: 'user' },
+    ],
 };
 
 export class RonaldSettingTab extends PluginSettingTab {
@@ -56,6 +74,10 @@ export class RonaldSettingTab extends PluginSettingTab {
 
     private get clearTags(): string[] {
         return this.plugin.settings.clearTags;
+    }
+
+    private get noteTypes(): NoteTypeSetting[] {
+        return this.plugin.settings.linkNoteTypes;
     }
 
     /**
@@ -154,7 +176,71 @@ export class RonaldSettingTab extends PluginSettingTab {
                         this.renderPlainTagRow(setting, this.clearTags, index),
                 })),
             },
+            {
+                type: 'list',
+                // The bar adds "overige" itself, after these; saying so here
+                // keeps it from reading as a type someone forgot to add. The
+                // icon field takes any Lucide name.
+                heading: 'Note types to filter links on (plus "overige")',
+                cls: 'ronald-setting-tag-list',
+                emptyState: 'No note types yet.',
+                addItem: {
+                    name: 'Add type',
+                    action: () => {
+                        this.noteTypes.push({ value: '', icon: '' });
+                        void this.save();
+                    },
+                },
+                onReorder: (oldIndex, newIndex) => {
+                    const [moved] = this.noteTypes.splice(oldIndex, 1);
+                    if (moved) this.noteTypes.splice(newIndex, 0, moved);
+                    void this.save();
+                },
+                onDelete: (index) => {
+                    this.noteTypes.splice(index, 1);
+                    void this.save();
+                },
+                items: this.noteTypes.map((type, index) => ({
+                    name: type.value.length > 0 ? type.value : 'New type',
+                    searchable: false,
+                    render: (setting: Setting) => this.renderNoteTypeRow(setting, type, index),
+                })),
+            },
         ];
+    }
+
+    /**
+     * One note type: the frontmatter value and the icon its pill carries.
+     *
+     * Numbered like the task filter tags, since the position decides the chip's
+     * shortcut in the link searches the same way.
+     */
+    private renderNoteTypeRow(
+        setting: Setting,
+        type: NoteTypeSetting,
+        index: number,
+    ): void {
+        setting
+            .setName(index < 9 ? `${SHORTCUT_MODIFIER}+${index + 1}` : '')
+            .setClass('ronald-setting-tag-row')
+            .addText((text) =>
+                text
+                    .setPlaceholder('Type')
+                    .setValue(type.value)
+                    .onChange((value) => {
+                        type.value = value.trim().toLowerCase();
+                        void this.plugin.saveSettings();
+                    }),
+            )
+            .addText((text) =>
+                text
+                    .setPlaceholder('Icon')
+                    .setValue(type.icon)
+                    .onChange((value) => {
+                        type.icon = value.trim();
+                        void this.plugin.saveSettings();
+                    }),
+            );
     }
 
     /**

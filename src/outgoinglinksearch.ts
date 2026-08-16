@@ -9,7 +9,14 @@ import {
 } from 'obsidian';
 
 import { FilterBar, FilterChip } from './filterbar';
-import { NOTE_TYPE_FILTERS, noteType, renderTypePill } from './notetype';
+import {
+    NoteTypeSetting,
+    configuredTypes,
+    noteType,
+    noteTypeFilterValue,
+    noteTypeFilters,
+    renderTypePill,
+} from './notetype';
 import {
     openFileFromSearch,
     registerAltEnter,
@@ -360,30 +367,29 @@ function addReference(
 const EXTERNAL_FILTER = 'extern:';
 
 /**
- * The filter row under the search field: the marked note types, plus one chip
- * for the links that leave the vault altogether.
+ * The second filter row: the one chip that reveals the links leaving the vault.
  *
- * One bar rather than two, so all six chips number from 1 under a single
- * modifier — the values are alternatives to one another (a destination is a
- * project *or* a website, never both), which is exactly what one OR'd bar is.
- * The external chip keeps its own presentational type so it reads as the odd
- * one out that it is.
+ * Its own bar rather than a sixth chip in the first, because it does not
+ * compete with the type chips the way they compete with each other — a
+ * destination is a project *or* a book, but "external" cuts across the whole
+ * list. Kept on Alt so both rows number their chips from 1.
  */
-const DESTINATION_FILTERS: FilterChip[] = [
-    ...NOTE_TYPE_FILTERS,
+const EXTERNAL_FILTERS: FilterChip[] = [
     { value: EXTERNAL_FILTER, type: 'external', label: 'extern' },
 ];
 
 /**
- * The chip value a row answers to: the external chip for a link that leaves
- * the vault, and otherwise the note's own type.
+ * The type chip a row answers to.
  *
- * An unresolved link matches no chip at all — it has no note to read a type
- * from — so it is filtered out as soon as any chip is on, which is right: it
- * is neither a typed note nor a website.
+ * Everything that is not a note with a configured type falls to "overige": a
+ * note whose type is blank or unlisted, a link to a note that does not exist
+ * yet, and a link that leaves the vault. So every row is reachable by some
+ * chip, which is what makes the bar safe to reach for — turning one on can
+ * never hide a row that no chip could bring back.
  */
-function filterValue(item: OutgoingLinkItem): string {
-    return item.kind === 'external' ? EXTERNAL_FILTER : item.type;
+function filterValue(item: OutgoingLinkItem, configured: ReadonlySet<string>): string {
+    if (item.kind !== 'note') return noteTypeFilterValue('', configured);
+    return noteTypeFilterValue(item.type, configured);
 }
 
 /** Sort rank per kind, so notes come before URLs and unresolved links last. */
@@ -516,50 +522,76 @@ function openMention(
 export class OutgoingLinkSearchModal extends SuggestModal<OutgoingLinkItem> {
     private items: OutgoingLinkItem[];
     private onChoose: (item: OutgoingLinkItem, event: MouseEvent | KeyboardEvent) => void;
-    private readonly filters: FilterBar;
+    private readonly noteTypes: readonly NoteTypeSetting[];
+    /** The type values with a chip of their own; the rest answer to "overige". */
+    private readonly configured: ReadonlySet<string>;
+    private readonly typeFilters: FilterBar;
+    private readonly externalFilters: FilterBar;
+    private readonly typeChips: FilterChip[];
 
     constructor(
         app: App,
         source: TFile,
         items: OutgoingLinkItem[],
+        noteTypes: readonly NoteTypeSetting[],
         onChoose: (item: OutgoingLinkItem, event: MouseEvent | KeyboardEvent) => void,
     ) {
         super(app);
         this.items = items;
         this.onChoose = onChoose;
+        this.noteTypes = noteTypes;
+        this.configured = configuredTypes(noteTypes);
+        this.typeChips = noteTypeFilters(noteTypes);
         this.setPlaceholder(`Search links in ${source.basename}…`);
         this.modalEl.addClass('ronald-backlink-search');
         registerNewTabEnter(this);
         registerAltEnter(this);
 
-        this.filters = new FilterBar({
-            chips: DESTINATION_FILTERS,
+        this.typeFilters = new FilterBar({
+            chips: this.typeChips,
             onChange: () => this.rerunSearch(),
+        });
+        this.externalFilters = new FilterBar({
+            chips: EXTERNAL_FILTERS,
+            onChange: () => this.rerunSearch(),
+            // Its own modifier, so both rows can number their chips from 1.
+            modifier: 'alt',
         });
         this.mountFilters();
 
         // `getSuggestions` keeps the counts current from the first keystroke
-        // on, but the bar is on screen before that, so seed it here.
-        this.filters.setCounts(this.filterCounts(''));
+        // on, but the bars are on screen before that, so seed them here.
+        this.typeFilters.setCounts(this.typeCounts(''));
+        this.externalFilters.setCounts(this.externalCounts(''));
     }
 
     /**
-     * Place the chips and give them their keyboard shortcuts.
+     * Place both chip rows and give them their keyboard shortcuts.
      *
-     * The bar sits between the search field and the results, so it stays
+     * The bars sit between the search field and the results, so they stay
      * visible while typing rather than scrolling away with the matches.
      *
      * Shortcuts are listened for on the modal rather than the input so they
      * work wherever focus sits, in the capture phase so Obsidian's own Mod+digit
      * bindings never see a press meant for a chip.
+     *
+     * Each bar answers to its own modifier, so both number their chips from 1
+     * without colliding: the types are Mod+1…, "extern" is Alt+1. A press is
+     * offered to each in turn and at most one takes it.
      */
     private mountFilters(): void {
-        this.inputEl.parentElement?.insertAdjacentElement('afterend', this.filters.el);
+        const anchor = this.inputEl.parentElement;
+        anchor?.insertAdjacentElement('afterend', this.typeFilters.el);
+        this.typeFilters.el.insertAdjacentElement('afterend', this.externalFilters.el);
 
         this.modalEl.addEventListener(
             'keydown',
             (event) => {
-                if (!this.filters.handleKeyDown(event)) return;
+                const handled =
+                    this.typeFilters.handleKeyDown(event) ||
+                    this.externalFilters.handleKeyDown(event);
+                if (!handled) return;
+
                 event.preventDefault();
                 event.stopPropagation();
             },
@@ -587,39 +619,86 @@ export class OutgoingLinkSearchModal extends SuggestModal<OutgoingLinkItem> {
         );
     }
 
+    /** True when the row's type answers to one of the type chips that are on. */
+    private matchesType(item: OutgoingLinkItem): boolean {
+        const wanted = this.typeFilters.activeValues;
+        return wanted.size === 0 || wanted.has(filterValue(item, this.configured));
+    }
+
+    /**
+     * True unless the "extern" chip is filtering the row away.
+     *
+     * The chip reveals rather than narrows: with it off, external links are
+     * hidden — they are addresses rather than notes, and mostly in the way when
+     * looking for where a note leads inside the vault — and with it on, they
+     * are shown alongside whatever the type row is already showing.
+     */
+    private matchesExternal(item: OutgoingLinkItem): boolean {
+        if (item.kind !== 'external') return true;
+        return this.externalFilters.activeValues.has(EXTERNAL_FILTER);
+    }
+
     getSuggestions(query: string): OutgoingLinkItem[] {
-        const wanted = this.filters.activeValues;
         const q = query.toLowerCase();
         const matches = this.items.filter(
             (item) =>
-                (wanted.size === 0 || wanted.has(filterValue(item))) &&
+                this.matchesType(item) &&
+                this.matchesExternal(item) &&
                 this.matchesQuery(item, q),
         );
 
-        this.filters.setCounts(this.filterCounts(q));
+        this.typeFilters.setCounts(this.typeCounts(q));
+        this.externalFilters.setCounts(this.externalCounts(q));
         return matches;
     }
 
     /**
-     * How many destinations each chip stands for, given the query.
+     * How many destinations each type chip stands for, given the query.
      *
      * The chips are OR'd together, so turning one on only ever adds its own
      * matches regardless of which others are active — the count for a chip is
      * how many rows answer to it and match the query.
+     *
+     * External links are counted only while their own chip is on, so the
+     * numbers add up to what the list actually shows: with "extern" off, a
+     * website is not among the rows "overige" would bring back.
      */
-    private filterCounts(q: string): Map<string, number> {
+    private typeCounts(q: string): Map<string, number> {
         const counts = new Map<string, number>();
 
-        for (const { value } of DESTINATION_FILTERS) {
+        for (const { value } of this.typeChips) {
             counts.set(
                 value,
                 this.items.filter(
-                    (item) => filterValue(item) === value && this.matchesQuery(item, q),
+                    (item) =>
+                        filterValue(item, this.configured) === value &&
+                        this.matchesExternal(item) &&
+                        this.matchesQuery(item, q),
                 ).length,
             );
         }
 
         return counts;
+    }
+
+    /**
+     * How many websites the "extern" chip would reveal, given the query.
+     *
+     * Counted against the type row as it stands, since that is what pressing
+     * the chip would actually add to the list.
+     */
+    private externalCounts(q: string): Map<string, number> {
+        return new Map([
+            [
+                EXTERNAL_FILTER,
+                this.items.filter(
+                    (item) =>
+                        item.kind === 'external' &&
+                        this.matchesType(item) &&
+                        this.matchesQuery(item, q),
+                ).length,
+            ],
+        ]);
     }
 
     renderSuggestion(item: OutgoingLinkItem, el: HTMLElement): void {
@@ -655,7 +734,7 @@ export class OutgoingLinkSearchModal extends SuggestModal<OutgoingLinkItem> {
             return;
         }
 
-        renderTypePill(title, item.type);
+        renderTypePill(title, item.type, this.noteTypes);
     }
 
     onChooseSuggestion(item: OutgoingLinkItem, event: MouseEvent | KeyboardEvent): void {
@@ -668,8 +747,14 @@ export class OutgoingLinkSearchModal extends SuggestModal<OutgoingLinkItem> {
  * listed once. Enter opens it — a note in the active tab, an external link in
  * the browser — Mod+Enter opens a note in a new tab, and Alt+Enter jumps to the
  * first place in the note where the link is written.
+ *
+ * `noteTypes` comes from the settings and decides which types get a chip of
+ * their own; everything else answers to the "overige" chip.
  */
-export async function searchOutgoingLinks(app: App): Promise<void> {
+export async function searchOutgoingLinks(
+    app: App,
+    noteTypes: readonly NoteTypeSetting[],
+): Promise<void> {
     const source = app.workspace.getActiveFile();
     if (!source) {
         new Notice('No note is open');
@@ -685,7 +770,7 @@ export async function searchOutgoingLinks(app: App): Promise<void> {
         return;
     }
 
-    new OutgoingLinkSearchModal(app, source, items, (item, event) => {
+    new OutgoingLinkSearchModal(app, source, items, noteTypes, (item, event) => {
         if (wantsAltAction(event)) {
             openMention(app, source, item, event);
             return;

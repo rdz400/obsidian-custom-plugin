@@ -1,9 +1,12 @@
 import { App, Loc, Notice, Reference, SuggestModal, TFile, setIcon } from 'obsidian';
 
-import { FilterBar } from './filterbar';
+import { FilterBar, FilterChip } from './filterbar';
 import {
-    NOTE_TYPE_FILTERS,
+    NoteTypeSetting,
+    configuredTypes,
     matchesNoteType,
+    noteTypeFilterValue,
+    noteTypeFilters,
     renderTypePill,
 } from './notetype';
 import { openFileFromSearch, registerNewTabEnter } from './openfile';
@@ -130,17 +133,29 @@ function openBacklink(
  */
 export class BacklinkSearchModal extends SuggestModal<BacklinkItem> {
     private items: BacklinkItem[];
+    private readonly noteTypes: readonly NoteTypeSetting[];
+    /** The type values with a chip of their own; the rest answer to "overige". */
+    private readonly configured: ReadonlySet<string>;
+    private readonly typeChips: FilterChip[];
     private readonly typeFilters: FilterBar;
 
-    constructor(app: App, target: TFile, items: BacklinkItem[]) {
+    constructor(
+        app: App,
+        target: TFile,
+        items: BacklinkItem[],
+        noteTypes: readonly NoteTypeSetting[],
+    ) {
         super(app);
         this.items = items;
+        this.noteTypes = noteTypes;
+        this.configured = configuredTypes(noteTypes);
+        this.typeChips = noteTypeFilters(noteTypes);
         this.setPlaceholder(`Search notes linking to ${target.basename}…`);
         this.modalEl.addClass('ronald-backlink-search');
         registerNewTabEnter(this);
 
         this.typeFilters = new FilterBar({
-            chips: NOTE_TYPE_FILTERS,
+            chips: this.typeChips,
             onChange: () => this.rerunSearch(),
         });
         this.mountFilters();
@@ -196,8 +211,11 @@ export class BacklinkSearchModal extends SuggestModal<BacklinkItem> {
         const q = query.toLowerCase();
         const matches = this.items.filter(
             (item) =>
-                matchesNoteType(item.type, this.typeFilters.activeValues) &&
-                this.matchesQuery(item, q),
+                matchesNoteType(
+                    item.type,
+                    this.typeFilters.activeValues,
+                    this.configured,
+                ) && this.matchesQuery(item, q),
         );
 
         this.typeFilters.setCounts(this.typeCounts(q));
@@ -209,17 +227,18 @@ export class BacklinkSearchModal extends SuggestModal<BacklinkItem> {
      *
      * The chips are OR'd together (see `matchesNoteType`), so turning one on
      * only ever adds its own matches regardless of which others are active —
-     * the count for a chip is how many notes carry that type and match the
-     * query.
+     * the count for a chip is how many notes answer to it and match the query.
      */
     private typeCounts(q: string): Map<string, number> {
         const counts = new Map<string, number>();
 
-        for (const { value } of NOTE_TYPE_FILTERS) {
+        for (const { value } of this.typeChips) {
             counts.set(
                 value,
                 this.items.filter(
-                    (item) => item.type === value && this.matchesQuery(item, q),
+                    (item) =>
+                        noteTypeFilterValue(item.type, this.configured) === value &&
+                        this.matchesQuery(item, q),
                 ).length,
             );
         }
@@ -255,7 +274,7 @@ export class BacklinkSearchModal extends SuggestModal<BacklinkItem> {
             links.createSpan({ text: String(item.count) });
         }
 
-        renderTypePill(title, item.type);
+        renderTypePill(title, item.type, this.noteTypes);
     }
 
     onChooseSuggestion(item: BacklinkItem, event: MouseEvent | KeyboardEvent): void {
@@ -267,8 +286,11 @@ export class BacklinkSearchModal extends SuggestModal<BacklinkItem> {
  * Search the notes linking to the active note in a modal. Choosing one opens it
  * — in the active tab, or in a new one with Mod+Enter — at the first link to
  * the note, or at the top when that link is in the frontmatter.
+ *
+ * `noteTypes` comes from the settings and decides which types get a chip of
+ * their own; everything else answers to the "overige" chip.
  */
-export function searchBacklinks(app: App): void {
+export function searchBacklinks(app: App, noteTypes: readonly NoteTypeSetting[]): void {
     const target = app.workspace.getActiveFile();
     if (!target) {
         new Notice('No note is open');
@@ -281,5 +303,5 @@ export function searchBacklinks(app: App): void {
         return;
     }
 
-    new BacklinkSearchModal(app, target, items).open();
+    new BacklinkSearchModal(app, target, items, noteTypes).open();
 }

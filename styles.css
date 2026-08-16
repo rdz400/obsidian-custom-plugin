@@ -189,9 +189,31 @@
 }
 
 /*
- * The "extern" chip, which sits in the same row as the note types but filters
- * on something else entirely: links that leave the vault. Squared off and in
- * its own colour so it reads as the odd one out even before it is pressed.
+ * The "overige" chip, last in the note-type row: everything the other chips do
+ * not claim. Squared off and greyed so it reads as the leftover bucket rather
+ * than as another type of note.
+ */
+.ronald-task-filter-type-other-note {
+    border-radius: 4px;
+    border-style: dashed;
+}
+
+.ronald-task-filter-type-other-note.is-active {
+    background: var(--background-modifier-hover);
+    border-color: var(--text-muted);
+    color: var(--text-normal);
+}
+
+.ronald-task-filter-type-other-note.is-active .ronald-task-filter-count {
+    background: var(--background-modifier-border);
+    color: var(--text-muted);
+}
+
+/*
+ * The "extern" chip, on its own row under the note types: it does not compete
+ * with them but cuts across the whole list, revealing the links that leave the
+ * vault. Squared off and in its own colour so it reads as the odd one out even
+ * before it is pressed.
  */
 .ronald-task-filter-type-external {
     border-radius: 4px;
@@ -499,6 +521,12 @@
     height: 12px;
 }
 
+/*
+ * Colours for the note types the vault is organised around. The types
+ * themselves are a setting, so a type added there gets the neutral pill above
+ * until it is given a rule here — it is still filtered and still pilled, just
+ * without a colour of its own.
+ */
 .ronald-backlink-type-project {
     background: rgba(var(--color-blue-rgb), 0.15);
     color: var(--color-blue);
