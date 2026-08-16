@@ -210,6 +210,43 @@
 }
 
 /*
+ * Folder chips in the recent notes list: which part of the vault the note sits
+ * in. Given the blue the "project" type pill carries, since a folder and a
+ * project are both about where work lives rather than what a note is.
+ */
+.ronald-task-filter-type-folder.is-active {
+    background: rgba(var(--color-blue-rgb), 0.15);
+    border-color: var(--color-blue);
+    color: var(--color-blue);
+}
+
+.ronald-task-filter-type-folder.is-active .ronald-task-filter-count {
+    background: rgba(var(--color-blue-rgb), 0.25);
+    color: var(--color-blue);
+}
+
+/*
+ * The "overige" chip closing the folder row: every folder without one of its
+ * own. Squared off and greyed like the note-type "overige", so the two read as
+ * the same kind of leftover bucket.
+ */
+.ronald-task-filter-type-other-folder {
+    border-radius: 4px;
+    border-style: dashed;
+}
+
+.ronald-task-filter-type-other-folder.is-active {
+    background: var(--background-modifier-hover);
+    border-color: var(--text-muted);
+    color: var(--text-normal);
+}
+
+.ronald-task-filter-type-other-folder.is-active .ronald-task-filter-count {
+    background: var(--background-modifier-border);
+    color: var(--text-muted);
+}
+
+/*
  * The "extern" chip, on its own row under the note types: it does not compete
  * with them but cuts across the whole list, revealing the links that leave the
  * vault. Squared off and in its own colour so it reads as the odd one out even
@@ -567,4 +604,50 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/*
+ * Recent notes modal ("Show recently created notes"), which borrows the
+ * backlink rows for its layout: the same note icon, folder line and type pill.
+ */
+
+/*
+ * A long note name is cut off at the row's width rather than pushing the date
+ * and the type pill off the right edge, as in the outgoing link search.
+ */
+.ronald-recent-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/*
+ * The creation date, sitting between the note name and the type pill and
+ * carrying the `margin-left: auto` that pushes both to the right edge. Given a
+ * fixed width so the pills beside them line up down the list, the way the
+ * backlink search's link count is.
+ */
+.ronald-recent-date {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    /*
+     * Wide enough for a whole DD-MM-YYYY plus its icon: any narrower and the
+     * date wraps onto a second line, which also knocks the type pills beside it
+     * out of alignment. `white-space: nowrap` keeps it on one line regardless.
+     */
+    width: 8.5em;
+    flex: none;
+    white-space: nowrap;
+    font-size: var(--font-smallest);
+    font-weight: var(--font-medium);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.ronald-recent-date .svg-icon {
+    width: 12px;
+    height: 12px;
 }

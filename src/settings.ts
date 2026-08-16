@@ -37,6 +37,16 @@ export interface RonaldSettings {
      * bar adds after these.
      */
     linkNoteTypes: NoteTypeSetting[];
+
+    /**
+     * Folders offered as filter chips in the recent notes list, in the order
+     * their chips are shown and numbered as Mod+1…Mod+9.
+     *
+     * A chip matches the folder and everything under it, so "1-projecten" also
+     * covers "1-projecten/archief". The bar adds an "overige" chip itself for
+     * every folder without one.
+     */
+    recentFolders: string[];
 }
 
 export const DEFAULT_SETTINGS: RonaldSettings = {
@@ -57,6 +67,7 @@ export const DEFAULT_SETTINGS: RonaldSettings = {
         { value: 'boek', icon: 'book' },
         { value: 'persoon', icon: 'user' },
     ],
+    recentFolders: ['0-inbox', '9-begrippen', '2-gebieden-ref', '1-projecten'],
 };
 
 export class RonaldSettingTab extends PluginSettingTab {
@@ -78,6 +89,10 @@ export class RonaldSettingTab extends PluginSettingTab {
 
     private get noteTypes(): NoteTypeSetting[] {
         return this.plugin.settings.linkNoteTypes;
+    }
+
+    private get recentFolders(): string[] {
+        return this.plugin.settings.recentFolders;
     }
 
     /**
@@ -206,7 +221,58 @@ export class RonaldSettingTab extends PluginSettingTab {
                     render: (setting: Setting) => this.renderNoteTypeRow(setting, type, index),
                 })),
             },
+            {
+                type: 'list',
+                // The bar adds "overige" itself, after these, so every note in
+                // the list is reachable by some chip.
+                heading: 'Folders to filter recent notes on (plus "overige")',
+                cls: 'ronald-setting-tag-list',
+                emptyState: 'No folders yet.',
+                addItem: {
+                    name: 'Add folder',
+                    action: () => {
+                        this.recentFolders.push('');
+                        void this.save();
+                    },
+                },
+                onReorder: (oldIndex, newIndex) => {
+                    const [moved] = this.recentFolders.splice(oldIndex, 1);
+                    if (moved !== undefined) this.recentFolders.splice(newIndex, 0, moved);
+                    void this.save();
+                },
+                onDelete: (index) => {
+                    this.recentFolders.splice(index, 1);
+                    void this.save();
+                },
+                items: this.recentFolders.map((folder, index) => ({
+                    name: folder.length > 0 ? folder : 'New folder',
+                    searchable: false,
+                    render: (setting: Setting) =>
+                        this.renderFolderRow(setting, index),
+                })),
+            },
         ];
+    }
+
+    /**
+     * One folder entry. Numbered like the filter tags, since the position
+     * decides the chip's shortcut in the recent notes list the same way.
+     */
+    private renderFolderRow(setting: Setting, index: number): void {
+        setting
+            .setName(index < 9 ? `${SHORTCUT_MODIFIER}+${index + 1}` : '')
+            .setClass('ronald-setting-tag-row')
+            .addText((text) =>
+                text
+                    .setPlaceholder('Folder')
+                    .setValue(this.recentFolders[index] ?? '')
+                    .onChange((value) => {
+                        // Trailing slashes would break the prefix match the
+                        // chip does, so they are dropped on the way in.
+                        this.recentFolders[index] = value.trim().replace(/\/+$/, '');
+                        void this.plugin.saveSettings();
+                    }),
+            );
     }
 
     /**

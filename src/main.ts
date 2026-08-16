@@ -33,6 +33,7 @@ import {
 } from './editorcommands';
 import { searchOutgoingLinks } from './outgoinglinksearch';
 import { searchProjects, type ProjectSearchOptions } from './projectsearch';
+import { showRecentNotes } from './recentnotes';
 import {
     DEFAULT_SETTINGS,
     RonaldSettingTab,
@@ -314,6 +315,20 @@ export default class RonaldPlugin extends Plugin {
                 void searchOutgoingLinks(this.app, this.settings.linkNoteTypes),
         });
 
+        this.addCommand({
+            id: 'show-recent-notes',
+            name: 'Show recently created notes',
+            icon: 'calendar-clock',
+            // Like the link searches, the settings are read here rather than
+            // captured, so a type or folder added in settings reaches the next
+            // run without a reload.
+            callback: () => this.showRecentNotes(),
+        });
+
+        this.addRibbonIcon('calendar-clock', 'Show recently created notes', () =>
+            this.showRecentNotes(),
+        );
+
         registerTasksUriHandler(this, () => this.settings.taskFilterTags);
         registerProjectsUriHandler(this, () => this.projectSearchOptions());
 
@@ -342,6 +357,15 @@ export default class RonaldPlugin extends Plugin {
     /** Open the project search from the command or the ribbon. */
     private searchProjects(): Promise<void> {
         return searchProjects(this.app, this.projectSearchOptions());
+    }
+
+    /** Open the recent notes list from the command or the ribbon. */
+    private showRecentNotes(): void {
+        showRecentNotes(
+            this.app,
+            this.settings.linkNoteTypes,
+            this.settings.recentFolders,
+        );
     }
 
     async loadSettings(): Promise<void> {
