@@ -56,13 +56,3 @@ export function registerTasksUriHandler(
         });
     });
 }
-
-/** The URI that opens the task search modal. */
-export function buildTasksUri(query?: string, tags?: readonly string[]): string {
-    const params = new URLSearchParams();
-    if (query) params.set('query', query);
-    if (tags && tags.length > 0) params.set('tags', tags.join(','));
-
-    const search = params.toString();
-    return `obsidian://${TASKS_URI_ACTION}${search ? `?${search}` : ''}`;
-}
