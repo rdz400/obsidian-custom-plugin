@@ -32,14 +32,14 @@ import {
     selectLine,
 } from './editorcommands';
 import { searchOutgoingLinks } from './outgoinglinksearch';
-import { searchProjects } from './projectsearch';
+import { searchProjects, type ProjectSearchOptions } from './projectsearch';
 import {
     DEFAULT_SETTINGS,
     RonaldSettingTab,
     type RonaldSettings,
 } from './settings';
 import { searchTasks } from './tasksearch';
-import { registerTasksUriHandler } from './urihandler';
+import { registerProjectsUriHandler, registerTasksUriHandler } from './urihandler';
 
 export default class RonaldPlugin extends Plugin {
     settings!: RonaldSettings;
@@ -315,6 +315,7 @@ export default class RonaldPlugin extends Plugin {
         });
 
         registerTasksUriHandler(this, () => this.settings.taskFilterTags);
+        registerProjectsUriHandler(this, () => this.projectSearchOptions());
 
         this.registerStatusBar();
     }
@@ -322,19 +323,25 @@ export default class RonaldPlugin extends Plugin {
     onunload() {}
 
     /**
-     * Open the project search, with Shift+Enter handing the chosen project's
-     * name to the task search as its query.
+     * How the project search behaves wherever it is opened from: Shift+Enter
+     * hands the chosen project's name to the task search as its query.
      *
-     * The chips come from the settings and are read here rather than captured,
-     * so a tag added in settings reaches the next search without a reload.
+     * Built per call rather than once, so the task chips it closes over are the
+     * ones in the settings at that moment — a tag added in settings reaches the
+     * next search without a reload.
      */
-    private searchProjects(): Promise<void> {
-        return searchProjects(this.app, {
+    private projectSearchOptions(): ProjectSearchOptions {
+        return {
             onSearchTasks: (name) =>
                 void searchTasks(this.app, this.settings.taskFilterTags, {
                     query: name,
                 }),
-        });
+        };
+    }
+
+    /** Open the project search from the command or the ribbon. */
+    private searchProjects(): Promise<void> {
+        return searchProjects(this.app, this.projectSearchOptions());
     }
 
     async loadSettings(): Promise<void> {

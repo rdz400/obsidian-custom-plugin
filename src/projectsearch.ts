@@ -67,6 +67,16 @@ function matchesTaskFilter(item: ProjectItem, value: string): boolean {
     return value === 'met-taken' ? item.openTasks > 0 : item.openTasks === 0;
 }
 
+/** The state a caller can hand the project search to open with. */
+export interface ProjectSearchPreset {
+    /** Text to put in the search field, as if the user had typed it. */
+    query?: string;
+    /** Status chips to switch on up front; values with no chip are ignored. */
+    activeStatuses?: readonly string[];
+    /** Task chips to switch on up front: "met-taken" and/or "zonder-taken". */
+    activeTaskFilters?: readonly string[];
+}
+
 /** A project note plus the metadata shown in the search modal. */
 export interface ProjectItem {
     file: TFile;
@@ -218,11 +228,13 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
     private onChoose: (item: ProjectItem, event: MouseEvent | KeyboardEvent) => void;
     private readonly statusFilters: FilterBar;
     private readonly taskFilters: FilterBar;
+    private readonly initialQuery: string;
 
     constructor(
         app: App,
         items: ProjectItem[],
         onChoose: (item: ProjectItem, event: MouseEvent | KeyboardEvent) => void,
+        preset: ProjectSearchPreset = {},
     ) {
         super(app);
         this.items = items;
@@ -248,10 +260,41 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
         });
         this.mountFilters();
 
+        // Toggled before the modal is on screen, so the first render already
+        // shows the preset selection; `toggle` drops values with no chip.
+        for (const status of preset.activeStatuses ?? []) {
+            this.statusFilters.toggle(status);
+        }
+        for (const value of preset.activeTaskFilters ?? []) {
+            this.taskFilters.toggle(value);
+        }
+
+        this.initialQuery = preset.query ?? '';
+
         // `getSuggestions` keeps the counts current from the first keystroke
         // on, but the bars are on screen before that, so seed them here.
-        this.statusFilters.setCounts(this.statusCounts(''));
-        this.taskFilters.setCounts(this.taskCounts(''));
+        const q = this.initialQuery.toLowerCase();
+        this.statusFilters.setCounts(this.statusCounts(q));
+        this.taskFilters.setCounts(this.taskCounts(q));
+    }
+
+    /**
+     * Seed the search field once the modal is up.
+     *
+     * The value has to be written after `super.onOpen` has run: Obsidian renders
+     * the empty result list on open, and setting the text before that would be
+     * overwritten by it. `rerunSearch` then produces the matches, which typing
+     * would otherwise be needed for.
+     */
+    onOpen(): void {
+        void super.onOpen();
+        if (this.initialQuery.length === 0) return;
+
+        this.inputEl.value = this.initialQuery;
+        // Leaves the cursor at the end so the query reads as typed and can be
+        // edited or cleared straight away.
+        this.inputEl.setSelectionRange(this.initialQuery.length, this.initialQuery.length);
+        this.rerunSearch();
     }
 
     /**
@@ -424,7 +467,7 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
 }
 
 /** Hooks a caller can supply for the project search's secondary actions. */
-export interface ProjectSearchOptions {
+export interface ProjectSearchOptions extends ProjectSearchPreset {
     /**
      * Called with the chosen project's note name on Shift+Enter, instead of
      * opening the note.
@@ -467,5 +510,5 @@ export async function searchProjects(
             return;
         }
         openFileFromSearch(app, item.file, event);
-    }).open();
+    }, options).open();
 }
