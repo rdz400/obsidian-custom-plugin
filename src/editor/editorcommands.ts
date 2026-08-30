@@ -167,9 +167,25 @@ export function getSelectedLinesText(editor: Editor): string {
     );
 }
 
+/**
+ * Put the cursor back where it was, by line number, after a move.
+ *
+ * Both move commands keep the document's line count the same, so holding the
+ * cursor at its original line leaves the view exactly where it was instead of
+ * scrolling along with the moved text. The line can still fall off the end
+ * (moving a block down shifts the lines below it up), so clamp it, and clamp
+ * the column to the length of whatever line it lands on.
+ */
+function restoreCursor(editor: Editor, at: EditorPosition): void {
+    const line = Math.min(at.line, editor.lastLine());
+    const ch = Math.min(at.ch, editor.getLine(line).length);
+    editor.setSelection({ line, ch });
+}
+
 /** Move the selected line(s) to the top of the file, below the frontmatter. */
 export function moveLinesToTop(editor: Editor): void {
     const { from, to } = selectedLineRange(editor);
+    const origin = editor.getCursor('from');
 
     const target = firstBodyLine(editor);
     if (from === target) return;
@@ -202,12 +218,13 @@ export function moveLinesToTop(editor: Editor): void {
         ],
     });
 
-    selectLines(editor, target, target + (to - from));
+    restoreCursor(editor, origin);
 }
 
 /** Move the selected lines to the end of the document. */
 export function moveLinesToEnd(editor: Editor): void {
     const { from, to } = selectedLineRange(editor);
+    const origin = editor.getCursor('from');
     const text = getSelectedLinesText(editor);
 
     const lastLine = editor.lastLine();
@@ -230,14 +247,5 @@ export function moveLinesToEnd(editor: Editor): void {
         ],
     });
 
-    // Keep the moved lines selected. After the removal the block sits at the
-    // end of the document, so count back from the last line that has content
-    // (a trailing newline leaves an empty line below the block).
-    let end = editor.lastLine();
-    if (editor.getLine(end).length === 0 && end > 0) end--;
-    const start = end - (to - from);
-    editor.setSelection(
-        { line: start, ch: 0 },
-        { line: end, ch: editor.getLine(end).length },
-    );
+    restoreCursor(editor, origin);
 }
