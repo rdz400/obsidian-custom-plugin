@@ -1,6 +1,6 @@
 import { App, Loc, Notice, Reference, SuggestModal, TFile, setIcon } from 'obsidian';
 
-import { FilterBar, FilterChip } from './filterbar';
+import { FilterBar, FilterChip } from '../ui/filterbar';
 import {
     NoteTypeSetting,
     configuredTypes,
@@ -8,8 +8,8 @@ import {
     noteTypeFilterValue,
     noteTypeFilters,
     renderTypePill,
-} from './notetype';
-import { openFileFromSearch, registerNewTabEnter } from './openfile';
+} from '../ui/notetype';
+import { openFileFromSearch, registerNewTabEnter } from '../ui/openfile';
 
 /** A note linking to the target note, plus what is shown for it. */
 export interface BacklinkItem {

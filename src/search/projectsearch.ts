@@ -7,8 +7,7 @@ import {
     setIcon,
 } from 'obsidian';
 
-import { getTemplatesFolder } from './commands';
-import { FilterBar, FilterChip } from './filterbar';
+import { FilterBar, FilterChip } from '../ui/filterbar';
 import {
     openFileFromSearch,
     registerAltEnter,
@@ -17,7 +16,8 @@ import {
     registerShiftEnter,
     wantsAltAction,
     wantsShiftAction,
-} from './openfile';
+} from '../ui/openfile';
+import { getTemplatesFolder } from '../vault';
 
 /** Statuses that mark a project as no longer running. */
 const CLOSED_PROJECT_STATUSES = ['klaar', 'geannuleerd'];

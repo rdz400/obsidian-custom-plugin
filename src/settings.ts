@@ -6,9 +6,9 @@ import {
     type SettingDefinitionItem,
 } from 'obsidian';
 
-import type { FilterChip } from './filterbar';
+import type { FilterChip } from './ui/filterbar';
 import type RonaldPlugin from './main';
-import type { NoteTypeSetting } from './notetype';
+import type { NoteTypeSetting } from './ui/notetype';
 
 export interface RonaldSettings {
     /**

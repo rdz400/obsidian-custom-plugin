@@ -1,71 +1,26 @@
 import {
     App,
     Editor,
-    EditorChange,
     ListItemCache,
     MarkdownView,
     Notice,
     TFile,
-    normalizePath,
 } from 'obsidian';
-import { selectedLineRange } from './editorcommands';
-import { toggleCheckbox } from './functions';
+import {
+    getSelectedLinesText,
+    removeLines,
+    selectedLineRange,
+} from './editor/editorcommands';
+import { toggleCheckbox } from './editor/text';
+import { getTemplatesFolder } from './vault';
 import {
     NoteSuggestModal,
     StringSuggestModal,
     TagSuggestModal,
-} from './modals';
+} from './ui/modals';
 
 
 
-
-/**
- * The edit that deletes lines [from, to], including a surrounding newline so no
- * blank line is left behind.
- *
- * Returned rather than applied so callers can combine it with another edit in a
- * single {@link Editor.transaction} — two separate `replaceRange` calls can end
- * up as two undo steps, which makes one undo revert only half of a move.
- */
-function removalChange(editor: Editor, from: number, to: number): EditorChange {
-    if (from === 0 && to < editor.lastLine()) {
-        // Leading lines: also drop the newline after them.
-        return {
-            from: { line: from, ch: 0 },
-            to: { line: to + 1, ch: 0 },
-            text: '',
-        };
-    }
-    if (from > 0) {
-        // Non-leading lines: also drop the newline before them.
-        return {
-            from: { line: from - 1, ch: editor.getLine(from - 1).length },
-            to: { line: to, ch: editor.getLine(to).length },
-            text: '',
-        };
-    }
-    // The selection is the whole document.
-    return {
-        from: { line: 0, ch: 0 },
-        to: { line: to, ch: editor.getLine(to).length },
-        text: '',
-    };
-}
-
-/** Remove the lines [from.line, to.line] from the editor, including a surrounding newline. */
-function removeLines(editor: Editor, from: number, to: number): void {
-    const change = removalChange(editor, from, to);
-    editor.replaceRange(change.text, change.from, change.to);
-}
-
-/** Return the text of the currently selected lines (full lines, not partial selections). */
-function getSelectedLinesText(editor: Editor): string {
-    const { from, to } = selectedLineRange(editor);
-    return editor.getRange(
-        { line: from, ch: 0 },
-        { line: to, ch: editor.getLine(to).length },
-    );
-}
 
 /** Open all task notes in new tabs. */
 export async function openTaakBestanden(app: App): Promise<void> {
@@ -99,13 +54,6 @@ export async function openMostRecentTaakNote(app: App): Promise<void> {
         app.workspace.getMostRecentLeaf(app.workspace.rootSplit) ??
         app.workspace.getLeaf(false);
     await leaf.openFile(mostRecent);
-}
-
-/** Folder configured in the core "Templates" plugin, or null if unset/disabled. */
-export function getTemplatesFolder(app: App): string | null {
-    const instance = (app as any).internalPlugins?.getPluginById('templates')?.instance;
-    const folder = instance?.options?.folder;
-    return typeof folder === 'string' && folder.length > 0 ? normalizePath(folder) : null;
 }
 
 /** Move every note whose frontmatter `type` is "taken" into the root folder "1-taken". */
@@ -350,43 +298,6 @@ export async function moveFinishedTasksToKlaar(app: App): Promise<void> {
     }
 
     new Notice(`Moved ${blocks.length} task(s) to ${target.basename}`);
-}
-
-/** Move the selected lines to the end of the document. */
-export function moveLinesToEnd(editor: Editor): void {
-    const { from, to } = selectedLineRange(editor);
-    const text = getSelectedLinesText(editor);
-
-    const lastLine = editor.lastLine();
-    if (to >= lastLine) return; // Already at the end.
-
-    // Append after the last line that has content, so a trailing empty line
-    // (notes usually end with a newline) doesn't become a blank gap above the
-    // moved text — and isn't consumed either.
-    const endsEmpty = editor.getLine(lastLine).length === 0;
-    const anchor = endsEmpty ? lastLine - 1 : lastLine;
-    const anchorEnd = { line: anchor, ch: editor.getLine(anchor).length };
-
-    // Both changes are applied as one transaction so a single undo reverts the
-    // whole move. Their positions are relative to the document as it is now,
-    // not to the result of the other change.
-    editor.transaction({
-        changes: [
-            removalChange(editor, from, to),
-            { from: anchorEnd, to: anchorEnd, text: '\n' + text },
-        ],
-    });
-
-    // Keep the moved lines selected. After the removal the block sits at the
-    // end of the document, so count back from the last line that has content
-    // (a trailing newline leaves an empty line below the block).
-    let end = editor.lastLine();
-    if (editor.getLine(end).length === 0 && end > 0) end--;
-    const start = end - (to - from);
-    editor.setSelection(
-        { line: start, ch: 0 },
-        { line: end, ch: editor.getLine(end).length },
-    );
 }
 
 /**

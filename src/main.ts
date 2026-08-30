@@ -8,9 +8,8 @@ import {
     debounce,
 } from 'obsidian';
 
-import { searchBacklinks } from './backlinksearch';
+import { searchBacklinks } from './search/backlinksearch';
 import {
-    moveLinesToEnd,
     toggleTag,
     moveLinesToNote,
     toggleCheckBoxAdvanced,
@@ -28,18 +27,19 @@ import {
 } from './commands';
 import {
     extendSelectionByLine,
+    moveLinesToEnd,
     moveLinesToTop,
     selectLine,
-} from './editorcommands';
-import { searchOutgoingLinks } from './outgoinglinksearch';
-import { searchProjects, type ProjectSearchOptions } from './projectsearch';
-import { showRecentNotes } from './recentnotes';
+} from './editor/editorcommands';
+import { searchOutgoingLinks } from './search/outgoinglinksearch';
+import { searchProjects, type ProjectSearchOptions } from './search/projectsearch';
+import { showRecentNotes } from './search/recentnotes';
 import {
     DEFAULT_SETTINGS,
     RonaldSettingTab,
     type RonaldSettings,
 } from './settings';
-import { searchTasks } from './tasksearch';
+import { searchTasks } from './search/tasksearch';
 import { registerProjectsUriHandler, registerTasksUriHandler } from './urihandler';
 
 export default class RonaldPlugin extends Plugin {

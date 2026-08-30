@@ -6,8 +6,8 @@ import {
     TFile,
 } from 'obsidian';
 
-import { FilterBar, FilterChip } from './filterbar';
-import { openFileFromSearch, registerNewTabEnter } from './openfile';
+import { FilterBar, FilterChip } from '../ui/filterbar';
+import { openFileFromSearch, registerNewTabEnter } from '../ui/openfile';
 
 /** One task line found in a "taken" note, with everything shown for it. */
 export interface TaskItem {

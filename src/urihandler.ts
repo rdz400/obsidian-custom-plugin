@@ -1,8 +1,8 @@
 import { Plugin } from 'obsidian';
 
-import type { FilterChip } from './filterbar';
-import { searchProjects, type ProjectSearchOptions } from './projectsearch';
-import { searchTasks } from './tasksearch';
+import type { FilterChip } from './ui/filterbar';
+import { searchProjects, type ProjectSearchOptions } from './search/projectsearch';
+import { searchTasks } from './search/tasksearch';
 
 /** The protocol action that opens the task search modal. */
 export const TASKS_URI_ACTION = 'ronald-tasks';
