@@ -100,23 +100,45 @@ export function extendSelectionByLine(editor: Editor, direction: -1 | 1): void {
 }
 
 /**
- * First line of the body, i.e. the line after the frontmatter block (and any
- * blank lines following it). Returns 0 when the note has no frontmatter.
+ * The line the frontmatter's closing `---` is on, or `null` when the note has
+ * no (terminated) frontmatter.
  */
-function firstBodyLine(editor: Editor): number {
-    if (editor.getLine(0).trim() !== '---') return 0;
+function frontmatterEndLine(editor: Editor): number | null {
+    if (editor.getLine(0).trim() !== '---') return null;
 
     const last = editor.lastLine();
     for (let i = 1; i <= last; i++) {
-        if (editor.getLine(i).trim() !== '---') continue;
-        // Skip blank lines between the frontmatter and the body.
-        let line = i + 1;
-        while (line <= last && editor.getLine(line).trim() === '') line++;
-        return line;
+        if (editor.getLine(i).trim() === '---') return i;
     }
 
     // Unterminated `---`: treat the whole note as body.
-    return 0;
+    return null;
+}
+
+/**
+ * The line moved text belongs on: two lines below the frontmatter's closing
+ * `---`, so exactly one blank line separates the two, or 0 when the note has no
+ * frontmatter.
+ *
+ * The offset is fixed rather than "the first non-blank line": blank lines
+ * already sitting under the frontmatter must not push the target down to where
+ * the existing content starts.
+ *
+ * The target line only exists once that blank line does, so a note that has
+ * none is given one first — which is why this needs an editor it may write to.
+ */
+function firstBodyLine(editor: Editor): number {
+    const end = frontmatterEndLine(editor);
+    if (end === null) return 0;
+
+    // No blank line under the frontmatter yet (or the note stops there): add
+    // one, so the moved text never ends up directly against the `---`.
+    if (editor.getLine(end + 1).trim() !== '' || end + 1 > editor.lastLine()) {
+        const at = lineEnd(editor, end);
+        editor.replaceRange('\n', at, at);
+    }
+
+    return end + 2;
 }
 
 /**
@@ -182,17 +204,33 @@ function restoreCursor(editor: Editor, at: EditorPosition): void {
     editor.setSelection({ line, ch });
 }
 
-/** Move the selected line(s) to the top of the file, below the frontmatter. */
+/**
+ * Move the selected line(s) to the top of the note: one blank line below the
+ * frontmatter, or the very first line when there is none.
+ */
 export function moveLinesToTop(editor: Editor): void {
-    const { from, to } = selectedLineRange(editor);
+    const selection = selectedLineRange(editor);
     const origin = editor.getCursor('from');
 
-    const target = firstBodyLine(editor);
-    if (from === target) return;
-    if (from < target) {
+    // Rejected before the note is touched, so a selection in the frontmatter
+    // leaves it exactly as it was.
+    const end = frontmatterEndLine(editor);
+    if (end !== null && selection.from <= end) {
         new Notice('Line(s) are inside the frontmatter');
         return;
     }
+
+    const linesBefore = editor.lastLine();
+    const target = firstBodyLine(editor);
+    // A blank line added under the frontmatter sits above the selection, so
+    // everything below it — the selection included — shifted down one line.
+    const shift = editor.lastLine() - linesBefore;
+    const from = selection.from + shift;
+    const to = selection.to + shift;
+
+    if (from === target) return;
+    // The blank line the frontmatter is followed by is not a line to move from.
+    if (from < target) return;
 
     const text = editor.getRange(lineStart(from), lineEnd(editor, to));
 
