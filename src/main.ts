@@ -32,6 +32,7 @@ import {
     selectLine,
 } from './editor/editorcommands';
 import { searchOutgoingLinks } from './search/outgoinglinksearch';
+import { showOutline } from './search/outlinesearch';
 import { searchProjects, type ProjectSearchOptions } from './search/projectsearch';
 import { showRecentNotes } from './search/recentnotes';
 import {
@@ -313,6 +314,13 @@ export default class RonaldPlugin extends Plugin {
             icon: 'external-link',
             callback: () =>
                 void searchOutgoingLinks(this.app, this.settings.linkNoteTypes),
+        });
+
+        this.addCommand({
+            id: 'show-outline',
+            name: 'Show outline of this note',
+            icon: 'list',
+            callback: () => showOutline(this.app),
         });
 
         this.addCommand({

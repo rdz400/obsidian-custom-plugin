@@ -651,3 +651,67 @@
     width: 12px;
     height: 12px;
 }
+
+/*
+ * Outline modal ("Show outline of this note"), which borrows the backlink rows
+ * for its layout and adds the nesting that makes an outline readable: each
+ * level is indented a step further and set a little smaller and fainter than
+ * the one above it, so the shape of the note is visible at a glance.
+ */
+
+/*
+ * A long heading is cut off at the row's width rather than growing the modal,
+ * as note names are in the recent notes list.
+ */
+.ronald-outline-heading {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/*
+ * The indent per level, applied to the row rather than the text so the heading
+ * icon steps in with it. Level 1 sits flush; every level below adds one step.
+ */
+.ronald-outline .suggestion-item[data-level='2'] {
+    margin-left: 16px;
+}
+
+.ronald-outline .suggestion-item[data-level='3'] {
+    margin-left: 32px;
+}
+
+.ronald-outline .suggestion-item[data-level='4'] {
+    margin-left: 48px;
+}
+
+.ronald-outline .suggestion-item[data-level='5'] {
+    margin-left: 64px;
+}
+
+.ronald-outline .suggestion-item[data-level='6'] {
+    margin-left: 80px;
+}
+
+/*
+ * Weight and colour carry the level as well as the indent, so the hierarchy
+ * still reads when a filtered list shows a deep heading with none of its
+ * parents around it.
+ */
+.ronald-outline .suggestion-item[data-level='1'] .ronald-outline-heading {
+    font-weight: var(--font-bold);
+}
+
+.ronald-outline .suggestion-item[data-level='2'] .ronald-outline-heading {
+    font-weight: var(--font-semibold);
+}
+
+.ronald-outline .suggestion-item[data-level='3'] .ronald-outline-heading,
+.ronald-outline .suggestion-item[data-level='4'] .ronald-outline-heading {
+    font-weight: var(--font-medium);
+}
+
+.ronald-outline .suggestion-item[data-level='5'] .ronald-outline-heading,
+.ronald-outline .suggestion-item[data-level='6'] .ronald-outline-heading {
+    color: var(--text-muted);
+}
