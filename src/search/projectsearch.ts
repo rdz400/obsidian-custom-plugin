@@ -1,6 +1,7 @@
 import {
     App,
     ListItemCache,
+    MarkdownView,
     Notice,
     SuggestModal,
     TFile,
@@ -219,8 +220,8 @@ export async function collectOpenProjects(app: App): Promise<ProjectItem[]> {
 /**
  * Search projects by note name and show their status and open task count.
  * Choosing a project opens the note, in a new tab with Mod+Enter, or with
- * Alt+Enter copies a wikilink to it instead — `onChoose` decides which from
- * the event it's handed.
+ * Alt+Enter copies and inserts a wikilink to it instead — `onChoose` decides
+ * which from the event it's handed.
  */
 export class ProjectSearchModal extends SuggestModal<ProjectItem> {
     private items: ProjectItem[];
@@ -482,8 +483,9 @@ export interface ProjectSearchOptions extends ProjectSearchPreset {
  * Search open projects by note name in a modal that shows their status and
  * open task count. Choosing a project opens its note — in the active tab, or
  * in a new one with Mod+Enter — while Alt+Enter (Option+Enter on macOS)
- * copies a wikilink to it to the clipboard instead. Shift+Enter hands the
- * project's name to `onSearchTasks` where the caller supplies one.
+ * copies a wikilink to it to the clipboard and, when a note is open, also
+ * inserts that link at the cursor. Shift+Enter hands the project's name to
+ * `onSearchTasks` where the caller supplies one.
  */
 export async function searchProjects(
     app: App,
@@ -503,10 +505,16 @@ export async function searchProjects(
             return;
         }
         if (wantsAltAction(event)) {
-            const sourcePath = app.workspace.getActiveFile()?.path ?? '';
+            const view = app.workspace.getActiveViewOfType(MarkdownView);
+            const sourcePath = view?.file?.path ?? '';
             const link = app.fileManager.generateMarkdownLink(item.file, sourcePath);
             void navigator.clipboard.writeText(link);
-            new Notice(`Copied link to ${item.file.basename}`);
+            if (view) {
+                view.editor.replaceSelection(link);
+                new Notice(`Inserted link to ${item.file.basename}`);
+            } else {
+                new Notice(`Copied link to ${item.file.basename}`);
+            }
             return;
         }
         openFileFromSearch(app, item.file, event);
