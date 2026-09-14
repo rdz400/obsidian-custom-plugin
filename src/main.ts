@@ -8,6 +8,7 @@ import {
     debounce,
 } from 'obsidian';
 
+import { applyNamingConvention } from './naming/renamefiles';
 import { searchBacklinks } from './search/backlinksearch';
 import {
     toggleTag,
@@ -314,6 +315,13 @@ export default class RonaldPlugin extends Plugin {
             icon: 'external-link',
             callback: () =>
                 void searchOutgoingLinks(this.app, this.settings.linkNoteTypes),
+        });
+
+        this.addCommand({
+            id: 'apply-naming-convention',
+            name: 'Apply naming convention to files in a folder',
+            icon: 'file-pen',
+            callback: () => applyNamingConvention(this.app),
         });
 
         this.addCommand({

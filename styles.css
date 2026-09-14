@@ -715,3 +715,15 @@
 .ronald-outline .suggestion-item[data-level='6'] .ronald-outline-heading {
     color: var(--text-muted);
 }
+
+/* The rename plan in the naming convention confirmation modal. */
+.ronald-rename-plan {
+    max-height: 50vh;
+    overflow-y: auto;
+    padding-left: var(--size-4-5);
+    font-size: var(--font-smaller);
+}
+
+.ronald-rename-plan li {
+    margin-bottom: var(--size-2-1);
+}
