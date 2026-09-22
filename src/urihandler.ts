@@ -1,5 +1,6 @@
 import { Plugin } from 'obsidian';
 
+import { openMostRecentTijdsregistratieNote } from './commands';
 import type { FilterChip } from './ui/filterbar';
 import { searchProjects, type ProjectSearchOptions } from './search/projectsearch';
 import { searchTasks } from './search/tasksearch';
@@ -9,6 +10,9 @@ export const TASKS_URI_ACTION = 'ronald-tasks';
 
 /** The protocol action that opens the project search modal. */
 export const PROJECTS_URI_ACTION = 'ronald-projects';
+
+/** The protocol action that opens the latest "tijdsregistratie" note. */
+export const TIJDSREGISTRATIE_URI_ACTION = 'ronald-tijdsregistratie';
 
 /** Parameters read by the task search action. */
 interface TasksUriParams extends Record<string, string> {
@@ -114,5 +118,17 @@ export function registerProjectsUriHandler(
             activeStatuses: parseValues(status),
             activeTaskFilters: parseTaskFilters(tasks),
         });
+    });
+}
+
+/**
+ * Register `obsidian://ronald-tijdsregistratie` for the lifetime of the plugin.
+ *
+ * The URI takes no parameters and does exactly what the command does: open the
+ * most recent "tijdsregistratie" note at its last line.
+ */
+export function registerTijdsregistratieUriHandler(plugin: Plugin): void {
+    plugin.registerObsidianProtocolHandler(TIJDSREGISTRATIE_URI_ACTION, () => {
+        void openMostRecentTijdsregistratieNote(plugin.app);
     });
 }

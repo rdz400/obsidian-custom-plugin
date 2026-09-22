@@ -13,6 +13,7 @@ import {
 } from './editor/editorcommands';
 import { toggleCheckbox } from './editor/text';
 import { getTemplatesFolder } from './vault';
+import { openFileFromSearch } from './ui/openfile';
 import {
     NoteSuggestModal,
     StringSuggestModal,
@@ -36,24 +37,58 @@ export async function openTaakBestanden(app: App): Promise<void> {
     }
 }
 
-/** Open the most recently created note whose frontmatter `type` is "taken". */
-export async function openMostRecentTaakNote(app: App): Promise<void> {
+/**
+ * Open the most recently created note whose frontmatter `type` is `type`.
+ *
+ * With `scrollToEnd`, the note opens at its last line instead of its top, for
+ * the kinds of note that are appended to and whose latest entry is the point.
+ */
+export async function openMostRecentNoteOfType(
+    app: App,
+    type: string,
+    { scrollToEnd = false }: { scrollToEnd?: boolean } = {},
+): Promise<void> {
     const files = app.vault.getMarkdownFiles().filter((file) => {
         const cache = app.metadataCache.getFileCache(file);
-        return cache?.frontmatter?.type === 'taken';
+        return cache?.frontmatter?.type === type;
     });
 
     if (files.length === 0) {
-        new Notice('No "taken" notes found');
+        new Notice(`No "${type}" notes found`);
         return;
     }
 
     const mostRecent = files.reduce((a, b) => (b.stat.ctime > a.stat.ctime ? b : a));
 
-    const leaf =
-        app.workspace.getMostRecentLeaf(app.workspace.rootSplit) ??
-        app.workspace.getLeaf(false);
-    await leaf.openFile(mostRecent);
+    if (!scrollToEnd) {
+        openFileFromSearch(app, mostRecent);
+        return;
+    }
+
+    // The line goes to `openFile` as ephemeral state, the same way the task and
+    // outline searches jump to a line: the view lands there as it opens, so the
+    // note never paints at the top first. The line count comes from the file,
+    // since there is no editor to ask until the note is open.
+    const text = await app.vault.cachedRead(mostRecent);
+    const line = text.split('\n').length - 1;
+
+    openFileFromSearch(app, mostRecent, undefined, {
+        // Live preview, whatever mode the note was last left in: that is
+        // `source` with `source: false` — "source" here means the editor rather
+        // than reading view, and the flag turns off raw markdown within it.
+        state: { mode: 'source', source: false },
+        eState: { line, cursor: { from: { line, ch: 0 } } },
+    });
+}
+
+/** Open the most recently created note whose frontmatter `type` is "taken". */
+export function openMostRecentTaakNote(app: App): Promise<void> {
+    return openMostRecentNoteOfType(app, 'taken');
+}
+
+/** Open the most recently created note whose frontmatter `type` is "tijdsregistratie". */
+export function openMostRecentTijdsregistratieNote(app: App): Promise<void> {
+    return openMostRecentNoteOfType(app, 'tijdsregistratie', { scrollToEnd: true });
 }
 
 /** Move every note whose frontmatter `type` is "taken" into the root folder "1-taken". */

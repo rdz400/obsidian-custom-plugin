@@ -24,6 +24,7 @@ import {
     setStatusInFrontmatter,
     mergeTakenNotes,
     openMostRecentTaakNote,
+    openMostRecentTijdsregistratieNote,
     removeTagFromTakenNotes,
 } from './commands';
 import {
@@ -42,7 +43,11 @@ import {
     type RonaldSettings,
 } from './settings';
 import { searchTasks } from './search/tasksearch';
-import { registerProjectsUriHandler, registerTasksUriHandler } from './urihandler';
+import {
+    registerProjectsUriHandler,
+    registerTasksUriHandler,
+    registerTijdsregistratieUriHandler,
+} from './urihandler';
 
 export default class RonaldPlugin extends Plugin {
     settings!: RonaldSettings;
@@ -280,6 +285,13 @@ export default class RonaldPlugin extends Plugin {
         this.addRibbonIcon('clock', 'Open most recent "taken" note', () => openMostRecentTaakNote(this.app));
 
         this.addCommand({
+            id: 'open-most-recent-tijdsregistratie-note',
+            name: 'Open most recent "tijdsregistratie" note',
+            icon: 'timer',
+            callback: () => void openMostRecentTijdsregistratieNote(this.app),
+        });
+
+        this.addCommand({
             id: 'search-projects',
             name: 'Search projects',
             icon: 'search',
@@ -347,6 +359,7 @@ export default class RonaldPlugin extends Plugin {
 
         registerTasksUriHandler(this, () => this.settings.taskFilterTags);
         registerProjectsUriHandler(this, () => this.projectSearchOptions());
+        registerTijdsregistratieUriHandler(this);
 
         this.registerStatusBar();
     }
