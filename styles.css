@@ -727,3 +727,46 @@
 .ronald-rename-plan li {
     margin-bottom: var(--size-2-1);
 }
+
+/* Time record modal ("Add time record" command). */
+
+.ronald-time-record-modal {
+    width: min(460px, 100%);
+}
+
+.ronald-time-record-modal .modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ronald-time-record-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ronald-time-record-icon {
+    display: flex;
+    flex-shrink: 0;
+    color: var(--text-muted);
+}
+
+.ronald-time-record-icon .svg-icon {
+    width: 18px;
+    height: 18px;
+}
+
+.ronald-time-record-time {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.ronald-time-record-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.ronald-time-record-row button {
+    flex-shrink: 0;
+}

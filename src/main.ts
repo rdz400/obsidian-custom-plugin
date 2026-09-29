@@ -37,6 +37,7 @@ import { searchOutgoingLinks } from './search/outgoinglinksearch';
 import { showOutline } from './search/outlinesearch';
 import { searchProjects, type ProjectSearchOptions } from './search/projectsearch';
 import { showRecentNotes } from './search/recentnotes';
+import { addTimeRecord } from './timerecord/addtimerecord';
 import {
     DEFAULT_SETTINGS,
     RonaldSettingTab,
@@ -289,6 +290,13 @@ export default class RonaldPlugin extends Plugin {
             name: 'Open most recent "tijdsregistratie" note',
             icon: 'timer',
             callback: () => void openMostRecentTijdsregistratieNote(this.app),
+        });
+
+        this.addCommand({
+            id: 'add-time-record',
+            name: 'Add time record to "tijdsregistratie" note',
+            icon: 'timer',
+            callback: () => addTimeRecord(this.app),
         });
 
         this.addCommand({

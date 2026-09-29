@@ -38,6 +38,20 @@ export async function openTaakBestanden(app: App): Promise<void> {
 }
 
 /**
+ * The most recently created note whose frontmatter `type` is `type`, or `null`
+ * when there is none.
+ */
+export function findMostRecentNoteOfType(app: App, type: string): TFile | null {
+    const files = app.vault.getMarkdownFiles().filter((file) => {
+        const cache = app.metadataCache.getFileCache(file);
+        return cache?.frontmatter?.type === type;
+    });
+
+    if (files.length === 0) return null;
+    return files.reduce((a, b) => (b.stat.ctime > a.stat.ctime ? b : a));
+}
+
+/**
  * Open the most recently created note whose frontmatter `type` is `type`.
  *
  * With `scrollToEnd`, the note opens at its last line instead of its top, for
@@ -48,17 +62,11 @@ export async function openMostRecentNoteOfType(
     type: string,
     { scrollToEnd = false }: { scrollToEnd?: boolean } = {},
 ): Promise<void> {
-    const files = app.vault.getMarkdownFiles().filter((file) => {
-        const cache = app.metadataCache.getFileCache(file);
-        return cache?.frontmatter?.type === type;
-    });
-
-    if (files.length === 0) {
+    const mostRecent = findMostRecentNoteOfType(app, type);
+    if (!mostRecent) {
         new Notice(`No "${type}" notes found`);
         return;
     }
-
-    const mostRecent = files.reduce((a, b) => (b.stat.ctime > a.stat.ctime ? b : a));
 
     if (!scrollToEnd) {
         openFileFromSearch(app, mostRecent);
