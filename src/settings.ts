@@ -47,6 +47,15 @@ export interface RonaldSettings {
      * every folder without one.
      */
     recentFolders: string[];
+
+    /**
+     * Messages offered as one-tap choices in the "Add time record" modal, in
+     * the order they are shown.
+     *
+     * A setting rather than a constant so these personal events stay out of
+     * the repository; the default is therefore empty.
+     */
+    timeRecordEvents: string[];
 }
 
 export const DEFAULT_SETTINGS: RonaldSettings = {
@@ -68,6 +77,7 @@ export const DEFAULT_SETTINGS: RonaldSettings = {
         { value: 'persoon', icon: 'user' },
     ],
     recentFolders: ['0-inbox', '9-begrippen', '2-gebieden-ref', '1-projecten'],
+    timeRecordEvents: [],
 };
 
 export class RonaldSettingTab extends PluginSettingTab {
@@ -93,6 +103,10 @@ export class RonaldSettingTab extends PluginSettingTab {
 
     private get recentFolders(): string[] {
         return this.plugin.settings.recentFolders;
+    }
+
+    private get timeRecordEvents(): string[] {
+        return this.plugin.settings.timeRecordEvents;
     }
 
     /**
@@ -251,7 +265,51 @@ export class RonaldSettingTab extends PluginSettingTab {
                         this.renderFolderRow(setting, index),
                 })),
             },
+            {
+                type: 'list',
+                heading: 'Common time record events',
+                cls: 'ronald-setting-tag-list',
+                emptyState: 'No events yet.',
+                addItem: {
+                    name: 'Add event',
+                    action: () => {
+                        this.timeRecordEvents.push('');
+                        void this.save();
+                    },
+                },
+                onReorder: (oldIndex, newIndex) => {
+                    const [moved] = this.timeRecordEvents.splice(oldIndex, 1);
+                    if (moved !== undefined) this.timeRecordEvents.splice(newIndex, 0, moved);
+                    void this.save();
+                },
+                onDelete: (index) => {
+                    this.timeRecordEvents.splice(index, 1);
+                    void this.save();
+                },
+                items: this.timeRecordEvents.map((event, index) => ({
+                    name: event.length > 0 ? event : 'New event',
+                    searchable: false,
+                    render: (setting: Setting) =>
+                        this.renderTimeRecordEventRow(setting, index),
+                })),
+            },
         ];
+    }
+
+    /**
+     * One time record event. Kept as typed, apart from surrounding whitespace:
+     * unlike a tag, it is written into the note as the message itself.
+     */
+    private renderTimeRecordEventRow(setting: Setting, index: number): void {
+        setting.setName('').setClass('ronald-setting-tag-row').addText((text) =>
+            text
+                .setPlaceholder('Event')
+                .setValue(this.timeRecordEvents[index] ?? '')
+                .onChange((value) => {
+                    this.timeRecordEvents[index] = value.trim();
+                    void this.plugin.saveSettings();
+                }),
+        );
     }
 
     /**

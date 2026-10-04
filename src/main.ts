@@ -48,6 +48,7 @@ import {
     registerProjectsUriHandler,
     registerTasksUriHandler,
     registerTijdsregistratieUriHandler,
+    registerTimeRecordUriHandler,
 } from './urihandler';
 
 export default class RonaldPlugin extends Plugin {
@@ -296,8 +297,14 @@ export default class RonaldPlugin extends Plugin {
             id: 'add-time-record',
             name: 'Add time record to "tijdsregistratie" note',
             icon: 'timer',
-            callback: () => addTimeRecord(this.app),
+            // Read at call time, so an event added in settings shows up in the
+            // next modal without a reload.
+            callback: () => addTimeRecord(this.app, this.settings.timeRecordEvents),
         });
+
+        this.addRibbonIcon('timer', 'Add time record', () =>
+            addTimeRecord(this.app, this.settings.timeRecordEvents),
+        );
 
         this.addCommand({
             id: 'search-projects',
@@ -368,6 +375,7 @@ export default class RonaldPlugin extends Plugin {
         registerTasksUriHandler(this, () => this.settings.taskFilterTags);
         registerProjectsUriHandler(this, () => this.projectSearchOptions());
         registerTijdsregistratieUriHandler(this);
+        registerTimeRecordUriHandler(this, () => this.settings.timeRecordEvents);
 
         this.registerStatusBar();
     }

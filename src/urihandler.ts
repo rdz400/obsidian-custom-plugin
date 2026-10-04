@@ -4,6 +4,7 @@ import { openMostRecentTijdsregistratieNote } from './commands';
 import type { FilterChip } from './ui/filterbar';
 import { searchProjects, type ProjectSearchOptions } from './search/projectsearch';
 import { searchTasks } from './search/tasksearch';
+import { addTimeRecord } from './timerecord/addtimerecord';
 
 /** The protocol action that opens the task search modal. */
 export const TASKS_URI_ACTION = 'ronald-tasks';
@@ -13,6 +14,9 @@ export const PROJECTS_URI_ACTION = 'ronald-projects';
 
 /** The protocol action that opens the latest "tijdsregistratie" note. */
 export const TIJDSREGISTRATIE_URI_ACTION = 'ronald-tijdsregistratie';
+
+/** The protocol action that adds a time record to that note. */
+export const TIME_RECORD_URI_ACTION = 'ronald-timerecord';
 
 /** Parameters read by the task search action. */
 interface TasksUriParams extends Record<string, string> {
@@ -36,6 +40,12 @@ interface ProjectsUriParams extends Record<string, string> {
      * link is likely to carry; they are mapped to the chip values here.
      */
     tasks: string;
+}
+
+/** Parameters read by the time record action. */
+interface TimeRecordUriParams extends Record<string, string> {
+    /** The record's text; when given, it is added without showing the modal. */
+    message: string;
 }
 
 /**
@@ -130,5 +140,25 @@ export function registerProjectsUriHandler(
 export function registerTijdsregistratieUriHandler(plugin: Plugin): void {
     plugin.registerObsidianProtocolHandler(TIJDSREGISTRATIE_URI_ACTION, () => {
         void openMostRecentTijdsregistratieNote(plugin.app);
+    });
+}
+
+/**
+ * Register `obsidian://ronald-timerecord` for the lifetime of the plugin.
+ *
+ * The bare URI opens the "Add time record" modal exactly as the command does;
+ * with `message=…` the record is added straight away, which suits a shortcut
+ * bound to one fixed event.
+ *
+ * The events come from the plugin settings and are read at call time rather
+ * than captured, for the same reason the task chips are.
+ */
+export function registerTimeRecordUriHandler(
+    plugin: Plugin,
+    events: () => string[],
+): void {
+    plugin.registerObsidianProtocolHandler(TIME_RECORD_URI_ACTION, (params) => {
+        const { message } = params as Partial<TimeRecordUriParams>;
+        addTimeRecord(plugin.app, events(), message);
     });
 }
