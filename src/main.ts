@@ -184,7 +184,7 @@ export default class RonaldPlugin extends Plugin {
             editorCallback: (editor: Editor) => moveLinesToTop(editor),
         });
 
-        for (const tag of ['nu', 'misschien', 'vandaag']) {
+        for (const tag of ['nu', 'misschien', 'vandaag', 'week']) {
             this.addCommand({
                 id: `toggle-${tag}-tag`,
                 name: `Toggle #${tag} tag`,
