@@ -13,6 +13,7 @@ import {
 } from './editor/editorcommands';
 import { toggleCheckbox } from './editor/text';
 import { getTemplatesFolder } from './vault';
+import { parseDatum, rawDatum } from './search/recentnotes';
 import { openFileFromSearch } from './ui/openfile';
 import {
     NoteSuggestModal,
@@ -38,17 +39,40 @@ export async function openTaakBestanden(app: App): Promise<void> {
 }
 
 /**
- * The most recently created note whose frontmatter `type` is `type`, or `null`
- * when there is none.
+ * The most recent note whose frontmatter `type` is `type`, or `null` when there
+ * is none.
+ *
+ * "Most recent" is what the note's own `datum` frontmatter says rather than the
+ * file's ctime, which sync, checkouts and copies can reset. Notes without a
+ * usable `datum` are left out, and so are templates, whose `datum` is an
+ * unfilled placeholder. Same-day notes are decided by name, later name first:
+ * notes are named after their creation time, so that is the later note.
  */
 export function findMostRecentNoteOfType(app: App, type: string): TFile | null {
-    const files = app.vault.getMarkdownFiles().filter((file) => {
-        const cache = app.metadataCache.getFileCache(file);
-        return cache?.frontmatter?.type === type;
-    });
+    const templatesFolder = getTemplatesFolder(app);
+    const isTemplate = (file: TFile): boolean =>
+        templatesFolder !== null &&
+        (file.path === templatesFolder || file.path.startsWith(`${templatesFolder}/`));
 
-    if (files.length === 0) return null;
-    return files.reduce((a, b) => (b.stat.ctime > a.stat.ctime ? b : a));
+    let best: { file: TFile; sortKey: number } | null = null;
+
+    for (const file of app.vault.getMarkdownFiles()) {
+        if (isTemplate(file)) continue;
+        if (app.metadataCache.getFileCache(file)?.frontmatter?.type !== type) continue;
+
+        const sortKey = parseDatum(rawDatum(app, file));
+        if (sortKey === undefined) continue;
+
+        if (
+            !best ||
+            sortKey > best.sortKey ||
+            (sortKey === best.sortKey && file.basename.localeCompare(best.file.basename) > 0)
+        ) {
+            best = { file, sortKey };
+        }
+    }
+
+    return best?.file ?? null;
 }
 
 /**

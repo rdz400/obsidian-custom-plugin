@@ -39,7 +39,7 @@ export interface RecentNoteItem {
  * placeholder reaches us as something else — so anything that is not already a
  * string is stringified and left to `parseDatum` to judge.
  */
-function rawDatum(app: App, file: TFile): string {
+export function rawDatum(app: App, file: TFile): string {
     const datum: unknown = app.metadataCache.getFileCache(file)?.frontmatter?.datum;
     if (typeof datum === 'string') return datum.trim();
     if (typeof datum === 'number') return String(datum);
