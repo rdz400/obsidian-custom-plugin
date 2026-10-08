@@ -56,6 +56,9 @@ export interface RonaldSettings {
      * the repository; the default is therefore empty.
      */
     timeRecordEvents: string[];
+
+    /** One-line texts offered by the "Insert snippet" command, in order. */
+    snippets: string[];
 }
 
 export const DEFAULT_SETTINGS: RonaldSettings = {
@@ -78,6 +81,7 @@ export const DEFAULT_SETTINGS: RonaldSettings = {
     ],
     recentFolders: ['0-inbox', '9-begrippen', '2-gebieden-ref', '1-projecten'],
     timeRecordEvents: [],
+    snippets: [],
 };
 
 export class RonaldSettingTab extends PluginSettingTab {
@@ -107,6 +111,10 @@ export class RonaldSettingTab extends PluginSettingTab {
 
     private get timeRecordEvents(): string[] {
         return this.plugin.settings.timeRecordEvents;
+    }
+
+    private get snippets(): string[] {
+        return this.plugin.settings.snippets;
     }
 
     /**
@@ -293,7 +301,50 @@ export class RonaldSettingTab extends PluginSettingTab {
                         this.renderTimeRecordEventRow(setting, index),
                 })),
             },
+            {
+                type: 'list',
+                heading: 'Snippets',
+                cls: 'ronald-setting-tag-list',
+                emptyState: 'No snippets yet.',
+                addItem: {
+                    name: 'Add snippet',
+                    action: () => {
+                        this.snippets.push('');
+                        void this.save();
+                    },
+                },
+                onReorder: (oldIndex, newIndex) => {
+                    const [moved] = this.snippets.splice(oldIndex, 1);
+                    if (moved !== undefined) this.snippets.splice(newIndex, 0, moved);
+                    void this.save();
+                },
+                onDelete: (index) => {
+                    this.snippets.splice(index, 1);
+                    void this.save();
+                },
+                items: this.snippets.map((snippet, index) => ({
+                    name: snippet.length > 0 ? snippet : 'New snippet',
+                    searchable: false,
+                    render: (setting: Setting) => this.renderSnippetRow(setting, index),
+                })),
+            },
         ];
+    }
+
+    /**
+     * One snippet. Kept as typed, apart from surrounding whitespace; a single
+     * text input keeps it to one line.
+     */
+    private renderSnippetRow(setting: Setting, index: number): void {
+        setting.setName('').setClass('ronald-setting-tag-row').addText((text) =>
+            text
+                .setPlaceholder('Snippet')
+                .setValue(this.snippets[index] ?? '')
+                .onChange((value) => {
+                    this.snippets[index] = value.trim();
+                    void this.plugin.saveSettings();
+                }),
+        );
     }
 
     /**
