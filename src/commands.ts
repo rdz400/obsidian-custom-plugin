@@ -484,6 +484,9 @@ export function insertProjectLink(app: App, editor: Editor): void {
 /** Project statuses, in Dutch. */
 const PROJECT_STATUSES = ['actief', 'klaar', 'backlog', 'misschien', 'geannuleerd'];
 
+/** Statuses that mark a project as finished; these set the `eind` date. */
+const PROJECT_CLOSED_STATUSES = ['klaar', 'geannuleerd'];
+
 /**
  * Pick an active project via a fuzzy-search modal and append a link to it to the
  * active note's `project` frontmatter list.
@@ -537,6 +540,10 @@ export function setStatusInFrontmatter(app: App): void {
     new StringSuggestModal(app, PROJECT_STATUSES, (status: string) => {
         app.fileManager.processFrontMatter(file, (fm) => {
             fm.status = status;
+            // Closed projects get today as their end date; reopening clears it.
+            fm.eind = PROJECT_CLOSED_STATUSES.includes(status)
+                ? formatDate(new Date(), 'YYYY-MM-DD')
+                : null;
         });
         new Notice(`Set status to ${status}`);
     }).open();
