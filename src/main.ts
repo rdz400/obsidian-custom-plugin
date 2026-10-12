@@ -8,6 +8,7 @@ import {
     debounce,
 } from 'obsidian';
 
+import { copyWikilink } from './links/copywikilink';
 import { applyNamingConvention } from './naming/renamefiles';
 import { searchBacklinks } from './search/backlinksearch';
 import {
@@ -357,6 +358,18 @@ export default class RonaldPlugin extends Plugin {
             icon: 'external-link',
             callback: () =>
                 void searchOutgoingLinks(this.app, this.settings.linkNoteTypes),
+        });
+
+        this.addCommand({
+            id: 'copy-wikilink-to-this-note',
+            name: 'Copy wikilink to this note',
+            icon: 'link-2',
+            checkCallback: (checking) => {
+                const file = this.app.workspace.getActiveFile();
+                if (!file) return false;
+                if (!checking) void copyWikilink(this.app, file);
+                return true;
+            },
         });
 
         this.addCommand({
