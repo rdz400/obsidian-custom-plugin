@@ -55,6 +55,38 @@ export function topLevelTaskTags(cache: TaskCache): string[] {
     return [...tags].sort();
 }
 
+/** The note's lines, marking which belong to a task's own text. */
+function noteLines(text: string, cache: TaskCache): Line[] {
+    const taskLines = new Set<number>();
+    for (const item of cache.listItems ?? []) {
+        if (item.task === undefined) continue;
+        for (let i = item.position.start.line; i <= item.position.end.line; i++) taskLines.add(i);
+    }
+    return text.split('\n').map((text, i): Line => ({ text, task: taskLines.has(i) }));
+}
+
+/**
+ * `lines` without the blocks, which are in note order. One between two blank
+ * lines takes one of them along, so no double gap is left behind.
+ */
+function takeOut(lines: Line[], blocks: Block[]): Line[] {
+    const kept: Line[] = [];
+    let next = 0;
+    for (const { from, to } of blocks) {
+        kept.push(...lines.slice(next, from));
+        next = to + 1;
+        if (isBlank(kept[kept.length - 1]) && isBlank(lines[next])) next++;
+    }
+    kept.push(...lines.slice(next));
+    return kept;
+}
+
+/** The first non-blank line after the frontmatter, if any. */
+function firstBodyLine(lines: Line[], cache: TaskCache): Line | undefined {
+    const start = (cache.frontmatterPosition?.end.line ?? -1) + 1;
+    return lines.slice(start).find((line) => !isBlank(line));
+}
+
 /**
  * Move the top-level tasks tagged `tag`, with their subtasks, in front of the
  * first non-blank body line, keeping their order, followed by a `---` line.
@@ -66,24 +98,9 @@ export function moveTaggedToTop(
     cache: TaskCache,
     tag: string,
 ): { text: string; moved: number } {
-    const taskLines = new Set<number>();
-    for (const item of cache.listItems ?? []) {
-        if (item.task === undefined) continue;
-        for (let i = item.position.start.line; i <= item.position.end.line; i++) taskLines.add(i);
-    }
-    const lines = text.split('\n').map((text, i): Line => ({ text, task: taskLines.has(i) }));
+    const lines = noteLines(text, cache);
     const tagged = hierarchies(cache).filter((block) => rootTags(block, cache).includes(tag));
-
-    // Take the tagged blocks out. One between two blank lines takes one of
-    // them along, so no double gap is left behind.
-    const kept: Line[] = [];
-    let next = 0;
-    for (const { from, to } of tagged) {
-        kept.push(...lines.slice(next, from));
-        next = to + 1;
-        if (isBlank(kept[kept.length - 1]) && isBlank(lines[next])) next++;
-    }
-    kept.push(...lines.slice(next));
+    const kept = takeOut(lines, tagged);
 
     const start = (cache.frontmatterPosition?.end.line ?? -1) + 1;
     let at = start;
@@ -106,4 +123,32 @@ export function moveTaggedToTop(
         else result.push(all[i]!);
     }
     return { text: result.map((line) => line.text).join('\n'), moved: tagged.length };
+}
+
+/**
+ * Take out the top-level tasks tagged `tag`, with their subtasks. `taken` is
+ * their text in note order and `moved` how many there are. A `---` rule left
+ * heading the body, as the one closing off tasks moved to the top would be,
+ * goes too.
+ */
+export function takeTagged(
+    text: string,
+    cache: TaskCache,
+    tag: string,
+): { text: string; taken: string; moved: number } {
+    const lines = noteLines(text, cache);
+    const tagged = hierarchies(cache).filter((block) => rootTags(block, cache).includes(tag));
+    const taken = tagged.flatMap(({ from, to }) => lines.slice(from, to + 1));
+
+    let kept = takeOut(lines, tagged);
+    const first = firstBodyLine(kept, cache);
+    if (first && first !== firstBodyLine(lines, cache) && first.text.trim() === '---') {
+        const i = kept.indexOf(first);
+        kept = [...kept.slice(0, i), ...kept.slice(i + 1)];
+    }
+    return {
+        text: kept.map((line) => line.text).join('\n'),
+        taken: taken.map((line) => line.text).join('\n'),
+        moved: tagged.length,
+    };
 }

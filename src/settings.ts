@@ -29,6 +29,12 @@ export interface RonaldSettings {
     clearTags: string[];
 
     /**
+     * Tags that get a "Move #tag tasks to note" command, in order: the tasks
+     * go to the note named after the tag.
+     */
+    moveTags: string[];
+
+    /**
      * Frontmatter `type` values called out in the two link searches, in the
      * order their chips are shown and numbered.
      *
@@ -63,6 +69,7 @@ export const DEFAULT_SETTINGS: RonaldSettings = {
     ],
     insertTags: ['buiten', 'prio', 'vandaag', 'computer'],
     clearTags: ['vandaag'],
+    moveTags: ['vandaag', 'misschien'],
     linkNoteTypes: [
         { value: 'project', icon: 'folder' },
         { value: 'taken', icon: 'list-checks' },
@@ -89,6 +96,10 @@ export class RonaldSettingTab extends PluginSettingTab {
 
     private get clearTags(): string[] {
         return this.plugin.settings.clearTags;
+    }
+
+    private get moveTags(): string[] {
+        return this.plugin.settings.moveTags;
     }
 
     private get noteTypes(): NoteTypeSetting[] {
@@ -197,6 +208,36 @@ export class RonaldSettingTab extends PluginSettingTab {
                     searchable: false,
                     render: (setting: Setting) =>
                         this.renderPlainTagRow(setting, this.clearTags, index),
+                })),
+            },
+            {
+                type: 'list',
+                // Each entry becomes its own command at load time, like the
+                // tags to clear above.
+                heading: 'Tags to move to their own note (reload after changing)',
+                cls: 'ronald-setting-tag-list',
+                emptyState: 'No tags to move yet.',
+                addItem: {
+                    name: 'Add tag',
+                    action: () => {
+                        this.moveTags.push('');
+                        void this.save();
+                    },
+                },
+                onReorder: (oldIndex, newIndex) => {
+                    const [moved] = this.moveTags.splice(oldIndex, 1);
+                    if (moved !== undefined) this.moveTags.splice(newIndex, 0, moved);
+                    void this.save();
+                },
+                onDelete: (index) => {
+                    this.moveTags.splice(index, 1);
+                    void this.save();
+                },
+                items: this.moveTags.map((tag, index) => ({
+                    name: tag.length > 0 ? `#${tag}` : 'New tag',
+                    searchable: false,
+                    render: (setting: Setting) =>
+                        this.renderPlainTagRow(setting, this.moveTags, index),
                 })),
             },
             {

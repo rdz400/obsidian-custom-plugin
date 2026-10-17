@@ -13,7 +13,7 @@ import {
 } from './editor/editorcommands';
 import { freshCache } from './editor/freshcache';
 import { toggleCheckbox } from './editor/text';
-import { getTemplatesFolder } from './vault';
+import { appendToNote, getTemplatesFolder } from './vault';
 import { parseDatum, rawDatum } from './search/recentnotes';
 import { openFileFromSearch } from './ui/openfile';
 import {
@@ -486,10 +486,7 @@ export function moveLinesToNote(app: App, editor: Editor): void {
     const text = getSelectedLinesText(editor);
 
     new NoteSuggestModal(app, async (file: TFile) => {
-        const content = await app.vault.read(file);
-        const separator = content.length > 0 && !content.endsWith('\n') ? '\n' : '';
-        await app.vault.modify(file, content + separator + text + '\n');
-
+        await appendToNote(app, file, text);
         removeLines(editor, from, to);
 
         new Notice(`Moved to ${file.basename}`);

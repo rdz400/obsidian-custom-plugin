@@ -39,6 +39,7 @@ import { showOutline } from './search/outlinesearch';
 import { searchProjects, type ProjectSearchOptions } from './search/projectsearch';
 import { showRecentNotes } from './search/recentnotes';
 import { insertSnippet } from './snippets/insertsnippet';
+import { moveTasksToTagNote } from './tasksort/movetonotes';
 import { moveTasksToTop } from './tasksort/sorttasks';
 import { addTimeRecord } from './timerecord/addtimerecord';
 import {
@@ -221,6 +222,23 @@ export default class RonaldPlugin extends Plugin {
                 return true;
             },
         });
+
+        // One command per tag, like the remove-tag commands above, so each can
+        // carry its own hotkey; an added tag needs a reload.
+        for (const tag of this.settings.moveTags) {
+            if (tag.length === 0) continue;
+            this.addCommand({
+                id: `move-${tag}-tasks-to-note`,
+                name: `Move #${tag} tasks to note "${tag}"`,
+                icon: 'file-output',
+                // Only offered in "taken" notes.
+                editorCheckCallback: (checking, editor, ctx) => {
+                    if (!ctx.file || noteType(this.app, ctx.file) !== 'taken') return false;
+                    if (!checking) void moveTasksToTagNote(this.app, ctx.file, editor, tag);
+                    return true;
+                },
+            });
+        }
 
         this.addCommand({
             id: 'move-lines-to-note',

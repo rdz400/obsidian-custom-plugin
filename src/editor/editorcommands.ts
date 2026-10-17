@@ -205,6 +205,32 @@ export function restoreCursor(editor: Editor, at: EditorPosition): void {
 }
 
 /**
+ * Replace only the stretch of the note that differs from `next`, so text
+ * around it (and whatever the editor tracks there, like folds) is left alone.
+ */
+export function replaceChanged(editor: Editor, next: string): void {
+    const current = editor.getValue();
+    const max = Math.min(current.length, next.length);
+
+    let start = 0;
+    while (start < max && current[start] === next[start]) start++;
+
+    let end = 0;
+    while (
+        end < max - start &&
+        current[current.length - 1 - end] === next[next.length - 1 - end]
+    ) {
+        end++;
+    }
+
+    editor.replaceRange(
+        next.slice(start, next.length - end),
+        editor.offsetToPos(start),
+        editor.offsetToPos(current.length - end),
+    );
+}
+
+/**
  * Move the selected line(s) to the top of the note: one blank line below the
  * frontmatter, or the very first line when there is none.
  */
