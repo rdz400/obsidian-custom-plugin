@@ -11,6 +11,7 @@ import {
     removeLines,
     selectedLineRange,
 } from './editor/editorcommands';
+import { freshCache } from './editor/freshcache';
 import { toggleCheckbox } from './editor/text';
 import { getTemplatesFolder } from './vault';
 import { parseDatum, rawDatum } from './search/recentnotes';
@@ -275,7 +276,15 @@ export async function moveFinishedTasksToKlaar(app: App): Promise<void> {
     }
 
     const editor = view.editor;
-    const items = app.metadataCache.getFileCache(sourceFile)?.listItems ?? [];
+    // The ranges below are removed from the editor, so they must come from a
+    // cache of what the editor shows, not of an older save.
+    const text = editor.getValue();
+    const cache = await freshCache(app, sourceFile, text);
+    if (!cache || editor.getValue() !== text) {
+        new Notice('Note changed while moving; try again');
+        return;
+    }
+    const items = cache.listItems ?? [];
 
     // Index list items by the line their item starts on, so a `parent` line
     // reference can be resolved to its ListItemCache.

@@ -198,7 +198,7 @@ export function getSelectedLinesText(editor: Editor): string {
  * (moving a block down shifts the lines below it up), so clamp it, and clamp
  * the column to the length of whatever line it lands on.
  */
-function restoreCursor(editor: Editor, at: EditorPosition): void {
+export function restoreCursor(editor: Editor, at: EditorPosition): void {
     const line = Math.min(at.line, editor.lastLine());
     const ch = Math.min(at.ch, editor.getLine(line).length);
     editor.setSelection({ line, ch });
