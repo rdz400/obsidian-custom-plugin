@@ -50,18 +50,6 @@ export interface RonaldSettings {
 
     /** One-line texts offered by the "Insert snippet" command, in order. */
     snippets: string[];
-
-    /**
-     * Tags that send a task hierarchy to the top of a "taken" note when sorting,
-     * first tag first.
-     */
-    sortTopTags: string[];
-
-    /**
-     * Tags that send a task hierarchy to the bottom of a "taken" note when
-     * sorting, first tag first.
-     */
-    sortBottomTags: string[];
 }
 
 export const DEFAULT_SETTINGS: RonaldSettings = {
@@ -84,8 +72,6 @@ export const DEFAULT_SETTINGS: RonaldSettings = {
     ],
     recentFolders: ['0-inbox', '9-begrippen', '2-gebieden-ref', '1-projecten'],
     snippets: [],
-    sortTopTags: ['prio', 'dag', 'week'],
-    sortBottomTags: ['misschien'],
 };
 
 export class RonaldSettingTab extends PluginSettingTab {
@@ -300,49 +286,7 @@ export class RonaldSettingTab extends PluginSettingTab {
                     render: (setting: Setting) => this.renderSnippetRow(setting, index),
                 })),
             },
-            this.plainTagList(
-                'Tags that sort tasks to the top (first tag first)',
-                this.plugin.settings.sortTopTags,
-            ),
-            this.plainTagList(
-                'Tags that sort tasks to the bottom (first tag first)',
-                this.plugin.settings.sortBottomTags,
-            ),
         ];
-    }
-
-    /**
-     * A reorderable list of bare tags. The order matters wherever the list is
-     * one: it decides which tag goes first.
-     */
-    private plainTagList(heading: string, tags: string[]): SettingDefinitionItem {
-        return {
-            type: 'list',
-            heading,
-            cls: 'ronald-setting-tag-list',
-            emptyState: 'No tags yet.',
-            addItem: {
-                name: 'Add tag',
-                action: () => {
-                    tags.push('');
-                    void this.save();
-                },
-            },
-            onReorder: (oldIndex, newIndex) => {
-                const [moved] = tags.splice(oldIndex, 1);
-                if (moved !== undefined) tags.splice(newIndex, 0, moved);
-                void this.save();
-            },
-            onDelete: (index) => {
-                tags.splice(index, 1);
-                void this.save();
-            },
-            items: tags.map((tag, index) => ({
-                name: tag.length > 0 ? `#${tag}` : 'New tag',
-                searchable: false,
-                render: (setting: Setting) => this.renderPlainTagRow(setting, tags, index),
-            })),
-        };
     }
 
     /**

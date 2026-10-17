@@ -39,7 +39,7 @@ import { showOutline } from './search/outlinesearch';
 import { searchProjects, type ProjectSearchOptions } from './search/projectsearch';
 import { showRecentNotes } from './search/recentnotes';
 import { insertSnippet } from './snippets/insertsnippet';
-import { moveTasksToTop, sortTasksByTag } from './tasksort/sorttasks';
+import { moveTasksToTop } from './tasksort/sorttasks';
 import { addTimeRecord } from './timerecord/addtimerecord';
 import {
     DEFAULT_SETTINGS,
@@ -211,35 +211,13 @@ export default class RonaldPlugin extends Plugin {
         }
 
         this.addCommand({
-            id: 'sort-tasks-by-tag',
-            name: 'Sort tasks by tag',
-            icon: 'arrow-up-down',
-            // Only offered in "taken" notes. The tag lists are read at call
-            // time, so a change in settings applies without a reload.
-            editorCheckCallback: (checking, editor, ctx) => {
-                if (!ctx.file || noteType(this.app, ctx.file) !== 'taken') return false;
-                if (!checking) {
-                    void sortTasksByTag(this.app, ctx.file, editor, {
-                        top: this.settings.sortTopTags,
-                        bottom: this.settings.sortBottomTags,
-                    });
-                }
-                return true;
-            },
-        });
-
-        this.addCommand({
             id: 'move-tagged-tasks-to-top',
-            name: 'Move tasks with chosen tags to top',
+            name: 'Move tasks with a tag to top',
             icon: 'arrow-up-to-line',
+            // Only offered in "taken" notes.
             editorCheckCallback: (checking, editor, ctx) => {
                 if (!ctx.file || noteType(this.app, ctx.file) !== 'taken') return false;
-                if (!checking) {
-                    moveTasksToTop(this.app, ctx.file, editor, {
-                        top: this.settings.sortTopTags,
-                        bottom: this.settings.sortBottomTags,
-                    });
-                }
+                if (!checking) void moveTasksToTop(this.app, ctx.file, editor);
                 return true;
             },
         });

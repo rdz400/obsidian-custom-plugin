@@ -1,236 +1,104 @@
 import type { CachedMetadata, ListItemCache } from 'obsidian';
 
-/**
- * Reorder the top-level task hierarchies of a note by their tags, and close
- * the gaps between tasks.
- *
- * The structure — which lines form a hierarchy and which tags a task carries —
- * comes from Obsidian's metadata cache, which must describe exactly `text`.
- * Nothing here touches the editor or the vault, so it works on plain values.
- */
+/** The parts of the metadata cache read here; it must describe exactly the text. */
+export type TaskCache = Pick<CachedMetadata, 'listItems' | 'tags' | 'frontmatterPosition'>;
 
-/** Which tags send a task hierarchy where, each list in priority order. */
-export interface SortTags {
-    top: readonly string[];
-    bottom: readonly string[];
-    /**
-     * Tags that decide a task's place like the others but leave it where it
-     * is, so a task whose last tag is one of these doesn't move.
-     */
-    keep?: readonly string[];
-    /**
-     * Whether the order of a list ranks its tags. When false, the tasks of a
-     * group keep their order in the note, whichever of its tags moved them.
-     */
-    ranked?: boolean;
-}
-
-export interface SortResult {
-    text: string;
-    /** How many tagged task hierarchies were placed at the top or the bottom. */
-    moved: number;
-}
-
-/** The parts of the metadata cache the sort reads. */
-export type SortCache = Pick<CachedMetadata, 'listItems' | 'tags' | 'frontmatterPosition'>;
-
-/** Where a tag sends a task hierarchy, and its position within that group. */
-interface Placement {
-    where: 'top' | 'bottom' | 'keep';
-    order: number;
-}
-
-/** A line of the note, with whether it is part of a task's own text. */
+/** A line of the note; `task` marks a task's own text, so it survives moving. */
 interface Line {
     text: string;
     task: boolean;
 }
 
-/** A task hierarchy: lines [from, to] of the note, both inclusive. */
+/** A top-level task and its subtasks: lines [from, to], both inclusive. */
 interface Block {
     root: ListItemCache;
     from: number;
     to: number;
 }
 
-function isBlank(line: Line | undefined): boolean {
-    return line !== undefined && line.text.trim() === '';
-}
-
-/**
- * The note's lines, each marked with whether it is part of a task's own text,
- * continuation lines included. The mark travels with the line, so it still
- * holds once the lines have moved.
- */
-function noteLines(text: string, cache: SortCache): Line[] {
-    const tasks = new Set<number>();
-    for (const item of cache.listItems ?? []) {
-        if (item.task === undefined) continue;
-        for (let i = item.position.start.line; i <= item.position.end.line; i++) tasks.add(i);
-    }
-    return text.split('\n').map((line, i) => ({ text: line, task: tasks.has(i) }));
-}
-
-/** Map each configured tag to its placement; a tag in several lists takes the first. */
-function placements(tags: SortTags): Map<string, Placement> {
-    const map = new Map<string, Placement>();
-    const add = (list: readonly string[], where: Placement['where']) =>
-        list.forEach((tag, order) => {
-            const key = tag.trim().replace(/^#/, '').toLowerCase();
-            if (key.length > 0 && !map.has(key)) {
-                map.set(key, { where, order: tags.ranked === false ? 0 : order });
-            }
-        });
-    add(tags.top, 'top');
-    add(tags.bottom, 'bottom');
-    add(tags.keep ?? [], 'keep');
-    return map;
-}
+const isBlank = (line: Line | undefined) => line !== undefined && line.text.trim() === '';
 
 /**
  * Every top-level task with its subtree.
  *
- * Top-level items have a negative `parent`; a child's `parent` is the line its
- * parent starts on, and parents come before children, so one pass can map every
- * item to its root. An item's own `position` doesn't cover its children, so a
- * hierarchy ends where the last item in it does.
- *
- * Only unindented roots count: a list inside a callout or blockquote is also a
- * root, but moving it out of there would break the callout.
+ * A child's `parent` is the line its parent starts on, and parents come first,
+ * so one pass maps every item to its root. Indented roots (lists in a callout
+ * or blockquote) are left out: moving them would break the callout.
  */
-function hierarchies(items: readonly ListItemCache[]): Block[] {
+function hierarchies(cache: TaskCache): Block[] {
     const blocks = new Map<number, Block>();
     const rootLine = new Map<number, number>();
-    for (const item of items) {
+    for (const item of cache.listItems ?? []) {
         const line = item.position.start.line;
         const root = item.parent < 0 ? line : rootLine.get(item.parent) ?? line;
         rootLine.set(line, root);
-
         const block = blocks.get(root);
-        if (block) {
-            block.to = Math.max(block.to, item.position.end.line);
-        } else {
-            blocks.set(root, { root: item, from: line, to: item.position.end.line });
-        }
+        if (block) block.to = Math.max(block.to, item.position.end.line);
+        else blocks.set(root, { root: item, from: line, to: item.position.end.line });
     }
     return [...blocks.values()].filter(
         (b) => b.root.task !== undefined && b.root.position.start.col === 0,
     );
 }
 
-/**
- * The placement of the last configured tag on the root task itself, or null.
- *
- * Tags on subtasks don't count. The last tag wins, so `#prio #misschien` goes
- * to the bottom: the tag closest to the end is the one added most recently.
- */
-function placementOf(block: Block, cache: SortCache, map: Map<string, Placement>): Placement | null {
+/** The tags on the root task itself, lower case and without `#`. */
+function rootTags(block: Block, cache: TaskCache): string[] {
     const { start, end } = block.root.position;
-    let found: Placement | null = null;
-    // `tags` is in document order, so the last match is the last tag.
-    for (const tag of cache.tags ?? []) {
-        const line = tag.position.start.line;
-        if (line < start.line || line > end.line) continue;
-        found = map.get(tag.tag.replace(/^#/, '').toLowerCase()) ?? found;
-    }
-    return found;
+    return (cache.tags ?? [])
+        .filter((t) => t.position.start.line >= start.line && t.position.start.line <= end.line)
+        .map((t) => t.tag.slice(1).toLowerCase());
+}
+
+/** The tags on the note's top-level tasks, sorted. */
+export function topLevelTaskTags(cache: TaskCache): string[] {
+    const tags = new Set(hierarchies(cache).flatMap((block) => rootTags(block, cache)));
+    return [...tags].sort();
 }
 
 /**
- * The note's lines without the moved blocks.
- *
- * A block that sat between two blank lines also takes one of them along, so
- * moving it out doesn't leave a double gap behind.
+ * Move the top-level tasks tagged `tag`, with their subtasks, in front of the
+ * first non-blank body line, keeping their order. Then drop the blank lines
+ * between tasks; blank lines next to anything else stay.
  */
-function withoutBlocks(lines: readonly Line[], blocks: readonly Block[]): Line[] {
+export function moveTaggedToTop(text: string, cache: TaskCache, tag: string): string {
+    const taskLines = new Set<number>();
+    for (const item of cache.listItems ?? []) {
+        if (item.task === undefined) continue;
+        for (let i = item.position.start.line; i <= item.position.end.line; i++) taskLines.add(i);
+    }
+    const lines = text.split('\n').map((text, i): Line => ({ text, task: taskLines.has(i) }));
+    const tagged = hierarchies(cache).filter((block) => rootTags(block, cache).includes(tag));
+
+    // Take the tagged blocks out. One between two blank lines takes one of
+    // them along, so no double gap is left behind.
     const kept: Line[] = [];
     let next = 0;
-    for (const block of blocks) {
-        kept.push(...lines.slice(next, block.from));
-        next = block.to + 1;
+    for (const { from, to } of tagged) {
+        kept.push(...lines.slice(next, from));
+        next = to + 1;
         if (isBlank(kept[kept.length - 1]) && isBlank(lines[next])) next++;
     }
     kept.push(...lines.slice(next));
-    return kept;
-}
 
-/** The lines of `blocks`, in tag order and, within a tag, in note order. */
-function groupLines(
-    lines: readonly Line[],
-    blocks: readonly { block: Block; placement: Placement }[],
-): Line[] {
-    // `sort` is stable, so blocks with the same tag keep their order.
-    return [...blocks]
-        .sort((a, b) => a.placement.order - b.placement.order)
-        .flatMap(({ block }) => lines.slice(block.from, block.to + 1));
-}
-
-/**
- * The lines without the blank lines that sit between two tasks.
- *
- * Only those: a blank line next to anything else can carry meaning — after a
- * heading, around a table, between paragraphs — so it stays.
- */
-function withoutGapsBetweenTasks(lines: readonly Line[]): Line[] {
-    const result: Line[] = [];
-    for (let i = 0; i < lines.length; i++) {
-        let next = i;
-        while (isBlank(lines[next])) next++;
-        // A run of blank lines from a task to a task: skip the whole run.
-        if (next > i && result[result.length - 1]?.task && lines[next]?.task) {
-            i = next - 1;
-            continue;
-        }
-        const line = lines[i];
-        if (line) result.push(line);
-    }
-    return result;
-}
-
-/**
- * Move tagged top-level task hierarchies to the top or the bottom of the body.
- *
- * The top group goes in front of the first non-blank body line, the bottom
- * group after the last one, so the blank line under the frontmatter and the
- * note's trailing newline stay where they are. Everything else keeps its order.
- * Blank lines between tasks are then removed, wherever they are in the note.
- */
-export function reorderTasks(text: string, cache: SortCache, tags: SortTags): SortResult {
-    const map = placements(tags);
-    const tagged = hierarchies(cache.listItems ?? []).flatMap((block) => {
-        const placement = placementOf(block, cache, map);
-        return placement && placement.where !== 'keep' ? [{ block, placement }] : [];
-    });
-    const lines = noteLines(text, cache);
     const start = (cache.frontmatterPosition?.end.line ?? -1) + 1;
-    const top = groupLines(lines, tagged.filter((t) => t.placement.where === 'top'));
-    const bottom = groupLines(lines, tagged.filter((t) => t.placement.where === 'bottom'));
-    const kept = withoutBlocks(lines, tagged.map((t) => t.block));
+    let at = start;
+    while (at < kept.length && isBlank(kept[at])) at++;
+    // A body of nothing but blank lines: insert after the first, keeping the last.
+    if (at === kept.length) at = start + 1 < kept.length ? start + 1 : start;
 
-    const content: number[] = [];
-    for (let i = start; i < kept.length; i++) {
-        if (!isBlank(kept[i])) content.push(i);
+    // Text right under the last task would read as part of it.
+    const after = kept[at];
+    const gap = after && !isBlank(after) && !after.task ? [{ text: '', task: false }] : [];
+    const moved = tagged.flatMap(({ from, to }) => lines.slice(from, to + 1));
+    const all = [...kept.slice(0, at), ...moved, ...gap, ...kept.slice(at)];
+
+    // Drop runs of blank lines that go from a task to a task.
+    const result: Line[] = [];
+    for (let i = 0; i < all.length; i++) {
+        let j = i;
+        while (isBlank(all[j])) j++;
+        if (j > i && result[result.length - 1]?.task && all[j]?.task) i = j - 1;
+        else result.push(all[i]!);
     }
-    // Nothing but moved tasks in the body: put them after its first blank line.
-    const fallback = isBlank(kept[start]) && start + 1 < kept.length ? start + 1 : start;
-    const topAt = content[0] ?? fallback;
-    const bottomAt = (content[content.length - 1] ?? fallback - 1) + 1;
-
-    // A group that ends up against prose, a heading or a table is kept apart
-    // from it by a blank line: text right under a task would read as part of it.
-    const apart = (line: Line | undefined): Line[] =>
-        line && !isBlank(line) && !line.task ? [{ text: '', task: false }] : [];
-    const topGap = top.length > 0 ? apart(kept[topAt]) : [];
-    const bottomGap = bottom.length > 0 && bottomAt > start ? apart(kept[bottomAt - 1]) : [];
-
-    const result = withoutGapsBetweenTasks([
-        ...kept.slice(0, topAt),
-        ...top,
-        ...topGap,
-        ...kept.slice(topAt, bottomAt),
-        ...bottomGap,
-        ...bottom,
-        ...kept.slice(bottomAt),
-    ]);
-    return { text: result.map((line) => line.text).join('\n'), moved: tagged.length };
+    return result.map((line) => line.text).join('\n');
 }
