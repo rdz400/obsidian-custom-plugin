@@ -13,6 +13,16 @@ import type { CachedMetadata, ListItemCache } from 'obsidian';
 export interface SortTags {
     top: readonly string[];
     bottom: readonly string[];
+    /**
+     * Tags that decide a task's place like the others but leave it where it
+     * is, so a task whose last tag is one of these doesn't move.
+     */
+    keep?: readonly string[];
+    /**
+     * Whether the order of a list ranks its tags. When false, the tasks of a
+     * group keep their order in the note, whichever of its tags moved them.
+     */
+    ranked?: boolean;
 }
 
 export interface SortResult {
@@ -26,7 +36,7 @@ export type SortCache = Pick<CachedMetadata, 'listItems' | 'tags' | 'frontmatter
 
 /** Where a tag sends a task hierarchy, and its position within that group. */
 interface Placement {
-    where: 'top' | 'bottom';
+    where: 'top' | 'bottom' | 'keep';
     order: number;
 }
 
@@ -61,16 +71,19 @@ function noteLines(text: string, cache: SortCache): Line[] {
     return text.split('\n').map((line, i) => ({ text: line, task: tasks.has(i) }));
 }
 
-/** Map each configured tag to its placement; a tag in both lists goes to the top. */
+/** Map each configured tag to its placement; a tag in several lists takes the first. */
 function placements(tags: SortTags): Map<string, Placement> {
     const map = new Map<string, Placement>();
     const add = (list: readonly string[], where: Placement['where']) =>
         list.forEach((tag, order) => {
             const key = tag.trim().replace(/^#/, '').toLowerCase();
-            if (key.length > 0 && !map.has(key)) map.set(key, { where, order });
+            if (key.length > 0 && !map.has(key)) {
+                map.set(key, { where, order: tags.ranked === false ? 0 : order });
+            }
         });
     add(tags.top, 'top');
     add(tags.bottom, 'bottom');
+    add(tags.keep ?? [], 'keep');
     return map;
 }
 
@@ -141,7 +154,7 @@ function withoutBlocks(lines: readonly Line[], blocks: readonly Block[]): Line[]
     return kept;
 }
 
-/** The lines of `blocks`, in group order and, within a tag, in note order. */
+/** The lines of `blocks`, in tag order and, within a tag, in note order. */
 function groupLines(
     lines: readonly Line[],
     blocks: readonly { block: Block; placement: Placement }[],
@@ -186,7 +199,7 @@ export function reorderTasks(text: string, cache: SortCache, tags: SortTags): So
     const map = placements(tags);
     const tagged = hierarchies(cache.listItems ?? []).flatMap((block) => {
         const placement = placementOf(block, cache, map);
-        return placement ? [{ block, placement }] : [];
+        return placement && placement.where !== 'keep' ? [{ block, placement }] : [];
     });
     const lines = noteLines(text, cache);
     const start = (cache.frontmatterPosition?.end.line ?? -1) + 1;

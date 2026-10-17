@@ -39,7 +39,7 @@ import { showOutline } from './search/outlinesearch';
 import { searchProjects, type ProjectSearchOptions } from './search/projectsearch';
 import { showRecentNotes } from './search/recentnotes';
 import { insertSnippet } from './snippets/insertsnippet';
-import { sortTasksByTag } from './tasksort/sorttasks';
+import { moveTasksToTop, sortTasksByTag } from './tasksort/sorttasks';
 import { addTimeRecord } from './timerecord/addtimerecord';
 import {
     DEFAULT_SETTINGS,
@@ -220,6 +220,22 @@ export default class RonaldPlugin extends Plugin {
                 if (!ctx.file || noteType(this.app, ctx.file) !== 'taken') return false;
                 if (!checking) {
                     void sortTasksByTag(this.app, ctx.file, editor, {
+                        top: this.settings.sortTopTags,
+                        bottom: this.settings.sortBottomTags,
+                    });
+                }
+                return true;
+            },
+        });
+
+        this.addCommand({
+            id: 'move-tagged-tasks-to-top',
+            name: 'Move tasks with chosen tags to top',
+            icon: 'arrow-up-to-line',
+            editorCheckCallback: (checking, editor, ctx) => {
+                if (!ctx.file || noteType(this.app, ctx.file) !== 'taken') return false;
+                if (!checking) {
+                    moveTasksToTop(this.app, ctx.file, editor, {
                         top: this.settings.sortTopTags,
                         bottom: this.settings.sortBottomTags,
                     });
