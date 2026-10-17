@@ -47,8 +47,10 @@ export async function moveTasksToTop(app: App, file: TFile, editor: Editor): Pro
             new Notice('Note changed while moving; try again');
             return;
         }
+        const result = moveTaggedToTop(text, cache, tag);
         const origin = editor.getCursor('from');
-        replaceChanged(editor, moveTaggedToTop(text, cache, tag));
+        replaceChanged(editor, result.text);
         restoreCursor(editor, origin);
+        new Notice(`Moved ${result.moved} task(s) with #${tag} to top`);
     }).open();
 }

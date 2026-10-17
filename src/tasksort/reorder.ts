@@ -57,10 +57,15 @@ export function topLevelTaskTags(cache: TaskCache): string[] {
 
 /**
  * Move the top-level tasks tagged `tag`, with their subtasks, in front of the
- * first non-blank body line, keeping their order. Then drop the blank lines
- * between tasks; blank lines next to anything else stay.
+ * first non-blank body line, keeping their order, followed by a `---` line.
+ * Then drop the blank lines between tasks; blank lines next to anything else
+ * stay. `moved` counts the top-level tasks taken up.
  */
-export function moveTaggedToTop(text: string, cache: TaskCache, tag: string): string {
+export function moveTaggedToTop(
+    text: string,
+    cache: TaskCache,
+    tag: string,
+): { text: string; moved: number } {
     const taskLines = new Set<number>();
     for (const item of cache.listItems ?? []) {
         if (item.task === undefined) continue;
@@ -86,11 +91,11 @@ export function moveTaggedToTop(text: string, cache: TaskCache, tag: string): st
     // A body of nothing but blank lines: insert after the first, keeping the last.
     if (at === kept.length) at = start + 1 < kept.length ? start + 1 : start;
 
-    // Text right under the last task would read as part of it.
-    const after = kept[at];
-    const gap = after && !isBlank(after) && !after.task ? [{ text: '', task: false }] : [];
+    // A rule closes off the moved tasks, unless one from an earlier move already does.
+    const rule =
+        tagged.length > 0 && kept[at]?.text.trim() !== '---' ? [{ text: '---', task: false }] : [];
     const moved = tagged.flatMap(({ from, to }) => lines.slice(from, to + 1));
-    const all = [...kept.slice(0, at), ...moved, ...gap, ...kept.slice(at)];
+    const all = [...kept.slice(0, at), ...moved, ...rule, ...kept.slice(at)];
 
     // Drop runs of blank lines that go from a task to a task.
     const result: Line[] = [];
@@ -100,5 +105,5 @@ export function moveTaggedToTop(text: string, cache: TaskCache, tag: string): st
         if (j > i && result[result.length - 1]?.task && all[j]?.task) i = j - 1;
         else result.push(all[i]!);
     }
-    return result.map((line) => line.text).join('\n');
+    return { text: result.map((line) => line.text).join('\n'), moved: tagged.length };
 }
