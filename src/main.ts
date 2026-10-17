@@ -313,14 +313,10 @@ export default class RonaldPlugin extends Plugin {
             id: 'add-time-record',
             name: 'Add time record to "tijdsregistratie" note',
             icon: 'timer',
-            // Read at call time, so an event added in settings shows up in the
-            // next modal without a reload.
-            callback: () => addTimeRecord(this.app, this.settings.timeRecordEvents),
+            callback: () => addTimeRecord(this.app),
         });
 
-        this.addRibbonIcon('timer', 'Add time record', () =>
-            addTimeRecord(this.app, this.settings.timeRecordEvents),
-        );
+        this.addRibbonIcon('timer', 'Add time record', () => addTimeRecord(this.app));
 
         this.addCommand({
             id: 'search-projects',
@@ -403,7 +399,7 @@ export default class RonaldPlugin extends Plugin {
         registerTasksUriHandler(this, () => this.settings.taskFilterTags);
         registerProjectsUriHandler(this, () => this.projectSearchOptions());
         registerTijdsregistratieUriHandler(this);
-        registerTimeRecordUriHandler(this, () => this.settings.timeRecordEvents);
+        registerTimeRecordUriHandler(this);
 
         this.registerStatusBar();
     }

@@ -22,8 +22,8 @@ function appendLine(text: string, line: string): string {
 }
 
 /**
- * Ask for a message, typed or picked from `events`, and add it, stamped with
- * the current time, at the bottom of the most recent "tijdsregistratie" note.
+ * Ask for a message and add it, stamped with the current time, at the bottom
+ * of the most recent "tijdsregistratie" note.
  *
  * With a `message` the modal is skipped and that message is added right away;
  * a blank one counts as none.
@@ -32,7 +32,7 @@ function appendLine(text: string, line: string): string {
  * submitted, so the record lands in the note that was current when it was
  * started.
  */
-export function addTimeRecord(app: App, events: string[], message?: string): void {
+export function addTimeRecord(app: App, message?: string): void {
     const note = findMostRecentNoteOfType(app, TIJDSREGISTRATIE_TYPE);
     if (!note) {
         new Notice(`No "${TIJDSREGISTRATIE_TYPE}" notes found`);
@@ -56,5 +56,5 @@ export function addTimeRecord(app: App, events: string[], message?: string): voi
         return;
     }
 
-    new TimeRecordModal(app, time, events, (text) => void add(text)).open();
+    new TimeRecordModal(app, time, (text) => void add(text)).open();
 }

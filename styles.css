@@ -770,31 +770,3 @@
 .ronald-time-record-row button {
     flex-shrink: 0;
 }
-
-/*
- * Common events, as chips between the time and the input. Indented to line up
- * with the text next to the icons, and capped in height so a long list scrolls
- * instead of pushing the input down towards the phone keyboard.
- */
-.ronald-time-record-events {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding-left: 28px;
-    max-height: 30vh;
-    overflow-y: auto;
-}
-
-.ronald-time-record-modal .ronald-time-record-event {
-    height: auto;
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: var(--font-ui-small);
-    background: var(--background-modifier-hover);
-    box-shadow: none;
-}
-
-.ronald-time-record-modal .ronald-time-record-event:hover {
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-}

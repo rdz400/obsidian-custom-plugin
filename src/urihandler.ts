@@ -149,16 +149,10 @@ export function registerTijdsregistratieUriHandler(plugin: Plugin): void {
  * The bare URI opens the "Add time record" modal exactly as the command does;
  * with `message=…` the record is added straight away, which suits a shortcut
  * bound to one fixed event.
- *
- * The events come from the plugin settings and are read at call time rather
- * than captured, for the same reason the task chips are.
  */
-export function registerTimeRecordUriHandler(
-    plugin: Plugin,
-    events: () => string[],
-): void {
+export function registerTimeRecordUriHandler(plugin: Plugin): void {
     plugin.registerObsidianProtocolHandler(TIME_RECORD_URI_ACTION, (params) => {
         const { message } = params as Partial<TimeRecordUriParams>;
-        addTimeRecord(plugin.app, events(), message);
+        addTimeRecord(plugin.app, message);
     });
 }
