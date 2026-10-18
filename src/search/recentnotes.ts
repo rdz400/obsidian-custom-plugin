@@ -9,7 +9,7 @@ import {
 } from '../ui/folderfilter';
 import { NoteTypeSetting, noteType, renderTypePill } from '../ui/notetype';
 import { openFileFromSearch, registerNewTabEnter } from '../ui/openfile';
-import { getTemplatesFolder } from '../vault';
+import { templateMatcher } from '../vault';
 
 /** The note type daily notes carry; they are left out of the list. */
 const DAILY_NOTE_TYPE = 'dagnotitie';
@@ -67,6 +67,21 @@ export function parseDatum(datum: string): number | undefined {
     return Number(`${year}${month}${day}`);
 }
 
+/** A note with its `datum` as parsed by `parseDatum`. */
+export interface DatedNote {
+    file: TFile;
+    sortKey: number;
+}
+
+/**
+ * Order notes newest first: by `datum`, and notes of the same day by the file's
+ * creation time. Everything that lists or picks recent notes sorts with this,
+ * so they all agree on which note is newest.
+ */
+export function compareNewestFirst(a: DatedNote, b: DatedNote): number {
+    return b.sortKey - a.sortKey || b.file.stat.ctime - a.file.stat.ctime;
+}
+
 /** `datum` as `DD-MM-YYYY`, the way dates read in this vault. */
 export function formatDatum(sortKey: number): string {
     const text = String(sortKey);
@@ -87,10 +102,7 @@ export function formatDatum(sortKey: number): string {
  * unfilled placeholder rather than a date.
  */
 export function collectRecentNotes(app: App, limit = RECENT_NOTES_LIMIT): RecentNoteItem[] {
-    const templatesFolder = getTemplatesFolder(app);
-    const isTemplate = (file: TFile): boolean =>
-        templatesFolder !== null &&
-        (file.path === templatesFolder || file.path.startsWith(`${templatesFolder}/`));
+    const isTemplate = templateMatcher(app);
 
     const items: RecentNoteItem[] = [];
 
@@ -107,11 +119,7 @@ export function collectRecentNotes(app: App, limit = RECENT_NOTES_LIMIT): Recent
         items.push({ file, datum, sortKey, type });
     }
 
-    // Newest first, and same-day notes by name so a day's worth of notes keeps a
-    // stable order from one open to the next rather than the vault's file order.
-    items.sort(
-        (a, b) => b.sortKey - a.sortKey || a.file.basename.localeCompare(b.file.basename),
-    );
+    items.sort(compareNewestFirst);
 
     return items.slice(0, limit);
 }

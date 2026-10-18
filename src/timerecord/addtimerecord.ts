@@ -1,9 +1,7 @@
 import { App, Notice, moment } from 'obsidian';
 
-import { findMostRecentNoteOfType } from '../commands';
 import { TimeRecordModal } from './timerecordmodal';
-
-const TIJDSREGISTRATIE_TYPE = 'tijdsregistratie';
+import { getTimeRecordNote } from './timerecordnote';
 
 /** The record line as it is written to the note: "- `hh:mm:ss` message". */
 function formatTimeRecord(time: string, message: string): string {
@@ -23,21 +21,17 @@ function appendLine(text: string, line: string): string {
 
 /**
  * Ask for a message and add it, stamped with the current time, at the bottom
- * of the most recent "tijdsregistratie" note.
+ * of the time record note.
  *
  * With a `message` the modal is skipped and that message is added right away;
  * a blank one counts as none.
  *
- * The note is looked up when the command runs, not when the message is
- * submitted, so the record lands in the note that was current when it was
- * started.
+ * The note is looked up before the modal opens, so a vault without one says so
+ * straight away rather than after the message has been typed.
  */
 export function addTimeRecord(app: App, message?: string): void {
-    const note = findMostRecentNoteOfType(app, TIJDSREGISTRATIE_TYPE);
-    if (!note) {
-        new Notice(`No "${TIJDSREGISTRATIE_TYPE}" notes found`);
-        return;
-    }
+    const note = getTimeRecordNote(app);
+    if (!note) return;
 
     const time = moment().format('HH:mm:ss');
 

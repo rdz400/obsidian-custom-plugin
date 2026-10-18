@@ -13,8 +13,13 @@ import {
 } from './editor/editorcommands';
 import { freshCache } from './editor/freshcache';
 import { toggleCheckbox } from './editor/text';
-import { appendToNote, getTemplatesFolder } from './vault';
-import { parseDatum, rawDatum } from './search/recentnotes';
+import { appendToNote, templateMatcher } from './vault';
+import {
+    type DatedNote,
+    compareNewestFirst,
+    parseDatum,
+    rawDatum,
+} from './search/recentnotes';
 import { openFileFromSearch } from './ui/openfile';
 import {
     NoteSuggestModal,
@@ -43,19 +48,15 @@ export async function openTaakBestanden(app: App): Promise<void> {
  * The most recent note whose frontmatter `type` is `type`, or `null` when there
  * is none.
  *
- * "Most recent" is what the note's own `datum` frontmatter says rather than the
- * file's ctime, which sync, checkouts and copies can reset. Notes without a
- * usable `datum` are left out, and so are templates, whose `datum` is an
- * unfilled placeholder. Same-day notes are decided by name, later name first:
- * notes are named after their creation time, so that is the later note.
+ * "Most recent" is decided by `compareNewestFirst`: the note's own `datum`
+ * frontmatter, then the file's creation time for notes of the same day. Notes
+ * without a usable `datum` are left out, and so are templates, whose `datum` is
+ * an unfilled placeholder.
  */
 export function findMostRecentNoteOfType(app: App, type: string): TFile | null {
-    const templatesFolder = getTemplatesFolder(app);
-    const isTemplate = (file: TFile): boolean =>
-        templatesFolder !== null &&
-        (file.path === templatesFolder || file.path.startsWith(`${templatesFolder}/`));
+    const isTemplate = templateMatcher(app);
 
-    let best: { file: TFile; sortKey: number } | null = null;
+    let best: DatedNote | null = null;
 
     for (const file of app.vault.getMarkdownFiles()) {
         if (isTemplate(file)) continue;
@@ -64,64 +65,27 @@ export function findMostRecentNoteOfType(app: App, type: string): TFile | null {
         const sortKey = parseDatum(rawDatum(app, file));
         if (sortKey === undefined) continue;
 
-        if (
-            !best ||
-            sortKey > best.sortKey ||
-            (sortKey === best.sortKey && file.basename.localeCompare(best.file.basename) > 0)
-        ) {
-            best = { file, sortKey };
-        }
+        const candidate = { file, sortKey };
+        if (!best || compareNewestFirst(candidate, best) < 0) best = candidate;
     }
 
     return best?.file ?? null;
 }
 
-/**
- * Open the most recently created note whose frontmatter `type` is `type`.
- *
- * With `scrollToEnd`, the note opens at its last line instead of its top, for
- * the kinds of note that are appended to and whose latest entry is the point.
- */
-export async function openMostRecentNoteOfType(
-    app: App,
-    type: string,
-    { scrollToEnd = false }: { scrollToEnd?: boolean } = {},
-): Promise<void> {
+/** Open the most recently created note whose frontmatter `type` is `type`. */
+export function openMostRecentNoteOfType(app: App, type: string): void {
     const mostRecent = findMostRecentNoteOfType(app, type);
     if (!mostRecent) {
         new Notice(`No "${type}" notes found`);
         return;
     }
 
-    if (!scrollToEnd) {
-        openFileFromSearch(app, mostRecent);
-        return;
-    }
-
-    // The line goes to `openFile` as ephemeral state, the same way the task and
-    // outline searches jump to a line: the view lands there as it opens, so the
-    // note never paints at the top first. The line count comes from the file,
-    // since there is no editor to ask until the note is open.
-    const text = await app.vault.cachedRead(mostRecent);
-    const line = text.split('\n').length - 1;
-
-    openFileFromSearch(app, mostRecent, undefined, {
-        // Live preview, whatever mode the note was last left in: that is
-        // `source` with `source: false` — "source" here means the editor rather
-        // than reading view, and the flag turns off raw markdown within it.
-        state: { mode: 'source', source: false },
-        eState: { line, cursor: { from: { line, ch: 0 } } },
-    });
+    openFileFromSearch(app, mostRecent);
 }
 
 /** Open the most recently created note whose frontmatter `type` is "taken". */
-export function openMostRecentTaakNote(app: App): Promise<void> {
-    return openMostRecentNoteOfType(app, 'taken');
-}
-
-/** Open the most recently created note whose frontmatter `type` is "tijdsregistratie". */
-export function openMostRecentTijdsregistratieNote(app: App): Promise<void> {
-    return openMostRecentNoteOfType(app, 'tijdsregistratie', { scrollToEnd: true });
+export function openMostRecentTaakNote(app: App): void {
+    openMostRecentNoteOfType(app, 'taken');
 }
 
 /** Move every note whose frontmatter `type` is "taken" into the root folder "1-taken". */
@@ -132,10 +96,7 @@ export async function moveTakenNotesToFolder(app: App): Promise<void> {
         await app.vault.createFolder(targetFolder);
     }
 
-    const templatesFolder = getTemplatesFolder(app);
-    const isTemplate = (file: TFile): boolean =>
-        templatesFolder !== null &&
-        (file.path === templatesFolder || file.path.startsWith(`${templatesFolder}/`));
+    const isTemplate = templateMatcher(app);
 
     const files = app.vault.getMarkdownFiles().filter((file) => {
         if (isTemplate(file)) return false;

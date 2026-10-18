@@ -25,7 +25,6 @@ import {
     setStatusInFrontmatter,
     mergeTakenNotes,
     openMostRecentTaakNote,
-    openMostRecentTijdsregistratieNote,
     removeTagFromTakenNotes,
 } from './commands';
 import {
@@ -41,6 +40,7 @@ import { showRecentNotes } from './search/recentnotes';
 import { moveTasksToTagNote } from './tasksort/movetonotes';
 import { moveTasksToTop } from './tasksort/sorttasks';
 import { addTimeRecord } from './timerecord/addtimerecord';
+import { openTimeRecordNote } from './timerecord/timerecordnote';
 import {
     DEFAULT_SETTINGS,
     RonaldSettingTab,
@@ -320,10 +320,10 @@ export default class RonaldPlugin extends Plugin {
         this.addRibbonIcon('clock', 'Open most recent "taken" note', () => openMostRecentTaakNote(this.app));
 
         this.addCommand({
-            id: 'open-most-recent-tijdsregistratie-note',
-            name: 'Open most recent "tijdsregistratie" note',
+            id: 'open-tijdsregistratie-note',
+            name: 'Open "tijdsregistratie" note',
             icon: 'timer',
-            callback: () => void openMostRecentTijdsregistratieNote(this.app),
+            callback: () => void openTimeRecordNote(this.app),
         });
 
         this.addCommand({

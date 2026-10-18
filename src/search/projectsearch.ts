@@ -18,7 +18,7 @@ import {
     wantsAltAction,
     wantsShiftAction,
 } from '../ui/openfile';
-import { getTemplatesFolder } from '../vault';
+import { templateMatcher } from '../vault';
 
 /** Statuses that mark a project as no longer running. */
 const CLOSED_PROJECT_STATUSES = ['klaar', 'geannuleerd'];
@@ -192,10 +192,7 @@ function toProjectItem(
 export async function collectOpenProjects(app: App): Promise<ProjectItem[]> {
     const taskCounts = await collectOpenTaskCounts(app);
 
-    const templatesFolder = getTemplatesFolder(app);
-    const isTemplate = (file: TFile): boolean =>
-        templatesFolder !== null &&
-        (file.path === templatesFolder || file.path.startsWith(`${templatesFolder}/`));
+    const isTemplate = templateMatcher(app);
 
     return app.vault
         .getMarkdownFiles()
