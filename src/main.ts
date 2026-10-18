@@ -38,7 +38,6 @@ import { searchOutgoingLinks } from './search/outgoinglinksearch';
 import { showOutline } from './search/outlinesearch';
 import { searchProjects, type ProjectSearchOptions } from './search/projectsearch';
 import { showRecentNotes } from './search/recentnotes';
-import { insertSnippet } from './snippets/insertsnippet';
 import { moveTasksToTagNote } from './tasksort/movetonotes';
 import { moveTasksToTop } from './tasksort/sorttasks';
 import { addTimeRecord } from './timerecord/addtimerecord';
@@ -289,20 +288,6 @@ export default class RonaldPlugin extends Plugin {
             editorCallback: (editor: Editor) =>
                 insertTag(this.app, editor, this.settings.insertTags),
         });
-
-        this.addCommand({
-            id: 'insert-snippet',
-            name: 'Insert snippet',
-            icon: 'text-quote',
-            // Read at call time, so a snippet added in settings shows up
-            // without a reload.
-            editorCallback: (editor: Editor) =>
-                insertSnippet(this.app, this.settings.snippets, editor),
-        });
-
-        this.addRibbonIcon('text-quote', 'Insert snippet', () =>
-            insertSnippet(this.app, this.settings.snippets),
-        );
 
         this.addCommand({
             id: 'add-project-to-frontmatter',
