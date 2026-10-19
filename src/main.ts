@@ -47,6 +47,8 @@ import {
     type RonaldSettings,
 } from './settings';
 import { searchTasks } from './search/tasksearch';
+import { TabRecency } from './tabs/tabrecency';
+import { showTabSwitcher } from './tabs/tabswitcher';
 import { noteType } from './ui/notetype';
 import {
     registerProjectsUriHandler,
@@ -57,6 +59,7 @@ import {
 
 export default class RonaldPlugin extends Plugin {
     settings!: RonaldSettings;
+    private readonly tabRecency = new TabRecency();
 
     async onload() {
         await this.loadSettings();
@@ -412,6 +415,16 @@ export default class RonaldPlugin extends Plugin {
         this.addRibbonIcon('calendar-clock', 'Show recently created notes', () =>
             this.showRecentNotes(),
         );
+
+        // Recorded from load on, so the switcher can list recent tabs first.
+        this.tabRecency.register(this);
+
+        this.addCommand({
+            id: 'switch-to-open-tab',
+            name: 'Switch to open tab',
+            icon: 'panels-top-left',
+            callback: () => showTabSwitcher(this.app, this.tabRecency),
+        });
 
         registerTasksUriHandler(this, () => this.settings.taskFilterTags);
         registerProjectsUriHandler(this, () => this.projectSearchOptions());
