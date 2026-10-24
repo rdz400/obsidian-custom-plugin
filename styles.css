@@ -99,11 +99,13 @@
 }
 
 /*
- * The project search stacks two chip rows. Only the lower one carries the
- * separator, so the pair reads as one block rather than two banded strips,
- * and the upper row loses the padding that would double the gap between them.
+ * The project and task searches stack two chip rows. Only the lower one
+ * carries the separator, so the pair reads as one block rather than two banded
+ * strips, and the upper row loses the padding that would double the gap
+ * between them.
  */
-.ronald-project-search .ronald-task-filters:has(+ .ronald-task-filters) {
+.ronald-project-search .ronald-task-filters:has(+ .ronald-task-filters),
+.ronald-task-search .ronald-task-filters:has(+ .ronald-task-filters) {
     border-bottom: none;
     padding-bottom: 0;
 }
@@ -266,6 +268,25 @@
 .ronald-task-filter-type-external.is-active .ronald-task-filter-count {
     background: rgba(var(--color-red-rgb), 0.25);
     color: var(--color-red);
+}
+
+/*
+ * GTD note chips ("today", "inbox", …) in the task search: which note the task
+ * is in. Squared off like the note letter on every row they filter on.
+ */
+.ronald-task-filter-type-gtd {
+    border-radius: 4px;
+}
+
+.ronald-task-filter-type-gtd.is-active {
+    background: rgba(var(--color-purple-rgb), 0.15);
+    border-color: var(--color-purple);
+    color: var(--color-purple);
+}
+
+.ronald-task-filter-type-gtd.is-active .ronald-task-filter-count {
+    background: rgba(var(--color-purple-rgb), 0.25);
+    color: var(--color-purple);
 }
 
 /* Context tags ("buiten", "thuis"): where the task happens. */

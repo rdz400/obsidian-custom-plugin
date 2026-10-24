@@ -15,11 +15,13 @@
  * Finding tasks
  * - "Search tasks" (also a ribbon icon) lists every task in the task notes.
  *   The chips under the search field filter on the tags in "Task filter
- *   tags" (Mod+1…Mod+9). A letter shows which note a task is in: T, S, O, I
- *   for the GTD notes. Ticking a checkbox writes straight to the note; Enter
- *   opens the task's line, Mod+Enter in a new tab.
- * - obsidian://ronald-tasks?query=bel&tags=nu,vandaag&done=true opens the
- *   same search from a link; every parameter is optional.
+ *   tags" (Mod+1…Mod+9); a task must carry every tag switched on. The chips
+ *   in the row below filter on the GTD note a task is in (Alt+1…Alt+4); with
+ *   more than one on, a task can be in any of them. A letter shows which note
+ *   a task is in: T, S, O, I for the GTD notes. Ticking a checkbox writes
+ *   straight to the note; Enter opens the task's line, Mod+Enter in a new tab.
+ * - obsidian://ronald-tasks?query=bel&tags=nu,vandaag&notes=today,inbox&done=true
+ *   opens the same search from a link; every parameter is optional.
  *
  * Getting to the notes
  * - "Switch to GTD note" (Mod+1…Mod+4 inside it) and "Open inbox" go to the

@@ -13,6 +13,8 @@ interface TasksUriParams extends Record<string, string> {
     query: string;
     /** Comma-separated tag values to switch on, e.g. `tags=nu,vandaag`. */
     tags: string;
+    /** Comma-separated GTD notes to switch on, e.g. `notes=today,inbox`. */
+    notes: string;
     /** When `"true"`, include tasks that are already ticked off. */
     done: string;
 }
@@ -32,11 +34,12 @@ export function registerTasksUriHandler(
     settings: () => TaskSettings,
 ): void {
     plugin.registerObsidianProtocolHandler(TASKS_URI_ACTION, (params) => {
-        const { query, tags, done } = params as Partial<TasksUriParams>;
+        const { query, tags, notes, done } = params as Partial<TasksUriParams>;
 
         void searchTasks(plugin.app, settings(), {
             query,
             activeTags: parseValues(tags),
+            activeNotes: parseValues(notes),
             showDone: done === 'true',
         });
     });

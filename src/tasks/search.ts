@@ -12,6 +12,7 @@ import { openFileFromSearch, registerNewTabEnter } from '../shared/ui/openfile';
 import type { TaskSettings } from './settings';
 import { isDoneMarker, taskMarker } from '../shared/taskline';
 import { collectTaskNotes } from '../shared/tasknotes';
+import { GTD_NOTES, type GtdNote, gtdNoteOf } from './gtdnotes';
 import { type TaskNoteBadge, taskNoteBadge } from './tasknotes';
 
 /** One task line found in a task note, with everything shown for it. */
@@ -19,6 +20,8 @@ export interface TaskItem {
     file: TFile;
     /** Which note the task is in, as shown next to its nesting level. */
     note: TaskNoteBadge;
+    /** Which GTD note the task is in, if it is in one; what the note chips filter on. */
+    gtd: GtdNote['id'] | undefined;
     /** Line number at collection time; only a hint, the file may change before a write. */
     line: number;
     /** The full raw source line, used to verify the line hint still points at this task. */
@@ -117,6 +120,7 @@ function collectFileTasks(
     lines: string[],
     file: TFile,
     note: TaskNoteBadge,
+    gtd: GtdNote['id'] | undefined,
 ): TaskItem[] {
     const inherited = new Map<
         number,
@@ -141,6 +145,7 @@ function collectFileTasks(
         tasks.push({
             file,
             note,
+            gtd,
             line,
             raw,
             text: taskText(raw),
@@ -168,7 +173,8 @@ export async function collectTaskNoteTasks(
         if (items.length === 0) continue;
 
         const lines = (await app.vault.cachedRead(file)).split('\n');
-        tasks.push(...collectFileTasks(items, lines, file, taskNoteBadge(file, settings)));
+        const gtd = gtdNoteOf(file, settings)?.id;
+        tasks.push(...collectFileTasks(items, lines, file, taskNoteBadge(file, settings), gtd));
     }
 
     return tasks;
@@ -241,10 +247,13 @@ export interface TaskSearchOptions {
     query?: string;
     /** Tag values to switch on up front; values with no chip are ignored. */
     activeTags?: readonly string[];
+    /** GTD notes to switch on up front ("today", "inbox", …); values with no chip are ignored. */
+    activeNotes?: readonly string[];
 }
 
 /**
- * Search tasks across all task notes by text, with clickable tag filters.
+ * Search tasks across all task notes by text, with clickable tag filters and,
+ * in a second row, filters on the GTD note a task is in.
  *
  * Choosing a task opens its note at the right line — in the active tab, or in a
  * new one with Mod+Enter; ticking its checkbox writes the marker straight back
@@ -253,13 +262,16 @@ export interface TaskSearchOptions {
 export class TaskSearchModal extends SuggestModal<TaskItem> {
     private items: TaskItem[];
     private readonly filters: FilterBar;
+    private readonly noteFilters: FilterBar;
     private readonly filterTags: readonly FilterChip[];
+    private readonly filterNotes: readonly FilterChip[];
     private readonly initialQuery: string;
 
     constructor(
         app: App,
         items: TaskItem[],
         filterTags: readonly FilterChip[],
+        filterNotes: readonly FilterChip[],
         options: TaskSearchOptions = {},
     ) {
         super(app);
@@ -268,6 +280,7 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
         // user just clicked does not vanish from under the cursor.
         this.items = options.showDone === true ? items : items.filter((task) => !task.done);
         this.filterTags = filterTags;
+        this.filterNotes = filterNotes;
         this.setPlaceholder('Search tasks…');
         this.modalEl.addClass('ronald-task-search');
         registerNewTabEnter(this);
@@ -276,6 +289,12 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
             chips: filterTags,
             onChange: () => this.rerunSearch(),
         });
+        this.noteFilters = new FilterBar({
+            chips: filterNotes,
+            onChange: () => this.rerunSearch(),
+            // Its own modifier, so both rows can number their chips from 1.
+            modifier: 'alt',
+        });
         this.mountFilters();
 
         // Toggled before the modal is on screen, so the first render already
@@ -283,12 +302,15 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
         for (const tag of options.activeTags ?? []) {
             this.filters.toggle(tag);
         }
+        for (const note of options.activeNotes ?? []) {
+            this.noteFilters.toggle(note);
+        }
 
         this.initialQuery = options.query ?? '';
 
         // `getSuggestions` keeps the counts current from the first keystroke
-        // on, but the bar is on screen before that, so seed it here.
-        this.filters.setCounts(this.tagCounts(normaliseQuery(this.initialQuery)));
+        // on, but the bars are on screen before that, so seed them here.
+        this.setCounts(normaliseQuery(this.initialQuery));
     }
 
     /**
@@ -311,22 +333,29 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
     }
 
     /**
-     * Place the tag chips and give them their keyboard shortcuts.
+     * Place both chip rows and give them their keyboard shortcuts.
      *
-     * The bar sits between the search field and the results, so it stays
+     * The bars sit between the search field and the results, so they stay
      * visible while typing rather than scrolling away with the matches.
      *
      * Shortcuts are listened for on the modal rather than the input so they
      * work wherever focus sits, in the capture phase so Obsidian's own Mod+digit
      * bindings never see a press meant for a chip.
+     *
+     * Each bar answers to its own modifier, so both number their chips from 1
+     * without colliding: the tags are Mod+1…9, the GTD notes Alt+1…4. A press
+     * is offered to each in turn and at most one takes it.
      */
     private mountFilters(): void {
         this.inputEl.parentElement?.insertAdjacentElement('afterend', this.filters.el);
+        this.filters.el.insertAdjacentElement('afterend', this.noteFilters.el);
 
         this.modalEl.addEventListener(
             'keydown',
             (event) => {
-                if (!this.filters.handleKeyDown(event)) return;
+                const handled =
+                    this.filters.handleKeyDown(event) || this.noteFilters.handleKeyDown(event);
+                if (!handled) return;
                 event.preventDefault();
                 event.stopPropagation();
             },
@@ -352,6 +381,17 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
         );
     }
 
+    /**
+     * True when the task is in one of the GTD notes in `wanted` (or `wanted`
+     * is empty, in which case every task matches).
+     *
+     * A task is in one note only, so unlike the tags this is an OR across the
+     * active chips: "today" and "inbox" together show the tasks of both.
+     */
+    private matchesNote(task: TaskItem, wanted: ReadonlySet<string>): boolean {
+        return wanted.size === 0 || (task.gtd !== undefined && wanted.has(task.gtd));
+    }
+
     /** True when the query appears in the task's text, tags or links. */
     private matchesQuery(task: TaskItem, q: string): boolean {
         // Match the tags and links too: tags are stripped out of the text, and
@@ -369,11 +409,18 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
         const matches = this.items.filter(
             (task) =>
                 this.matchesTags(task, this.filters.activeValues) &&
+                this.matchesNote(task, this.noteFilters.activeValues) &&
                 this.matchesQuery(task, q),
         );
 
-        this.filters.setCounts(this.tagCounts(q));
+        this.setCounts(q);
         return matches;
+    }
+
+    /** Bring the counts on both chip rows up to date with the query and the chips. */
+    private setCounts(q: string): void {
+        this.filters.setCounts(this.tagCounts(q));
+        this.noteFilters.setCounts(this.noteCounts(q));
     }
 
     /**
@@ -387,17 +434,47 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
      * every inactive chip read as its own intersection with the selection, but
      * an active chip would then always equal the result count, which tells the
      * reader nothing.
+     *
+     * The note row ANDs with this one, so its active chips narrow every count.
      */
     private tagCounts(q: string): Map<string, number> {
         const counts = new Map<string, number>();
+        const wantedNotes = this.noteFilters.activeValues;
 
         for (const { value: tag } of this.filterTags) {
             const others = [...this.filters.activeValues].filter((active) => active !== tag);
             const total = this.items.filter(
                 (task) =>
-                    this.matchesTags(task, [...others, tag]) && this.matchesQuery(task, q),
+                    this.matchesTags(task, [...others, tag]) &&
+                    this.matchesNote(task, wantedNotes) &&
+                    this.matchesQuery(task, q),
             ).length;
             counts.set(tag, total);
+        }
+
+        return counts;
+    }
+
+    /**
+     * How many tasks each GTD note chip stands for, given the query and the tags.
+     *
+     * Note chips are OR'd together (see `matchesNote`), so turning one on only
+     * ever adds its own tasks to the result, whichever other note chips are
+     * active: the count is how many tasks in that note match the query and
+     * the active tags.
+     */
+    private noteCounts(q: string): Map<string, number> {
+        const counts = new Map<string, number>();
+        const wantedTags = this.filters.activeValues;
+
+        for (const { value: note } of this.filterNotes) {
+            const total = this.items.filter(
+                (task) =>
+                    task.gtd === note &&
+                    this.matchesTags(task, wantedTags) &&
+                    this.matchesQuery(task, q),
+            ).length;
+            counts.set(note, total);
         }
 
         return counts;
@@ -505,9 +582,10 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
 /**
  * Collect the tasks in all task notes and open the search modal.
  *
- * The settings give the task folder, the GTD notes the badges name, and the tag
- * chips. A tag left blank there would render a chip that filters on nothing, so
- * half-finished rows are dropped rather than shown.
+ * The settings give the task folder, the GTD notes the badges and note chips
+ * name, and the tag chips. A tag left blank there would render a chip that
+ * filters on nothing, so half-finished rows are dropped rather than shown; so
+ * is the chip of a GTD note that isn't set.
  */
 export async function searchTasks(
     app: App,
@@ -522,5 +600,8 @@ export async function searchTasks(
     }
 
     const chips = settings.taskFilterTags.filter((chip) => chip.value.length > 0);
-    new TaskSearchModal(app, tasks, chips, options).open();
+    const noteChips = GTD_NOTES.filter((note) => settings[note.key].length > 0).map(
+        (note): FilterChip => ({ value: note.id, type: 'gtd', label: note.name }),
+    );
+    new TaskSearchModal(app, tasks, chips, noteChips, options).open();
 }

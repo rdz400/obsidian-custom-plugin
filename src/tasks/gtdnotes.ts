@@ -22,6 +22,14 @@ export const GTD_NOTES = [
     tagKey: keyof TaskSettings;
 }[];
 
+/** One of the GTD notes: today, someday, overview or inbox. */
+export type GtdNote = (typeof GTD_NOTES)[number];
+
+/** The GTD note `file` is set as in settings, if any. */
+export function gtdNoteOf(file: TFile, settings: TaskSettings): GtdNote | undefined {
+    return GTD_NOTES.find((note) => settings[note.key] === file.path);
+}
+
 /**
  * One "Move line(s) to …" command per GTD note.
  *

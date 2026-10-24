@@ -1,7 +1,7 @@
 import { App, Notice, TAbstractFile, TFile } from 'obsidian';
 
 import { collectTaskNotes, isTaskNote } from '../shared/tasknotes';
-import { GTD_NOTES } from './gtdnotes';
+import { GTD_NOTES, gtdNoteOf } from './gtdnotes';
 import type RonaldPlugin from '../main';
 import type { TaskSettings } from './settings';
 
@@ -20,7 +20,7 @@ export interface TaskNoteBadge {
  * letter in lowercase, which keeps it from passing for one of those four.
  */
 export function taskNoteBadge(file: TFile, settings: TaskSettings): TaskNoteBadge {
-    const gtd = GTD_NOTES.find((note) => settings[note.key] === file.path);
+    const gtd = gtdNoteOf(file, settings);
     if (gtd) {
         return {
             letter: gtd.name.charAt(0).toUpperCase(),
