@@ -1,13 +1,40 @@
+/**
+ * Navigation
+ * ==========
+ *
+ * Getting around quickly: within a note, to recently created notes, and
+ * between open tabs.
+ *
+ * How to use it
+ * -------------
+ * - "Show outline of this note" lists the note's headings, indented by level;
+ *   choosing one jumps to it.
+ * - "Show recently created notes" (also a ribbon icon) lists the 80 newest
+ *   notes by their `datum` frontmatter, newest first. Daily notes (type
+ *   dagnotitie) and templates are left out. The chips filter on the folders
+ *   in "Folders to filter recent notes on"; each note's type is shown as a
+ *   pill, styled like in the link searches.
+ * - "Switch to open tab" lists the open tabs, the most recently used first.
+ *
+ * The tab history (tabrecency.ts) is kept from the moment the plugin loads.
+ * The GTD switcher in tasks/ uses it as well, to find the tab a note is in.
+ *
+ * Where the code is
+ * -----------------
+ * - outlinesearch.ts   the outline
+ * - recentnotes.ts     recently created notes
+ * - tabswitcher.ts     the tab switcher
+ * - tabrecency.ts      the tab history
+ * - settings.ts        the recent notes folders setting
+ */
+
 import type RonaldPlugin from '../main';
 import { showOutline } from './outlinesearch';
 import { showRecentNotes } from './recentnotes';
 import type { TabRecency } from './tabrecency';
 import { showTabSwitcher } from './tabswitcher';
 
-/**
- * Getting around: the outline of the active note, recently created notes and
- * switching between open tabs, recent ones first by `recency`.
- */
+/** Register the navigation features, listing tabs by `recency`. */
 export function registerNavigation(plugin: RonaldPlugin, recency: TabRecency): void {
     plugin.addCommand({
         id: 'show-outline',

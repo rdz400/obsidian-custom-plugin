@@ -48,9 +48,9 @@ npm run build
     src/
       main.ts           # Lifecycle: settings, tab history, one register call per feature
       settings/         # RonaldSettings (each feature's settings combined), the settings tab
-      shared/           # Code features share: ui/ (modals, filter bar), editor/ (line helpers), vault, markdown, date, uri
+      shared/           # Code features share: ui/ (modals, filter bar), editor/ (line helpers), task lines and task notes, vault, markdown, date, uri
       tasks/            # Task notes, task search, tags, GTD notes and switcher, estimates, task count
-      projects/         # Project search, project commands and statuses
+      projects/         # Project search (with open task counts), project commands and statuses
       links/            # Backlink and outgoing link searches, copy wikilink
       navigation/       # Outline, recent notes, tab switcher and tab history
       editing/          # Selecting and moving lines
@@ -61,8 +61,8 @@ npm run build
 - **Dependency rules**:
     - `shared/` never imports from a feature folder.
     - `tasks/` may use `shared/` and `navigation/`, never `projects/` or the other features, so it can become a plugin of its own later.
-    - `projects/` may use `tasks/` (task counts, handing a project to the task search).
-    - Other features use only `shared/`.
+    - All other features, `projects/` included, use only `shared/`. What two features both need (such as telling a task line, or finding the task notes) belongs in `shared/`.
+- **Feature overviews**: each feature's `index.ts` starts with an explanation of the feature: what it is for, how to use it (commands, URIs, settings), and which file does what. Keep it up to date when a feature changes.
 - **Do not commit build artifacts**: Never commit `node_modules/`, `main.js`, or other generated files to version control.
 - Keep the plugin small. Avoid large dependencies. Prefer browser-compatible packages.
 - Generated output should be placed at the plugin root or `dist/` depending on your build setup. Release artifacts must end up at the top level of the plugin folder in the vault (`main.js`, `manifest.json`, `styles.css`).
