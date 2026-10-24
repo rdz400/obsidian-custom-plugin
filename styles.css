@@ -802,3 +802,17 @@
 .ronald-time-record-row button {
     flex-shrink: 0;
 }
+
+/*
+ * Time estimates on tasks ("\20" for twenty minutes), in task notes, in the
+ * editor and in reading mode. The colour is a variable so a snippet can
+ * change it without fighting this selector.
+ */
+body {
+    --ronald-estimate-color: var(--color-blue);
+}
+
+.ronald-estimate {
+    color: var(--ronald-estimate-color);
+    font-variant-numeric: tabular-nums;
+}

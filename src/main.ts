@@ -1,13 +1,12 @@
 import {
     Editor,
-    MarkdownView,
     Notice,
     Plugin,
     TFile,
     WorkspaceLeaf,
-    debounce,
 } from 'obsidian';
 
+import { registerEstimates } from './estimate';
 import { copyWikilink } from './links/copywikilink';
 import { applyNamingConvention } from './naming/renamefiles';
 import { searchBacklinks } from './search/backlinksearch';
@@ -34,6 +33,7 @@ import { searchOutgoingLinks } from './search/outgoinglinksearch';
 import { showOutline } from './search/outlinesearch';
 import { searchProjects, type ProjectSearchOptions } from './search/projectsearch';
 import { showRecentNotes } from './search/recentnotes';
+import { registerTaskCount } from './statusbar/taskcount';
 import { registerGtdNoteCommands } from './tasksort/gtdnotes';
 import { isTaskNote, registerTaskNoteRenames } from './tasksort/tasknotes';
 import { moveTasksToTagNote } from './tasksort/movetonotes';
@@ -426,7 +426,8 @@ export default class RonaldPlugin extends Plugin {
         registerTijdsregistratieUriHandler(this);
         registerTimeRecordUriHandler(this);
 
-        this.registerStatusBar();
+        registerTaskCount(this);
+        registerEstimates(this);
     }
 
     onunload() {}
@@ -478,37 +479,5 @@ export default class RonaldPlugin extends Plugin {
 
     async saveSettings(): Promise<void> {
         await this.saveData(this.settings);
-    }
-
-    /** Show the number of tasks in the active note in the status bar. */
-    private registerStatusBar(): void {
-        const statusBarItemEl = this.addStatusBarItem();
-
-        const updateTaskCount = (editor: Editor) => {
-            const tasks = editor
-                .getValue()
-                .split('\n')
-                .filter((line) => /^\s*[-*]\s+\[[ xX]\]/.test(line));
-            statusBarItemEl.setText(String(tasks.length));
-        };
-
-        const onChangeDebounced = debounce(updateTaskCount, 300);
-
-        this.registerEvent(
-            this.app.workspace.on('editor-change', (editor) => {
-                onChangeDebounced(editor);
-            })
-        );
-
-        this.registerEvent(
-            this.app.workspace.on('active-leaf-change', () => {
-                const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (view) {
-                    updateTaskCount(view.editor);
-                } else {
-                    statusBarItemEl.setText('');
-                }
-            })
-        );
     }
 }

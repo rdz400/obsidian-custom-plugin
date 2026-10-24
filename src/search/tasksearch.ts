@@ -10,6 +10,7 @@ import { FilterBar, FilterChip } from '../ui/filterbar';
 import { openFileFromSearch, registerNewTabEnter } from '../ui/openfile';
 import type { RonaldSettings } from '../settings';
 import { collectTaskNotes, type TaskNoteBadge, taskNoteBadge } from '../tasksort/tasknotes';
+import { isDoneMarker, taskMarker } from '../tasksort/taskline';
 
 /** One task line found in a task note, with everything shown for it. */
 export interface TaskItem {
@@ -32,7 +33,6 @@ export interface TaskItem {
     links: string[];
 }
 
-const TASK_LINE_RE = /^(\s*[-*+]\s+)\[([^\]])\]\s?/;
 const TAG_RE = /#([\w/-]+)/g;
 const LINK_RE = /\[\[([^\]|#^]+?)(?:[#^][^\]|]*)?(?:\|([^\]]*))?\]\]/g;
 
@@ -146,7 +146,7 @@ function collectFileTasks(
         const depth = (parent?.depth ?? 0) + 1;
         inherited.set(line, { tags, links, depth });
 
-        const marker = TASK_LINE_RE.exec(raw)?.[2];
+        const marker = taskMarker(raw);
         if (marker === undefined) continue;
 
         tasks.push({
@@ -155,7 +155,7 @@ function collectFileTasks(
             line,
             raw,
             text: taskText(raw),
-            done: marker === 'x' || marker === 'X',
+            done: isDoneMarker(marker),
             depth,
             tags,
             links,
