@@ -352,18 +352,45 @@
 }
 
 /*
- * Nesting level: 1 is a top-level item, 2 sits under it, and so on. Rendered
- * after the body, which takes the leftover width, so it ends up in the empty
- * space at the right edge of the row.
+ * The note badge and the depth badge, side by side. Rendered after the body,
+ * which takes the leftover width, so they end up in the empty space at the
+ * right edge of the row. Kept closer together than the row's own gap, so they
+ * read as one pair.
  */
-.ronald-task-depth {
+.ronald-task-badges {
     flex-shrink: 0;
+    display: flex;
+    gap: 3px;
+    margin-top: 1px;
+}
+
+/*
+ * Which note the task is in: T, S, O or I for the GTD notes, a lowercase first
+ * letter for any other task note; the tooltip has the full name.
+ *
+ * Only an outline in faint text, no fill: it is there to be looked up, not to
+ * compete with the task text or the depth badge next to it.
+ */
+.ronald-task-note {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 16px;
     height: 16px;
-    margin-top: 1px;
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 1px var(--background-modifier-border);
+    color: var(--text-faint);
+    font-size: var(--font-smallest);
+    line-height: 1;
+}
+
+/* Nesting level: 1 is a top-level item, 2 sits under it, and so on. */
+.ronald-task-depth {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
     border-radius: 4px;
     background: var(--background-modifier-border);
     color: var(--text-muted);
@@ -413,7 +440,12 @@
     flex: 1;
 }
 
+/*
+ * One step below the row's own size: --font-small is relative, so on top of the
+ * row's --font-small it lands at about 13px instead of 14px.
+ */
 .ronald-task-text {
+    font-size: var(--font-small);
     overflow-wrap: anywhere;
     line-height: 1.35;
 }

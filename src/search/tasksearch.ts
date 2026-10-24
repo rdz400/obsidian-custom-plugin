@@ -8,11 +8,14 @@ import {
 
 import { FilterBar, FilterChip } from '../ui/filterbar';
 import { openFileFromSearch, registerNewTabEnter } from '../ui/openfile';
-import { collectTaskNotes } from '../tasksort/tasknotes';
+import type { RonaldSettings } from '../settings';
+import { collectTaskNotes, type TaskNoteBadge, taskNoteBadge } from '../tasksort/tasknotes';
 
 /** One task line found in a task note, with everything shown for it. */
 export interface TaskItem {
     file: TFile;
+    /** Which note the task is in, as shown next to its nesting level. */
+    note: TaskNoteBadge;
     /** Line number at collection time; only a hint, the file may change before a write. */
     line: number;
     /** The full raw source line, used to verify the line hint still points at this task. */
@@ -124,6 +127,7 @@ function collectFileTasks(
     items: ListItemCache[],
     lines: string[],
     file: TFile,
+    note: TaskNoteBadge,
 ): TaskItem[] {
     const inherited = new Map<
         number,
@@ -147,6 +151,7 @@ function collectFileTasks(
 
         tasks.push({
             file,
+            note,
             line,
             raw,
             text: taskText(raw),
@@ -160,12 +165,12 @@ function collectFileTasks(
     return tasks;
 }
 
-/** Every task in every task note, the notes directly in `taskFolder`. */
+/** Every task in every task note, the notes directly in the task folder. */
 export async function collectTaskNoteTasks(
     app: App,
-    taskFolder: string,
+    settings: RonaldSettings,
 ): Promise<TaskItem[]> {
-    const files = collectTaskNotes(app, taskFolder);
+    const files = collectTaskNotes(app, settings.taskFolder);
 
     const tasks: TaskItem[] = [];
 
@@ -174,7 +179,7 @@ export async function collectTaskNoteTasks(
         if (items.length === 0) continue;
 
         const lines = (await app.vault.cachedRead(file)).split('\n');
-        tasks.push(...collectFileTasks(items, lines, file));
+        tasks.push(...collectFileTasks(items, lines, file, taskNoteBadge(file, settings)));
     }
 
     return tasks;
@@ -442,8 +447,15 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
             }
         }
 
-        // Last, so it sits in the empty space at the right edge of the row.
-        el.createSpan({
+        // Last, so they sit in the empty space at the right edge of the row:
+        // which note the task is in, then how deeply it is nested.
+        const badges = el.createDiv({ cls: 'ronald-task-badges' });
+        badges.createSpan({
+            cls: 'ronald-task-note',
+            text: task.note.letter,
+            attr: { 'aria-label': `In ${task.note.label}` },
+        });
+        badges.createSpan({
             cls: 'ronald-task-depth',
             text: String(task.depth),
             attr: { 'aria-label': `Nesting level ${task.depth}` },
@@ -504,22 +516,22 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
 /**
  * Collect the tasks in all task notes and open the search modal.
  *
- * A tag left blank in the settings would render a chip that filters on nothing,
- * so half-finished rows are dropped rather than shown.
+ * The settings give the task folder, the GTD notes the badges name, and the tag
+ * chips. A tag left blank there would render a chip that filters on nothing, so
+ * half-finished rows are dropped rather than shown.
  */
 export async function searchTasks(
     app: App,
-    taskFolder: string,
-    filterTags: readonly FilterChip[],
+    settings: RonaldSettings,
     options: TaskSearchOptions = {},
 ): Promise<void> {
-    const tasks = await collectTaskNoteTasks(app, taskFolder);
+    const tasks = await collectTaskNoteTasks(app, settings);
 
     if (tasks.length === 0) {
-        new Notice(`No tasks found in ${taskFolder || 'task notes'}`);
+        new Notice(`No tasks found in ${settings.taskFolder || 'task notes'}`);
         return;
     }
 
-    const chips = filterTags.filter((chip) => chip.value.length > 0);
+    const chips = settings.taskFilterTags.filter((chip) => chip.value.length > 0);
     new TaskSearchModal(app, tasks, chips, options).open();
 }

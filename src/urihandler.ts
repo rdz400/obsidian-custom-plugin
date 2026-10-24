@@ -1,6 +1,6 @@
 import { Plugin } from 'obsidian';
 
-import type { FilterChip } from './ui/filterbar';
+import type { RonaldSettings } from './settings';
 import { searchProjects, type ProjectSearchOptions } from './search/projectsearch';
 import { searchTasks } from './search/tasksearch';
 import { addTimeRecord } from './timerecord/addtimerecord';
@@ -84,20 +84,18 @@ function parseTaskFilters(value: string | undefined): string[] {
  * Every parameter is optional: the bare URI opens the modal exactly as the
  * command does.
  *
- * The chips and the task folder come from the plugin settings and are read at
- * call time rather than captured, so a tag added in settings is available to the
- * next link without a reload. `registerObsidianProtocolHandler` unregisters on unload, so nothing
+ * The settings are read at call time rather than captured, so a tag added in
+ * settings is available to the next link without a reload. `registerObsidianProtocolHandler` unregisters on unload, so nothing
  * extra is needed in `onunload`.
  */
 export function registerTasksUriHandler(
     plugin: Plugin,
-    taskFolder: () => string,
-    filterTags: () => readonly FilterChip[],
+    settings: () => RonaldSettings,
 ): void {
     plugin.registerObsidianProtocolHandler(TASKS_URI_ACTION, (params) => {
         const { query, tags, done } = params as Partial<TasksUriParams>;
 
-        void searchTasks(plugin.app, taskFolder(), filterTags(), {
+        void searchTasks(plugin.app, settings(), {
             query,
             activeTags: parseValues(tags),
             showDone: done === 'true',

@@ -417,9 +417,12 @@ export default class RonaldPlugin extends Plugin {
             callback: () => showGtdSwitcher(this.app, this.settings, this.tabRecency),
         });
 
-        const taskFolder = () => this.settings.taskFolder;
-        registerTasksUriHandler(this, taskFolder, () => this.settings.taskFilterTags);
-        registerProjectsUriHandler(this, taskFolder, () => this.projectSearchOptions());
+        registerTasksUriHandler(this, () => this.settings);
+        registerProjectsUriHandler(
+            this,
+            () => this.settings.taskFolder,
+            () => this.projectSearchOptions(),
+        );
         registerTijdsregistratieUriHandler(this);
         registerTimeRecordUriHandler(this);
 
@@ -444,12 +447,7 @@ export default class RonaldPlugin extends Plugin {
 
     /** Open the task search from the command, the ribbon or the project search. */
     private searchTasks(options?: TaskSearchOptions): Promise<void> {
-        return searchTasks(
-            this.app,
-            this.settings.taskFolder,
-            this.settings.taskFilterTags,
-            options,
-        );
+        return searchTasks(this.app, this.settings, options);
     }
 
     /** Open the project search from the command or the ribbon. */

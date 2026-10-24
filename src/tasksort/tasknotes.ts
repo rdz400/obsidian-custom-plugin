@@ -2,6 +2,7 @@ import { App, Notice, TAbstractFile, TFile } from 'obsidian';
 
 import { GTD_NOTES } from './gtdnotes';
 import type RonaldPlugin from '../main';
+import type { RonaldSettings } from '../settings';
 
 /**
  * Whether `file` is a task note: a note directly in the task folder. Notes in
@@ -24,6 +25,33 @@ export function collectTaskNotes(app: App, taskFolder: string): TFile[] {
     return folder.children.filter(
         (child): child is TFile => child instanceof TFile && isTaskNote(child, taskFolder),
     );
+}
+
+/** How a task note is marked next to its tasks in the task search. */
+export interface TaskNoteBadge {
+    /** One letter: the GTD role's capital, or the note name's first letter in lowercase. */
+    letter: string;
+    /** The full name, for the tooltip. */
+    label: string;
+}
+
+/**
+ * The badge for `file`. A GTD note is marked by its role rather than its file
+ * name, so today, someday, overview and inbox always read as T, S, O and I
+ * whatever the notes are called. Any other task note gets its own first
+ * letter in lowercase, which keeps it from passing for one of those four.
+ */
+export function taskNoteBadge(file: TFile, settings: RonaldSettings): TaskNoteBadge {
+    const gtd = GTD_NOTES.find((note) => settings[note.key] === file.path);
+    if (gtd) {
+        return {
+            letter: gtd.name.charAt(0).toUpperCase(),
+            label: gtd.name === file.basename ? gtd.name : `${gtd.name} (${file.basename})`,
+        };
+    }
+    // Spread so a name starting with an emoji or other surrogate pair keeps it whole.
+    const first = [...file.basename][0] ?? '?';
+    return { letter: first.toLowerCase(), label: file.basename };
 }
 
 /** `path` after a rename of `oldPath` to `newPath`, which may be a parent of it. */
