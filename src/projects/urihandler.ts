@@ -1,7 +1,7 @@
 import type { Plugin } from 'obsidian';
 
 import { parseValues } from '../shared/uri';
-import { searchProjects, type ProjectSearchOptions } from './search';
+import { searchProjects } from './search';
 
 /** The protocol action that opens the project search modal. */
 export const PROJECTS_URI_ACTION = 'ronald-projects';
@@ -41,22 +41,17 @@ function parseTaskFilters(value: string | undefined): string[] {
  * Every parameter is optional: the bare URI opens the modal exactly as the
  * command does.
  *
- * `options` carries the hooks the command wiring supplies — Shift+Enter handing
- * the project's name to the task search — so a project opened from a link
- * behaves the same as one opened from the command. It is read at call time
- * rather than captured for the same reason the task chips are, and so is the
- * task folder.
+ * The task folder is read at call time rather than captured, so changing it
+ * in settings needs no reload.
  */
 export function registerProjectsUriHandler(
     plugin: Plugin,
     taskFolder: () => string,
-    options: () => ProjectSearchOptions,
 ): void {
     plugin.registerObsidianProtocolHandler(PROJECTS_URI_ACTION, (params) => {
         const { query, status, tasks } = params as Partial<ProjectsUriParams>;
 
         void searchProjects(plugin.app, taskFolder(), {
-            ...options(),
             query,
             activeStatuses: parseValues(status),
             activeTaskFilters: parseTaskFilters(tasks),

@@ -1,7 +1,6 @@
 import type { Editor } from 'obsidian';
 
 import type RonaldPlugin from '../main';
-import { searchTasks } from '../tasks/search';
 import {
     addProjectToFrontmatter,
     insertProjectLink,
@@ -9,7 +8,7 @@ import {
     openProjects,
     setStatusInFrontmatter,
 } from './commands';
-import { searchProjects, type ProjectSearchOptions } from './search';
+import { searchProjects } from './search';
 import { registerProjectsUriHandler } from './urihandler';
 
 /**
@@ -54,20 +53,7 @@ export function registerProjectFeatures(plugin: RonaldPlugin): void {
         callback: () => setStatusInFrontmatter(plugin.app),
     });
 
-    /**
-     * How the project search behaves wherever it is opened from: Shift+Enter
-     * hands the chosen project's name to the task search as its query.
-     *
-     * Built per call rather than once, so the task chips it closes over are the
-     * ones in the settings at that moment — a tag added in settings reaches the
-     * next search without a reload.
-     */
-    const searchOptions = (): ProjectSearchOptions => ({
-        onSearchTasks: (name) => void searchTasks(plugin.app, plugin.settings, { query: name }),
-    });
-
-    const search = () =>
-        searchProjects(plugin.app, plugin.settings.taskFolder, searchOptions());
+    const search = () => searchProjects(plugin.app, plugin.settings.taskFolder);
 
     plugin.addCommand({
         id: 'search-projects',
@@ -78,5 +64,5 @@ export function registerProjectFeatures(plugin: RonaldPlugin): void {
 
     plugin.addRibbonIcon('search', 'Search projects', () => void search());
 
-    registerProjectsUriHandler(plugin, () => plugin.settings.taskFolder, searchOptions);
+    registerProjectsUriHandler(plugin, () => plugin.settings.taskFolder);
 }

@@ -1,8 +1,8 @@
 import { App, Editor, Notice } from 'obsidian';
 
 import { selectedLineRange } from '../shared/editor/lines';
+import { collectTaskNotes } from '../shared/tasknotes';
 import { TagSuggestModal } from '../shared/ui/modals';
-import { collectTaskNotes } from './tasknotes';
 
 /**
  * Open a modal to pick a tag and toggle it at the end of each selected list item.

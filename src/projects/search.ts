@@ -13,14 +13,11 @@ import { FilterBar, FilterChip } from '../shared/ui/filterbar';
 import {
     openFileFromSearch,
     registerAltEnter,
-    registerLongPressShift,
     registerNewTabEnter,
-    registerShiftEnter,
     wantsAltAction,
-    wantsShiftAction,
 } from '../shared/ui/openfile';
-import { isDoneMarker, taskMarker } from '../tasks/taskline';
-import { collectTaskNotes } from '../tasks/tasknotes';
+import { isDoneMarker, taskMarker } from '../shared/taskline';
+import { collectTaskNotes } from '../shared/tasknotes';
 import { templateMatcher } from '../shared/vault';
 import { isOpenStatus } from './statuses';
 
@@ -226,10 +223,6 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
         this.modalEl.addClass('ronald-project-search');
         registerNewTabEnter(this);
         registerAltEnter(this);
-        registerShiftEnter(this);
-        // The touch equivalent of Shift+Enter, for mobile where no modifier
-        // key can be held; it arrives as a shift-flagged click either way.
-        registerLongPressShift(this);
 
         this.statusFilters = new FilterBar({
             chips: STATUS_FILTERS,
@@ -449,30 +442,17 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
     }
 }
 
-/** Hooks a caller can supply for the project search's secondary actions. */
-export interface ProjectSearchOptions extends ProjectSearchPreset {
-    /**
-     * Called with the chosen project's note name on Shift+Enter, instead of
-     * opening the note.
-     *
-     * Left to the caller so this module stays unaware of what the name is
-     * handed to; the command wiring decides that.
-     */
-    onSearchTasks?: (name: string) => void;
-}
-
 /**
  * Search open projects by note name in a modal that shows their status and
  * open task count. Choosing a project opens its note — in the active tab, or
  * in a new one with Mod+Enter — while Alt+Enter (Option+Enter on macOS)
  * copies a wikilink to it to the clipboard and, when a note is open, also
- * inserts that link at the cursor. Shift+Enter hands the project's name to
- * `onSearchTasks` where the caller supplies one.
+ * inserts that link at the cursor.
  */
 export async function searchProjects(
     app: App,
     taskFolder: string,
-    options: ProjectSearchOptions = {},
+    preset: ProjectSearchPreset = {},
 ): Promise<void> {
     const projects = await collectOpenProjects(app, taskFolder);
 
@@ -482,11 +462,6 @@ export async function searchProjects(
     }
 
     new ProjectSearchModal(app, projects, (item, event) => {
-        const searchTasks = options.onSearchTasks;
-        if (searchTasks && wantsShiftAction(event)) {
-            searchTasks(item.file.basename);
-            return;
-        }
         if (wantsAltAction(event)) {
             const view = app.workspace.getActiveViewOfType(MarkdownView);
             const sourcePath = view?.file?.path ?? '';
@@ -501,5 +476,5 @@ export async function searchProjects(
             return;
         }
         openFileFromSearch(app, item.file, event);
-    }, options).open();
+    }, preset).open();
 }

@@ -1,4 +1,4 @@
-import { isDoneMarker, taskMarker } from '../taskline';
+import { isDoneMarker, taskMarker } from '../../shared/taskline';
 
 /**
  * A time estimate: a backslash and the minutes, as the last word of a task's

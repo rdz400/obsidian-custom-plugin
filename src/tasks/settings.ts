@@ -2,9 +2,9 @@ import type { Setting, SettingDefinitionItem, TFile } from 'obsidian';
 
 import type RonaldPlugin from '../main';
 import { shortcutName, type SettingSectionContext } from '../settings/section';
+import { isTaskNote } from '../shared/tasknotes';
 import type { FilterChip } from '../shared/ui/filterbar';
 import { GTD_NOTES } from './gtdnotes';
-import { isTaskNote } from './tasknotes';
 
 export interface TaskSettings {
     /**

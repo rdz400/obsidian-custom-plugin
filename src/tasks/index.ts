@@ -1,6 +1,7 @@
 import type { Editor } from 'obsidian';
 
 import type RonaldPlugin from '../main';
+import { isTaskNote } from '../shared/tasknotes';
 import type { TabRecency } from '../navigation/tabrecency';
 import { toggleCheckBoxAdvanced } from './checkbox';
 import { registerEstimates } from './estimate';
@@ -12,7 +13,7 @@ import { searchTasks } from './search';
 import { moveTasksToTop } from './sorttasks';
 import { insertTag, removeTagFromTaskNotes, toggleTag } from './tags';
 import { registerTaskCount } from './taskcount';
-import { isTaskNote, openTaskNotes, registerTaskNoteRenames } from './tasknotes';
+import { openTaskNotes, registerTaskNoteRenames } from './tasknotes';
 import { registerTasksUriHandler } from './urihandler';
 
 /**
