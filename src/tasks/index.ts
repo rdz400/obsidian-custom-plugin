@@ -1,7 +1,7 @@
 import type { Editor } from 'obsidian';
 
 import type RonaldPlugin from '../main';
-import type { TabRecency } from '../tabs/tabrecency';
+import type { TabRecency } from '../navigation/tabrecency';
 import { toggleCheckBoxAdvanced } from './checkbox';
 import { registerEstimates } from './estimate';
 import { registerGtdNoteCommands } from './gtdnotes';

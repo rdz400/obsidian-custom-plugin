@@ -1,7 +1,7 @@
 import { Plugin } from 'obsidian';
 
-import { addTimeRecord } from './timerecord/addtimerecord';
-import { openTimeRecordNote } from './timerecord/timerecordnote';
+import { addTimeRecord } from './addtimerecord';
+import { openTimeRecordNote } from './timerecordnote';
 
 /** The protocol action that opens the "tijdsregistratie" note. */
 export const TIJDSREGISTRATIE_URI_ACTION = 'ronald-tijdsregistratie';
