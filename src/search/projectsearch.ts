@@ -19,8 +19,8 @@ import {
     wantsAltAction,
     wantsShiftAction,
 } from '../shared/ui/openfile';
-import { isDoneMarker, taskMarker } from '../tasksort/taskline';
-import { collectTaskNotes } from '../tasksort/tasknotes';
+import { isDoneMarker, taskMarker } from '../tasks/taskline';
+import { collectTaskNotes } from '../tasks/tasknotes';
 import { templateMatcher } from '../shared/vault';
 
 /** Statuses that mark a project as no longer running. */

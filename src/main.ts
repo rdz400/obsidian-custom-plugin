@@ -6,21 +6,14 @@ import {
     WorkspaceLeaf,
 } from 'obsidian';
 
-import { registerEstimates } from './estimate';
 import { copyWikilink } from './links/copywikilink';
 import { applyNamingConvention } from './naming/renamefiles';
 import { searchBacklinks } from './search/backlinksearch';
 import {
-    toggleTag,
-    toggleCheckBoxAdvanced,
-    openTaakBestanden,
-    moveFinishedTasksToKlaar,
     moveProjectNotesToFolder,
     insertProjectLink,
-    insertTag,
     addProjectToFrontmatter,
     setStatusInFrontmatter,
-    removeTagFromTakenNotes,
 } from './commands';
 import {
     extendSelectionByLine,
@@ -33,11 +26,6 @@ import { searchOutgoingLinks } from './search/outgoinglinksearch';
 import { showOutline } from './search/outlinesearch';
 import { searchProjects, type ProjectSearchOptions } from './search/projectsearch';
 import { showRecentNotes } from './search/recentnotes';
-import { registerTaskCount } from './statusbar/taskcount';
-import { registerGtdNoteCommands } from './tasksort/gtdnotes';
-import { isTaskNote, registerTaskNoteRenames } from './tasksort/tasknotes';
-import { moveTasksToGtdNotes } from './tasksort/movetonotes';
-import { moveTasksToTop } from './tasksort/sorttasks';
 import { addTimeRecord } from './timerecord/addtimerecord';
 import { openTimeRecordNote } from './timerecord/timerecordnote';
 import {
@@ -45,13 +33,12 @@ import {
     RonaldSettingTab,
     type RonaldSettings,
 } from './settings';
-import { searchTasks, type TaskSearchOptions } from './search/tasksearch';
+import { registerTaskFeatures } from './tasks';
+import { searchTasks } from './tasks/search';
 import { TabRecency } from './tabs/tabrecency';
-import { goToGtdNote, showGtdSwitcher } from './tabs/gtdswitcher';
 import { showTabSwitcher } from './tabs/tabswitcher';
 import {
     registerProjectsUriHandler,
-    registerTasksUriHandler,
     registerTijdsregistratieUriHandler,
     registerTimeRecordUriHandler,
 } from './urihandler';
@@ -118,48 +105,6 @@ export default class RonaldPlugin extends Plugin {
 
         this.addRibbonIcon('folder-open', 'Open projecten', openProjecten);
 
-        const openNoteByName = async (name: string) => {
-            const note = this.app.metadataCache.getFirstLinkpathDest(name, '');
-            if (!note) {
-                new Notice(`Note "${name}" not found`);
-                return;
-            }
-            const leaf =
-                this.app.workspace.getMostRecentLeaf(
-                    this.app.workspace.rootSplit,
-                ) ?? this.app.workspace.getLeaf(false);
-            await leaf.openFile(note);
-        };
-
-        this.addCommand({
-            id: 'open-klaar',
-            name: 'Open klaar',
-            icon: 'check-check',
-            callback: () => openNoteByName('klaar'),
-        });
-
-        // The inbox is the GTD note set in settings, opened the way the GTD
-        // switcher opens it, so both always land on the same note.
-        const openInbox = () =>
-            goToGtdNote(this.app, this.settings, this.tabRecency, 'inbox');
-
-        this.addCommand({
-            id: 'open-inbox',
-            name: 'Open inbox',
-            icon: 'inbox',
-            callback: () => void openInbox(),
-        });
-
-        this.addRibbonIcon('check-check', 'Open klaar', () => openNoteByName('klaar'));
-        this.addRibbonIcon('inbox', 'Open inbox', () => void openInbox());
-
-        this.addCommand({
-            id: 'open-taken',
-            name: 'Open taken',
-            icon: 'list-checks',
-            callback: () => openTaakBestanden(this.app, this.settings.taskFolder),
-        });
-
         this.addCommand({
             id: 'move-lines-to-end',
             name: 'Move line(s) to end of file',
@@ -195,76 +140,11 @@ export default class RonaldPlugin extends Plugin {
             editorCallback: (editor: Editor) => moveLinesToTop(editor),
         });
 
-        for (const tag of ['nu', 'misschien', 'vandaag', 'week']) {
-            this.addCommand({
-                id: `toggle-${tag}-tag`,
-                name: `Toggle #${tag} tag`,
-                icon: 'hash',
-                editorCallback: (editor: Editor) => toggleTag(editor, tag),
-            });
-        }
-
-        // One command per tag rather than one command that asks which tag: this
-        // way each can carry its own hotkey. Reading the list at load means an
-        // added tag needs a reload, which the setting's description says.
-        for (const tag of this.settings.clearTags) {
-            if (tag.length === 0) continue;
-            this.addCommand({
-                id: `remove-${tag}-tag-from-taken-notes`,
-                name: `Remove #${tag} tag from all task notes`,
-                icon: 'eraser',
-                callback: () =>
-                    void removeTagFromTakenNotes(this.app, this.settings.taskFolder, tag),
-            });
-        }
-
-        this.addCommand({
-            id: 'move-tagged-tasks-to-top',
-            name: 'Move tasks with a tag to top',
-            icon: 'arrow-up-to-line',
-            // Only offered in task notes.
-            editorCheckCallback: (checking, editor, ctx) => {
-                if (!ctx.file || !isTaskNote(ctx.file, this.settings.taskFolder)) return false;
-                if (!checking) void moveTasksToTop(this.app, ctx.file, editor);
-                return true;
-            },
-        });
-
-        this.addCommand({
-            id: 'move-tagged-tasks-to-gtd-notes',
-            // eslint-disable-next-line obsidianmd/ui/sentence-case -- GTD is an acronym
-            name: 'Move tagged tasks to their GTD notes',
-            icon: 'file-output',
-            // Only offered in task notes.
-            editorCheckCallback: (checking, editor, ctx) => {
-                if (!ctx.file || !isTaskNote(ctx.file, this.settings.taskFolder)) return false;
-                if (!checking) void moveTasksToGtdNotes(this.app, this.settings, ctx.file, editor);
-                return true;
-            },
-        });
-
         this.addCommand({
             id: 'move-lines-to-note',
             name: 'Move line(s) to another note',
             icon: 'file-output',
             editorCallback: (editor: Editor) => moveLinesToNote(this.app, editor),
-        });
-
-        registerGtdNoteCommands(this);
-        registerTaskNoteRenames(this);
-
-        this.addCommand({
-            id: 'toggle-checkbox-advanced',
-            name: 'Toggle checkbox status advanced',
-            icon: 'square-check-big',
-            editorCallback: (editor: Editor) => toggleCheckBoxAdvanced(editor),
-        });
-
-        this.addCommand({
-            id: 'move-finished-tasks-to-klaar',
-            name: 'Move finished tasks to "klaar"',
-            icon: 'check-check',
-            callback: () => moveFinishedTasksToKlaar(this.app),
         });
 
         this.addCommand({
@@ -279,14 +159,6 @@ export default class RonaldPlugin extends Plugin {
             name: 'Insert link to active project',
             icon: 'link',
             editorCallback: (editor: Editor) => insertProjectLink(this.app, editor),
-        });
-
-        this.addCommand({
-            id: 'insert-tag',
-            name: 'Insert tag at end of line',
-            icon: 'tag',
-            editorCallback: (editor: Editor) =>
-                insertTag(this.app, editor, this.settings.insertTags),
         });
 
         this.addCommand({
@@ -325,15 +197,6 @@ export default class RonaldPlugin extends Plugin {
             icon: 'search',
             callback: () => void this.searchProjects(),
         });
-
-        this.addCommand({
-            id: 'search-tasks',
-            name: 'Search tasks',
-            icon: 'list-checks',
-            callback: () => void this.searchTasks(),
-        });
-
-        this.addRibbonIcon('list-checks', 'Search tasks', () => void this.searchTasks());
 
         this.addRibbonIcon('search', 'Search projects', () => void this.searchProjects());
 
@@ -405,15 +268,8 @@ export default class RonaldPlugin extends Plugin {
             callback: () => showTabSwitcher(this.app, this.tabRecency),
         });
 
-        this.addCommand({
-            id: 'switch-to-gtd-note',
-            // eslint-disable-next-line obsidianmd/ui/sentence-case -- GTD is an acronym
-            name: 'Switch to GTD note',
-            icon: 'list-todo',
-            callback: () => showGtdSwitcher(this.app, this.settings, this.tabRecency),
-        });
+        registerTaskFeatures(this, this.tabRecency);
 
-        registerTasksUriHandler(this, () => this.settings);
         registerProjectsUriHandler(
             this,
             () => this.settings.taskFolder,
@@ -421,9 +277,6 @@ export default class RonaldPlugin extends Plugin {
         );
         registerTijdsregistratieUriHandler(this);
         registerTimeRecordUriHandler(this);
-
-        registerTaskCount(this);
-        registerEstimates(this);
     }
 
     onunload() {}
@@ -438,13 +291,9 @@ export default class RonaldPlugin extends Plugin {
      */
     private projectSearchOptions(): ProjectSearchOptions {
         return {
-            onSearchTasks: (name) => void this.searchTasks({ query: name }),
+            onSearchTasks: (name) =>
+                void searchTasks(this.app, this.settings, { query: name }),
         };
-    }
-
-    /** Open the task search from the command, the ribbon or the project search. */
-    private searchTasks(options?: TaskSearchOptions): Promise<void> {
-        return searchTasks(this.app, this.settings, options);
     }
 
     /** Open the project search from the command or the ribbon. */

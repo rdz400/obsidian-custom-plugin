@@ -7,8 +7,8 @@ import {
     type TFile,
 } from 'obsidian';
 
-import { GTD_NOTES } from './tasksort/gtdnotes';
-import { isTaskNote } from './tasksort/tasknotes';
+import { GTD_NOTES } from './tasks/gtdnotes';
+import { isTaskNote } from './tasks/tasknotes';
 import type { FilterChip } from './shared/ui/filterbar';
 import type RonaldPlugin from './main';
 import type { NoteTypeSetting } from './shared/ui/notetype';

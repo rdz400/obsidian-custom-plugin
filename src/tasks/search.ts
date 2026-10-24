@@ -10,8 +10,8 @@ import { addMissing, LINK_RE, linksOnLine } from '../shared/markdown';
 import { FilterBar, FilterChip } from '../shared/ui/filterbar';
 import { openFileFromSearch, registerNewTabEnter } from '../shared/ui/openfile';
 import type { RonaldSettings } from '../settings';
-import { collectTaskNotes, type TaskNoteBadge, taskNoteBadge } from '../tasksort/tasknotes';
-import { isDoneMarker, taskMarker } from '../tasksort/taskline';
+import { collectTaskNotes, type TaskNoteBadge, taskNoteBadge } from './tasknotes';
+import { isDoneMarker, taskMarker } from './taskline';
 
 /** One task line found in a task note, with everything shown for it. */
 export interface TaskItem {

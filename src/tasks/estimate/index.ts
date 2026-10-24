@@ -1,7 +1,7 @@
 import type { TFile } from 'obsidian';
 
-import type RonaldPlugin from '../main';
-import { isTaskNote } from '../tasksort/tasknotes';
+import type RonaldPlugin from '../../main';
+import { isTaskNote } from '../tasknotes';
 import { estimateHighlighter } from './editorextension';
 import { estimatePostProcessor } from './postprocessor';
 import { registerEstimateTotal } from './statusbar';

@@ -1,13 +1,9 @@
 import { Plugin } from 'obsidian';
 
-import type { RonaldSettings } from './settings';
 import { searchProjects, type ProjectSearchOptions } from './search/projectsearch';
-import { searchTasks } from './search/tasksearch';
+import { parseValues } from './shared/uri';
 import { addTimeRecord } from './timerecord/addtimerecord';
 import { openTimeRecordNote } from './timerecord/timerecordnote';
-
-/** The protocol action that opens the task search modal. */
-export const TASKS_URI_ACTION = 'ronald-tasks';
 
 /** The protocol action that opens the project search modal. */
 export const PROJECTS_URI_ACTION = 'ronald-projects';
@@ -17,16 +13,6 @@ export const TIJDSREGISTRATIE_URI_ACTION = 'ronald-tijdsregistratie';
 
 /** The protocol action that adds a time record to that note. */
 export const TIME_RECORD_URI_ACTION = 'ronald-timerecord';
-
-/** Parameters read by the task search action. */
-interface TasksUriParams extends Record<string, string> {
-    /** Text to put in the search field. */
-    query: string;
-    /** Comma-separated tag values to switch on, e.g. `tags=nu,vandaag`. */
-    tags: string;
-    /** When `"true"`, include tasks that are already ticked off. */
-    done: string;
-}
 
 /** Parameters read by the project search action. */
 interface ProjectsUriParams extends Record<string, string> {
@@ -49,21 +35,6 @@ interface TimeRecordUriParams extends Record<string, string> {
 }
 
 /**
- * Split a comma-separated parameter into the values the filter bar uses.
- *
- * A hand-written link is likely to spell a tag the way it reads in a note, so a
- * leading "#" is accepted and capitals are folded away; the chips themselves are
- * lowercase and unprefixed.
- */
-function parseValues(value: string | undefined): string[] {
-    if (!value) return [];
-    return value
-        .split(',')
-        .map((entry) => entry.trim().replace(/^#/, '').toLowerCase())
-        .filter((entry) => entry.length > 0);
-}
-
-/**
  * The task chips a `tasks` parameter asks for.
  *
  * Both the short form ("met", "zonder") and the chip values themselves are
@@ -75,31 +46,6 @@ function parseTaskFilters(value: string | undefined): string[] {
         if (entry === 'met' || entry === 'met-taken') return ['met-taken'];
         if (entry === 'zonder' || entry === 'zonder-taken') return ['zonder-taken'];
         return [];
-    });
-}
-
-/**
- * Register `obsidian://ronald-tasks` for the lifetime of the plugin.
- *
- * Every parameter is optional: the bare URI opens the modal exactly as the
- * command does.
- *
- * The settings are read at call time rather than captured, so a tag added in
- * settings is available to the next link without a reload. `registerObsidianProtocolHandler` unregisters on unload, so nothing
- * extra is needed in `onunload`.
- */
-export function registerTasksUriHandler(
-    plugin: Plugin,
-    settings: () => RonaldSettings,
-): void {
-    plugin.registerObsidianProtocolHandler(TASKS_URI_ACTION, (params) => {
-        const { query, tags, done } = params as Partial<TasksUriParams>;
-
-        void searchTasks(plugin.app, settings(), {
-            query,
-            activeTags: parseValues(tags),
-            showDone: done === 'true',
-        });
     });
 }
 

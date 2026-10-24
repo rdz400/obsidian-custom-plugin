@@ -105,3 +105,13 @@ export function registerTaskNoteRenames(plugin: RonaldPlugin): void {
         }),
     );
 }
+
+/** Open all task notes in new tabs. */
+export async function openTaskNotes(app: App, taskFolder: string): Promise<void> {
+    const files = collectTaskNotes(app, taskFolder);
+
+    for (const file of files) {
+        const leaf = app.workspace.getLeaf('tab');
+        await leaf.openFile(file);
+    }
+}
