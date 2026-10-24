@@ -39,7 +39,7 @@ export interface RecentNoteItem {
  * placeholder reaches us as something else — so anything that is not already a
  * string is stringified and left to `parseDatum` to judge.
  */
-export function rawDatum(app: App, file: TFile): string {
+function rawDatum(app: App, file: TFile): string {
     const datum: unknown = app.metadataCache.getFileCache(file)?.frontmatter?.datum;
     if (typeof datum === 'string') return datum.trim();
     if (typeof datum === 'number') return String(datum);
@@ -54,7 +54,7 @@ export function rawDatum(app: App, file: TFile): string {
  * template, a stray word — yields undefined and the note is left out, since a
  * list ordered by date has nowhere to put a note without one.
  */
-export function parseDatum(datum: string): number | undefined {
+function parseDatum(datum: string): number | undefined {
     const match = /^(\d{4})-?(\d{2})-?(\d{2})$/.exec(datum);
     if (!match) return undefined;
 
@@ -68,17 +68,16 @@ export function parseDatum(datum: string): number | undefined {
 }
 
 /** A note with its `datum` as parsed by `parseDatum`. */
-export interface DatedNote {
+interface DatedNote {
     file: TFile;
     sortKey: number;
 }
 
 /**
  * Order notes newest first: by `datum`, and notes of the same day by the file's
- * creation time. Everything that lists or picks recent notes sorts with this,
- * so they all agree on which note is newest.
+ * creation time.
  */
-export function compareNewestFirst(a: DatedNote, b: DatedNote): number {
+function compareNewestFirst(a: DatedNote, b: DatedNote): number {
     return b.sortKey - a.sortKey || b.file.stat.ctime - a.file.stat.ctime;
 }
 

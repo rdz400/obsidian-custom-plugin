@@ -17,14 +17,11 @@ import {
     toggleCheckBoxAdvanced,
     openTaakBestanden,
     moveFinishedTasksToKlaar,
-    moveTakenNotesToFolder,
     moveProjectNotesToFolder,
     insertProjectLink,
     insertTag,
     addProjectToFrontmatter,
     setStatusInFrontmatter,
-    mergeTakenNotes,
-    openMostRecentTaakNote,
     removeTagFromTakenNotes,
 } from './commands';
 import {
@@ -268,13 +265,6 @@ export default class RonaldPlugin extends Plugin {
         });
 
         this.addCommand({
-            id: 'move-taken-notes-to-folder',
-            name: 'Move "taken" notes to 1-taken folder',
-            icon: 'folder-input',
-            callback: () => moveTakenNotesToFolder(this.app),
-        });
-
-        this.addCommand({
             id: 'move-project-notes-to-folder',
             name: 'Move "project" notes to 1-projecten folder',
             icon: 'folder-input',
@@ -309,22 +299,6 @@ export default class RonaldPlugin extends Plugin {
             icon: 'circle-dot',
             callback: () => setStatusInFrontmatter(this.app),
         });
-
-        this.addCommand({
-            id: 'merge-taken-notes',
-            name: 'Merge "taken" notes into one note',
-            icon: 'merge',
-            callback: () => mergeTakenNotes(this.app),
-        });
-
-        this.addCommand({
-            id: 'open-most-recent-taak-note',
-            name: 'Open most recent "taken" note',
-            icon: 'clock',
-            callback: () => openMostRecentTaakNote(this.app),
-        });
-
-        this.addRibbonIcon('clock', 'Open most recent "taken" note', () => openMostRecentTaakNote(this.app));
 
         this.addCommand({
             id: 'open-tijdsregistratie-note',

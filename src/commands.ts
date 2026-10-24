@@ -13,14 +13,7 @@ import {
 } from './editor/editorcommands';
 import { freshCache } from './editor/freshcache';
 import { toggleCheckbox } from './editor/text';
-import { appendToNote, templateMatcher } from './vault';
-import {
-    type DatedNote,
-    compareNewestFirst,
-    parseDatum,
-    rawDatum,
-} from './search/recentnotes';
-import { openFileFromSearch } from './ui/openfile';
+import { appendToNote } from './vault';
 import {
     NoteSuggestModal,
     StringSuggestModal,
@@ -42,81 +35,6 @@ export async function openTaakBestanden(app: App): Promise<void> {
         const leaf = app.workspace.getLeaf('tab');
         await leaf.openFile(file);
     }
-}
-
-/**
- * The most recent note whose frontmatter `type` is `type`, or `null` when there
- * is none.
- *
- * "Most recent" is decided by `compareNewestFirst`: the note's own `datum`
- * frontmatter, then the file's creation time for notes of the same day. Notes
- * without a usable `datum` are left out, and so are templates, whose `datum` is
- * an unfilled placeholder.
- */
-export function findMostRecentNoteOfType(app: App, type: string): TFile | null {
-    const isTemplate = templateMatcher(app);
-
-    let best: DatedNote | null = null;
-
-    for (const file of app.vault.getMarkdownFiles()) {
-        if (isTemplate(file)) continue;
-        if (app.metadataCache.getFileCache(file)?.frontmatter?.type !== type) continue;
-
-        const sortKey = parseDatum(rawDatum(app, file));
-        if (sortKey === undefined) continue;
-
-        const candidate = { file, sortKey };
-        if (!best || compareNewestFirst(candidate, best) < 0) best = candidate;
-    }
-
-    return best?.file ?? null;
-}
-
-/** Open the most recently created note whose frontmatter `type` is `type`. */
-export function openMostRecentNoteOfType(app: App, type: string): void {
-    const mostRecent = findMostRecentNoteOfType(app, type);
-    if (!mostRecent) {
-        new Notice(`No "${type}" notes found`);
-        return;
-    }
-
-    openFileFromSearch(app, mostRecent);
-}
-
-/** Open the most recently created note whose frontmatter `type` is "taken". */
-export function openMostRecentTaakNote(app: App): void {
-    openMostRecentNoteOfType(app, 'taken');
-}
-
-/** Move every note whose frontmatter `type` is "taken" into the root folder "1-taken". */
-export async function moveTakenNotesToFolder(app: App): Promise<void> {
-    const targetFolder = '1-taken';
-
-    if (!app.vault.getFolderByPath(targetFolder)) {
-        await app.vault.createFolder(targetFolder);
-    }
-
-    const isTemplate = templateMatcher(app);
-
-    const files = app.vault.getMarkdownFiles().filter((file) => {
-        if (isTemplate(file)) return false;
-        const cache = app.metadataCache.getFileCache(file);
-        return cache?.frontmatter?.type === 'taken';
-    });
-
-    let moved = 0;
-    for (const file of files) {
-        const dest = `${targetFolder}/${file.name}`;
-        if (file.path === dest) continue;
-        if (app.vault.getAbstractFileByPath(dest)) {
-            new Notice(`Skipped "${file.name}": already exists in ${targetFolder}`);
-            continue;
-        }
-        await app.fileManager.renameFile(file, dest);
-        moved++;
-    }
-
-    new Notice(`Moved ${moved} note(s) to ${targetFolder}`);
 }
 
 /** Move every note in "0-inbox" whose frontmatter `type` is "project" into "1-projecten". */
@@ -543,68 +461,6 @@ export function setStatusInFrontmatter(app: App): void {
 /** Zero-pad a number to two digits. */
 function pad2(n: number): string {
     return String(n).padStart(2, '0');
-}
-
-/**
- * Merge every note in "1-taken" with frontmatter `type: taken` into a single new
- * note, most recent content first, then delete the originals.
- */
-export async function mergeTakenNotes(app: App): Promise<void> {
-    const sourceFolder = '1-taken';
-
-    const files = app.vault.getMarkdownFiles().filter((file) => {
-        if (!file.path.startsWith(`${sourceFolder}/`)) return false;
-        const cache = app.metadataCache.getFileCache(file);
-        return cache?.frontmatter?.type === 'taken';
-    });
-
-    if (files.length === 0) {
-        new Notice('No "taken" notes found');
-        return;
-    }
-
-    // Most recent creation date first.
-    files.sort((a, b) => b.stat.ctime - a.stat.ctime);
-
-    const sections: string[] = [];
-    for (const file of files) {
-        const cache = app.metadataCache.getFileCache(file);
-        const raw = await app.vault.cachedRead(file);
-        const bodyStart = cache?.frontmatterPosition
-            ? cache.frontmatterPosition.end.line + 1
-            : 0;
-        const lines = raw.split('\n');
-        const body = lines.slice(bodyStart).join('\n').replace(/^\n+/, '').trimEnd();
-
-        sections.push(`## ${file.basename}\n\n${body}`);
-    }
-
-    const now = new Date();
-    const noteName =
-        `${String(now.getFullYear()).slice(2)}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}` +
-        `-${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}`;
-
-    const datum = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
-
-    const frontmatter =
-        `---\n` +
-        `datum: ${datum}\n` +
-        `type: taken\n` +
-        `cssclasses:\n` +
-        `  - kleiner\n` +
-        `  - kleur\n` +
-        `---\n\n`;
-
-    const content = frontmatter + sections.join('\n\n');
-
-    const dest = `${sourceFolder}/${noteName}.md`;
-    await app.vault.create(dest, content);
-
-    for (const file of files) {
-        await app.vault.delete(file);
-    }
-
-    new Notice(`Merged ${files.length} note(s) into ${noteName}`);
 }
 
 /** Cycle the checkbox state of the current line, preserving the cursor/selection position. */
