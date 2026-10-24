@@ -43,22 +43,26 @@ npm run build
 
 - **Organize code into multiple files**: Split functionality across separate modules rather than putting everything in `main.ts`.
 - Source lives in `src/`. Keep `main.ts` small and focused on plugin lifecycle (loading, unloading, registering commands).
-- **Example file structure**:
+- **File structure**: code is organised by feature. Each feature folder has an `index.ts` with one `register…(plugin)` function that adds its commands, ribbon icons, URI handlers and status bar items; `main.ts` only loads the settings and calls those.
     ```
     src/
-      main.ts           # Plugin entry point, lifecycle management
-      settings.ts       # Settings interface and defaults
-      commands/         # Command implementations
-        command1.ts
-        command2.ts
-      ui/              # UI components, modals, views
-        modal.ts
-        view.ts
-      utils/           # Utility functions, helpers
-        helpers.ts
-        constants.ts
-      types.ts         # TypeScript interfaces and types
+      main.ts           # Lifecycle: settings, tab history, one register call per feature
+      settings/         # RonaldSettings (each feature's settings combined), the settings tab
+      shared/           # Code features share: ui/ (modals, filter bar), editor/ (line helpers), vault, markdown, date, uri
+      tasks/            # Task notes, task search, tags, GTD notes and switcher, estimates, task count
+      projects/         # Project search, project commands and statuses
+      links/            # Backlink and outgoing link searches, copy wikilink
+      navigation/       # Outline, recent notes, tab switcher and tab history
+      editing/          # Selecting and moving lines
+      timerecord/       # The "tijdsregistratie" note
+      naming/           # File naming convention
     ```
+- **Settings per feature**: a feature with settings has a `settings.ts` with its settings interface, defaults and settings tab sections. `settings/index.ts` combines them; setting keys are stored flat, so don't rename them.
+- **Dependency rules**:
+    - `shared/` never imports from a feature folder.
+    - `tasks/` may use `shared/` and `navigation/`, never `projects/` or the other features, so it can become a plugin of its own later.
+    - `projects/` may use `tasks/` (task counts, handing a project to the task search).
+    - Other features use only `shared/`.
 - **Do not commit build artifacts**: Never commit `node_modules/`, `main.js`, or other generated files to version control.
 - Keep the plugin small. Avoid large dependencies. Prefer browser-compatible packages.
 - Generated output should be placed at the plugin root or `dist/` depending on your build setup. Release artifacts must end up at the top level of the plugin folder in the vault (`main.js`, `manifest.json`, `styles.css`).
