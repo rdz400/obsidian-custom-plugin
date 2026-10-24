@@ -6,20 +6,15 @@ import {
     Notice,
     TFile,
 } from 'obsidian';
-import {
-    getSelectedLinesText,
-    removeLines,
-    selectedLineRange,
-} from './editor/editorcommands';
-import { freshCache } from './editor/freshcache';
+import { removeLines, selectedLineRange } from './shared/editor/lines';
+import { freshCache } from './shared/editor/freshcache';
 import { toggleCheckbox } from './editor/text';
 import { collectTaskNotes } from './tasksort/tasknotes';
-import { appendToNote } from './vault';
 import {
     NoteSuggestModal,
     StringSuggestModal,
     TagSuggestModal,
-} from './ui/modals';
+} from './shared/ui/modals';
 
 
 
@@ -355,19 +350,6 @@ export async function removeTagFromTakenNotes(
             ? `No #${tag} tags found in ${taskFolder || 'task notes'}`
             : `Removed ${lines} #${tag} tag(s) from ${notes} note(s)`,
     );
-}
-
-/** Move the selected lines to a chosen note via a fuzzy-search modal. */
-export function moveLinesToNote(app: App, editor: Editor): void {
-    const { from, to } = selectedLineRange(editor);
-    const text = getSelectedLinesText(editor);
-
-    new NoteSuggestModal(app, async (file: TFile) => {
-        await appendToNote(app, file, text);
-        removeLines(editor, from, to);
-
-        new Notice(`Moved to ${file.basename}`);
-    }).open();
 }
 
 /** Insert an internal link to a chosen active project at the cursor via a fuzzy-search modal. */

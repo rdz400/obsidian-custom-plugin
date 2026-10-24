@@ -8,7 +8,8 @@ import {
     setIcon,
 } from 'obsidian';
 
-import { FilterBar, FilterChip } from '../ui/filterbar';
+import { addMissing, linksOnLine } from '../shared/markdown';
+import { FilterBar, FilterChip } from '../shared/ui/filterbar';
 import {
     openFileFromSearch,
     registerAltEnter,
@@ -17,9 +18,10 @@ import {
     registerShiftEnter,
     wantsAltAction,
     wantsShiftAction,
-} from '../ui/openfile';
+} from '../shared/ui/openfile';
+import { isDoneMarker, taskMarker } from '../tasksort/taskline';
 import { collectTaskNotes } from '../tasksort/tasknotes';
-import { templateMatcher } from '../vault';
+import { templateMatcher } from '../shared/vault';
 
 /** Statuses that mark a project as no longer running. */
 const CLOSED_PROJECT_STATUSES = ['klaar', 'geannuleerd'];
@@ -87,19 +89,6 @@ export interface ProjectItem {
     openTasks: number;
 }
 
-const TASK_LINE_RE = /^(\s*[-*+]\s+)\[([^\]])\]\s?/;
-const LINK_RE = /\[\[([^\]|#^]+?)(?:[#^][^\]|]*)?(?:\|([^\]]*))?\]\]/g;
-
-/** The wikilink targets on one line, using the display text where given. */
-function linksOnLine(raw: string): string[] {
-    return Array.from(raw.matchAll(LINK_RE)).map((m) => (m[2] ?? m[1] ?? '').trim());
-}
-
-/** Append the entries of `extra` that `into` doesn't already have. */
-function addMissing(into: string[], extra: string[]): string[] {
-    return [...into, ...extra.filter((entry) => !into.includes(entry))];
-}
-
 /**
  * Count the open checkbox lines in one note against the project each links to.
  *
@@ -129,8 +118,8 @@ function countFileTasks(
         const links = addMissing(linksOnLine(raw), parent ?? []);
         inherited.set(line, links);
 
-        const marker = TASK_LINE_RE.exec(raw)?.[2];
-        if (marker === undefined || marker === 'x' || marker === 'X') continue;
+        const marker = taskMarker(raw);
+        if (marker === undefined || isDoneMarker(marker)) continue;
 
         for (const link of links) {
             const key = link.toLowerCase();

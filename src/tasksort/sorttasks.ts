@@ -1,8 +1,8 @@
 import { App, Editor, Notice, TFile } from 'obsidian';
 
-import { replaceChanged, restoreCursor } from '../editor/editorcommands';
-import { freshCache } from '../editor/freshcache';
-import { TagSuggestModal } from '../ui/modals';
+import { replaceChanged, restoreCursor } from '../shared/editor/lines';
+import { freshCache } from '../shared/editor/freshcache';
+import { TagSuggestModal } from '../shared/ui/modals';
 import { moveTaggedToTop, topLevelTaskTags } from './reorder';
 
 /** Pick a tag on a top-level task in `file`, then move the tasks with it to the top. */

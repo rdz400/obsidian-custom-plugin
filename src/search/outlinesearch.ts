@@ -1,6 +1,6 @@
 import { App, HeadingCache, Notice, SuggestModal, TFile, setIcon } from 'obsidian';
 
-import { openFileFromSearch, registerNewTabEnter } from '../ui/openfile';
+import { openFileFromSearch, registerNewTabEnter } from '../shared/ui/openfile';
 
 /** How deep a heading may sit before it stops being indented any further. */
 const MAX_INDENT_LEVEL = 6;

@@ -1,15 +1,15 @@
 import { App, Notice, SuggestModal, TFile, setIcon } from 'obsidian';
 
-import { FilterBar, FilterChip } from '../ui/filterbar';
+import { FilterBar, FilterChip } from '../shared/ui/filterbar';
 import {
     OTHER_FOLDER_FILTER,
     folderFilterValue,
     folderFilters,
     matchesFolder,
-} from '../ui/folderfilter';
-import { NoteTypeSetting, noteType, renderTypePill } from '../ui/notetype';
-import { openFileFromSearch, registerNewTabEnter } from '../ui/openfile';
-import { templateMatcher } from '../vault';
+} from '../shared/ui/folderfilter';
+import { NoteTypeSetting, noteType, renderTypePill } from '../shared/ui/notetype';
+import { openFileFromSearch, registerNewTabEnter } from '../shared/ui/openfile';
+import { templateMatcher } from '../shared/vault';
 
 /** The note type daily notes carry; they are left out of the list. */
 const DAILY_NOTE_TYPE = 'dagnotitie';

@@ -1,7 +1,7 @@
 import type { Plugin } from 'obsidian';
 
 import { taskMarker } from '../tasksort/taskline';
-import { addActiveNoteStatus } from './activenote';
+import { addActiveNoteStatus } from '../shared/ui/activenote';
 
 /** Show the number of tasks in the active note in the status bar, for any note. */
 export function registerTaskCount(plugin: Plugin): void {

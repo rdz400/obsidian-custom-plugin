@@ -12,7 +12,6 @@ import { applyNamingConvention } from './naming/renamefiles';
 import { searchBacklinks } from './search/backlinksearch';
 import {
     toggleTag,
-    moveLinesToNote,
     toggleCheckBoxAdvanced,
     openTaakBestanden,
     moveFinishedTasksToKlaar,
@@ -26,9 +25,10 @@ import {
 import {
     extendSelectionByLine,
     moveLinesToEnd,
+    moveLinesToNote,
     moveLinesToTop,
     selectLine,
-} from './editor/editorcommands';
+} from './editing/linecommands';
 import { searchOutgoingLinks } from './search/outgoinglinksearch';
 import { showOutline } from './search/outlinesearch';
 import { searchProjects, type ProjectSearchOptions } from './search/projectsearch';

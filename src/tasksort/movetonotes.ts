@@ -1,9 +1,9 @@
 import { App, Editor, Notice, TFile } from 'obsidian';
 
-import { replaceChanged, restoreCursor } from '../editor/editorcommands';
-import { freshCache } from '../editor/freshcache';
+import { replaceChanged, restoreCursor } from '../shared/editor/lines';
+import { freshCache } from '../shared/editor/freshcache';
 import type { RonaldSettings } from '../settings';
-import { appendToNote } from '../vault';
+import { appendToNote } from '../shared/vault';
 import { GTD_NOTES } from './gtdnotes';
 import { takeByDestination } from './reorder';
 

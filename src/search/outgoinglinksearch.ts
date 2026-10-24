@@ -8,7 +8,7 @@ import {
     setIcon,
 } from 'obsidian';
 
-import { FilterBar, FilterChip } from '../ui/filterbar';
+import { FilterBar, FilterChip } from '../shared/ui/filterbar';
 import {
     NoteTypeSetting,
     configuredTypes,
@@ -16,13 +16,13 @@ import {
     noteTypeFilterValue,
     noteTypeFilters,
     renderTypePill,
-} from '../ui/notetype';
+} from '../shared/ui/notetype';
 import {
     openFileFromSearch,
     registerAltEnter,
     registerNewTabEnter,
     wantsAltAction,
-} from '../ui/openfile';
+} from '../shared/ui/openfile';
 
 /** One destination the current note links to, however often it links there. */
 export interface OutgoingLinkItem {

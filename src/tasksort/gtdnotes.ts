@@ -1,8 +1,8 @@
 import { App, Editor, ListItemCache, Notice, TFile } from 'obsidian';
 
-import { replaceChanged, restoreCursor, selectedLineRange } from '../editor/editorcommands';
-import { freshCache } from '../editor/freshcache';
-import { appendToNote } from '../vault';
+import { replaceChanged, restoreCursor, selectedLineRange } from '../shared/editor/lines';
+import { freshCache } from '../shared/editor/freshcache';
+import { appendToNote } from '../shared/vault';
 import type RonaldPlugin from '../main';
 import type { RonaldSettings } from '../settings';
 

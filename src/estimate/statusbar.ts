@@ -1,6 +1,6 @@
 import { setIcon, setTooltip, type Plugin, type TFile } from 'obsidian';
 
-import { addActiveNoteStatus } from '../statusbar/activenote';
+import { addActiveNoteStatus } from '../shared/ui/activenote';
 import { formatMinutes, openEstimateTotal } from './estimate';
 
 /**

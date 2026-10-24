@@ -6,8 +6,9 @@ import {
     TFile,
 } from 'obsidian';
 
-import { FilterBar, FilterChip } from '../ui/filterbar';
-import { openFileFromSearch, registerNewTabEnter } from '../ui/openfile';
+import { addMissing, LINK_RE, linksOnLine } from '../shared/markdown';
+import { FilterBar, FilterChip } from '../shared/ui/filterbar';
+import { openFileFromSearch, registerNewTabEnter } from '../shared/ui/openfile';
 import type { RonaldSettings } from '../settings';
 import { collectTaskNotes, type TaskNoteBadge, taskNoteBadge } from '../tasksort/tasknotes';
 import { isDoneMarker, taskMarker } from '../tasksort/taskline';
@@ -34,7 +35,6 @@ export interface TaskItem {
 }
 
 const TAG_RE = /#([\w/-]+)/g;
-const LINK_RE = /\[\[([^\]|#^]+?)(?:[#^][^\]|]*)?(?:\|([^\]]*))?\]\]/g;
 
 /** Set the checkbox marker of a task line, e.g. "- [ ] Foo" -> "- [x] Foo". */
 function setTaskMarker(line: string, marker: string): string {
@@ -44,13 +44,6 @@ function setTaskMarker(line: string, marker: string): string {
 /** The inline "#tag"s written on one line, lowercased. */
 function tagsOnLine(raw: string): string[] {
     return Array.from(raw.matchAll(TAG_RE)).map((m) => (m[1] as string).toLowerCase());
-}
-
-/** The wikilink targets on one line, using the display text where given. */
-function linksOnLine(raw: string): string[] {
-    return Array.from(raw.matchAll(LINK_RE)).map(
-        (m) => (m[2] ?? m[1] ?? '').trim(),
-    );
 }
 
 /**
@@ -101,11 +94,6 @@ export function textParts(text: string): TextPart[] {
     if (rest.length > 0) parts.push({ text: rest, link: false });
 
     return parts;
-}
-
-/** Append the entries of `extra` that `into` doesn't already have. */
-function addMissing(into: string[], extra: string[]): string[] {
-    return [...into, ...extra.filter((entry) => !into.includes(entry))];
 }
 
 /**

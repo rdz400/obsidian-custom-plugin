@@ -1,6 +1,6 @@
 import { App, Notice, TFile } from 'obsidian';
 
-import { openFileFromSearch } from '../ui/openfile';
+import { openFileFromSearch } from '../shared/ui/openfile';
 
 /** The note every time record is written to. */
 export const TIME_RECORD_NOTE = 'tijdsregistratie';

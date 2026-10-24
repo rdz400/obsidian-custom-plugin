@@ -9,9 +9,9 @@ import {
 
 import { GTD_NOTES } from './tasksort/gtdnotes';
 import { isTaskNote } from './tasksort/tasknotes';
-import type { FilterChip } from './ui/filterbar';
+import type { FilterChip } from './shared/ui/filterbar';
 import type RonaldPlugin from './main';
-import type { NoteTypeSetting } from './ui/notetype';
+import type { NoteTypeSetting } from './shared/ui/notetype';
 
 export interface RonaldSettings {
     /**
