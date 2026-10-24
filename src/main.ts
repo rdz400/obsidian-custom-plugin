@@ -47,7 +47,7 @@ import {
 } from './settings';
 import { searchTasks, type TaskSearchOptions } from './search/tasksearch';
 import { TabRecency } from './tabs/tabrecency';
-import { showGtdSwitcher } from './tabs/gtdswitcher';
+import { goToGtdNote, showGtdSwitcher } from './tabs/gtdswitcher';
 import { showTabSwitcher } from './tabs/tabswitcher';
 import {
     registerProjectsUriHandler,
@@ -138,15 +138,20 @@ export default class RonaldPlugin extends Plugin {
             callback: () => openNoteByName('klaar'),
         });
 
+        // The inbox is the GTD note set in settings, opened the way the GTD
+        // switcher opens it, so both always land on the same note.
+        const openInbox = () =>
+            goToGtdNote(this.app, this.settings, this.tabRecency, 'inbox');
+
         this.addCommand({
             id: 'open-inbox',
             name: 'Open inbox',
             icon: 'inbox',
-            callback: () => openNoteByName('inbox'),
+            callback: () => void openInbox(),
         });
 
         this.addRibbonIcon('check-check', 'Open klaar', () => openNoteByName('klaar'));
-        this.addRibbonIcon('inbox', 'Open inbox', () => openNoteByName('inbox'));
+        this.addRibbonIcon('inbox', 'Open inbox', () => void openInbox());
 
         this.addCommand({
             id: 'open-taken',

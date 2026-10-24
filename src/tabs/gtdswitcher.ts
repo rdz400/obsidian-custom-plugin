@@ -117,6 +117,22 @@ class GtdSwitcherModal extends SuggestModal<GtdItem> {
     }
 }
 
+/** Go to the GTD note with `id`, the one set in settings, like the switcher does. */
+export async function goToGtdNote(
+    app: App,
+    settings: RonaldSettings,
+    recency: TabRecency,
+    id: (typeof GTD_NOTES)[number]['id'],
+): Promise<void> {
+    const note = GTD_NOTES.find((n) => n.id === id);
+    const file = note && app.vault.getFileByPath(settings[note.key]);
+    if (!file) {
+        new Notice(`Set the ${id} note in settings first`);
+        return;
+    }
+    await goToNote(app, file, recency);
+}
+
 /** Show the GTD notes in a modal and go to the chosen one. */
 export function showGtdSwitcher(
     app: App,
