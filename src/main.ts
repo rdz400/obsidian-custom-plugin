@@ -22,22 +22,6 @@ export default class RonaldPlugin extends Plugin {
         await this.loadSettings();
         this.addSettingTab(new RonaldSettingTab(this.app, this));
 
-
-        this.addCommand({
-            id: 'playing',
-            name: 'Playing ',
-            icon: 'flask-conical',
-            editorCallback: (editor, view) => {
-                if (!view.file) return;
-                console.log("Hello world");
-
-                const files = this.app.vault.getMarkdownFiles();
-                const filtered = files.map((file, index) => {return file.basename});
-                const content = filtered.join('\n');
-
-            },
-        });
-
         // Recorded from load on, so the switchers can list recent tabs first.
         this.tabRecency.register(this);
 
