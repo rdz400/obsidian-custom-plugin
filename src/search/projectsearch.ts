@@ -18,6 +18,7 @@ import {
     wantsAltAction,
     wantsShiftAction,
 } from '../ui/openfile';
+import { collectTaskNotes } from '../tasksort/tasknotes';
 import { templateMatcher } from '../vault';
 
 /** Statuses that mark a project as no longer running. */
@@ -82,7 +83,7 @@ export interface ProjectSearchPreset {
 export interface ProjectItem {
     file: TFile;
     status: string;
-    /** Open tasks in "taken" notes that link to this project. */
+    /** Open tasks in task notes that link to this project. */
     openTasks: number;
 }
 
@@ -141,19 +142,17 @@ function countFileTasks(
 /**
  * How many open tasks each linked note has, keyed by lowercased link target.
  *
- * Only "taken" notes are scanned, matching where tasks are kept; the count is
+ * Only task notes are scanned, matching where tasks are kept; the count is
  * looked up per project by note name, so a link written as a path or with a
  * display text only lands on the project when it reads as the note's name.
  */
-async function collectOpenTaskCounts(app: App): Promise<Map<string, number>> {
+async function collectOpenTaskCounts(
+    app: App,
+    taskFolder: string,
+): Promise<Map<string, number>> {
     const counts = new Map<string, number>();
 
-    const files = app.vault
-        .getMarkdownFiles()
-        .filter(
-            (file) =>
-                app.metadataCache.getFileCache(file)?.frontmatter?.type === 'taken',
-        );
+    const files = collectTaskNotes(app, taskFolder);
 
     for (const file of files) {
         const items = app.metadataCache.getFileCache(file)?.listItems ?? [];
@@ -189,8 +188,11 @@ function toProjectItem(
 }
 
 /** Every project note that is still running, in display order. */
-export async function collectOpenProjects(app: App): Promise<ProjectItem[]> {
-    const taskCounts = await collectOpenTaskCounts(app);
+export async function collectOpenProjects(
+    app: App,
+    taskFolder: string,
+): Promise<ProjectItem[]> {
+    const taskCounts = await collectOpenTaskCounts(app, taskFolder);
 
     const isTemplate = templateMatcher(app);
 
@@ -486,9 +488,10 @@ export interface ProjectSearchOptions extends ProjectSearchPreset {
  */
 export async function searchProjects(
     app: App,
+    taskFolder: string,
     options: ProjectSearchOptions = {},
 ): Promise<void> {
-    const projects = await collectOpenProjects(app);
+    const projects = await collectOpenProjects(app, taskFolder);
 
     if (projects.length === 0) {
         new Notice('No open projects found');

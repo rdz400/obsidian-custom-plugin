@@ -35,6 +35,7 @@ import { showOutline } from './search/outlinesearch';
 import { searchProjects, type ProjectSearchOptions } from './search/projectsearch';
 import { showRecentNotes } from './search/recentnotes';
 import { registerGtdNoteCommands } from './tasksort/gtdnotes';
+import { isTaskNote, registerTaskNoteRenames } from './tasksort/tasknotes';
 import { moveTasksToTagNote } from './tasksort/movetonotes';
 import { moveTasksToTop } from './tasksort/sorttasks';
 import { addTimeRecord } from './timerecord/addtimerecord';
@@ -44,11 +45,10 @@ import {
     RonaldSettingTab,
     type RonaldSettings,
 } from './settings';
-import { searchTasks } from './search/tasksearch';
+import { searchTasks, type TaskSearchOptions } from './search/tasksearch';
 import { TabRecency } from './tabs/tabrecency';
 import { showGtdSwitcher } from './tabs/gtdswitcher';
 import { showTabSwitcher } from './tabs/tabswitcher';
-import { noteType } from './ui/notetype';
 import {
     registerProjectsUriHandler,
     registerTasksUriHandler,
@@ -152,7 +152,7 @@ export default class RonaldPlugin extends Plugin {
             id: 'open-taken',
             name: 'Open taken',
             icon: 'list-checks',
-            callback: () => openTaakBestanden(this.app),
+            callback: () => openTaakBestanden(this.app, this.settings.taskFolder),
         });
 
         this.addCommand({
@@ -206,9 +206,10 @@ export default class RonaldPlugin extends Plugin {
             if (tag.length === 0) continue;
             this.addCommand({
                 id: `remove-${tag}-tag-from-taken-notes`,
-                name: `Remove #${tag} tag from all "taken" notes`,
+                name: `Remove #${tag} tag from all task notes`,
                 icon: 'eraser',
-                callback: () => void removeTagFromTakenNotes(this.app, tag),
+                callback: () =>
+                    void removeTagFromTakenNotes(this.app, this.settings.taskFolder, tag),
             });
         }
 
@@ -216,9 +217,9 @@ export default class RonaldPlugin extends Plugin {
             id: 'move-tagged-tasks-to-top',
             name: 'Move tasks with a tag to top',
             icon: 'arrow-up-to-line',
-            // Only offered in "taken" notes.
+            // Only offered in task notes.
             editorCheckCallback: (checking, editor, ctx) => {
-                if (!ctx.file || noteType(this.app, ctx.file) !== 'taken') return false;
+                if (!ctx.file || !isTaskNote(ctx.file, this.settings.taskFolder)) return false;
                 if (!checking) void moveTasksToTop(this.app, ctx.file, editor);
                 return true;
             },
@@ -232,9 +233,9 @@ export default class RonaldPlugin extends Plugin {
                 id: `move-${tag}-tasks-to-note`,
                 name: `Move #${tag} tasks to note "${tag}"`,
                 icon: 'file-output',
-                // Only offered in "taken" notes.
+                // Only offered in task notes.
                 editorCheckCallback: (checking, editor, ctx) => {
-                    if (!ctx.file || noteType(this.app, ctx.file) !== 'taken') return false;
+                    if (!ctx.file || !isTaskNote(ctx.file, this.settings.taskFolder)) return false;
                     if (!checking) void moveTasksToTagNote(this.app, ctx.file, editor, tag);
                     return true;
                 },
@@ -249,6 +250,7 @@ export default class RonaldPlugin extends Plugin {
         });
 
         registerGtdNoteCommands(this);
+        registerTaskNoteRenames(this);
 
         this.addCommand({
             id: 'toggle-checkbox-advanced',
@@ -327,12 +329,10 @@ export default class RonaldPlugin extends Plugin {
             id: 'search-tasks',
             name: 'Search tasks',
             icon: 'list-checks',
-            callback: () => void searchTasks(this.app, this.settings.taskFilterTags),
+            callback: () => void this.searchTasks(),
         });
 
-        this.addRibbonIcon('list-checks', 'Search tasks', () =>
-            void searchTasks(this.app, this.settings.taskFilterTags),
-        );
+        this.addRibbonIcon('list-checks', 'Search tasks', () => void this.searchTasks());
 
         this.addRibbonIcon('search', 'Search projects', () => void this.searchProjects());
 
@@ -412,8 +412,9 @@ export default class RonaldPlugin extends Plugin {
             callback: () => showGtdSwitcher(this.app, this.settings, this.tabRecency),
         });
 
-        registerTasksUriHandler(this, () => this.settings.taskFilterTags);
-        registerProjectsUriHandler(this, () => this.projectSearchOptions());
+        const taskFolder = () => this.settings.taskFolder;
+        registerTasksUriHandler(this, taskFolder, () => this.settings.taskFilterTags);
+        registerProjectsUriHandler(this, taskFolder, () => this.projectSearchOptions());
         registerTijdsregistratieUriHandler(this);
         registerTimeRecordUriHandler(this);
 
@@ -432,16 +433,27 @@ export default class RonaldPlugin extends Plugin {
      */
     private projectSearchOptions(): ProjectSearchOptions {
         return {
-            onSearchTasks: (name) =>
-                void searchTasks(this.app, this.settings.taskFilterTags, {
-                    query: name,
-                }),
+            onSearchTasks: (name) => void this.searchTasks({ query: name }),
         };
+    }
+
+    /** Open the task search from the command, the ribbon or the project search. */
+    private searchTasks(options?: TaskSearchOptions): Promise<void> {
+        return searchTasks(
+            this.app,
+            this.settings.taskFolder,
+            this.settings.taskFilterTags,
+            options,
+        );
     }
 
     /** Open the project search from the command or the ribbon. */
     private searchProjects(): Promise<void> {
-        return searchProjects(this.app, this.projectSearchOptions());
+        return searchProjects(
+            this.app,
+            this.settings.taskFolder,
+            this.projectSearchOptions(),
+        );
     }
 
     /** Open the recent notes list from the command or the ribbon. */

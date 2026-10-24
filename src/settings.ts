@@ -8,6 +8,7 @@ import {
 } from 'obsidian';
 
 import { GTD_NOTES } from './tasksort/gtdnotes';
+import { isTaskNote } from './tasksort/tasknotes';
 import type { FilterChip } from './ui/filterbar';
 import type RonaldPlugin from './main';
 import type { NoteTypeSetting } from './ui/notetype';
@@ -23,7 +24,8 @@ export interface RonaldSettings {
     insertTags: string[];
 
     /**
-     * Tags that get a "Remove #tag from all taken notes" command, in order.
+     * Tags that get a "Remove #tag from all task notes" command, in order: the
+     * tag is removed from every task note, see `taskFolder`.
      *
      * Each entry becomes its own command so it can be bound to a hotkey; the
      * list is a setting because which tags need clearing changes over time.
@@ -57,6 +59,13 @@ export interface RonaldSettings {
     recentFolders: string[];
 
     /**
+     * The folder whose notes are the task notes: the ones the task search, the
+     * project task counts and the tag commands work on. Only notes directly in
+     * it count, not those in a subfolder. The GTD notes are expected here.
+     */
+    taskFolder: string;
+
+    /**
      * Vault paths of the GTD notes the "Move line(s) to …" commands send lines
      * to; empty hides that command.
      */
@@ -86,6 +95,7 @@ export const DEFAULT_SETTINGS: RonaldSettings = {
         { value: 'persoon', icon: 'user' },
     ],
     recentFolders: ['0-inbox', '9-begrippen', '2-gebieden-ref', '1-projecten'],
+    taskFolder: '1-taken',
     todayNote: '',
     somedayNote: '',
     overviewNote: '',
@@ -134,19 +144,37 @@ export class RonaldSettingTab extends PluginSettingTab {
         return [
             {
                 type: 'group',
-                heading: 'GTD notes',
-                // The built-in file control stores the path and saves through
-                // the tab's default setControlValue.
-                items: GTD_NOTES.map((note) => ({
-                    name: `Note for ${note.name}`,
-                    desc: `Where "Move line(s) to ${note.name}" sends lines.`,
-                    control: {
-                        type: 'file',
-                        key: note.key,
-                        placeholder: 'Select a note',
-                        filter: (file: TFile) => file.extension === 'md',
+                heading: 'Task notes',
+                // The built-in file and folder controls store the path and save
+                // through the tab's default setControlValue.
+                items: [
+                    {
+                        name: 'Task notes folder',
+                        desc: 'Notes directly in this folder hold tasks; subfolders are left out.',
+                        control: {
+                            type: 'folder',
+                            key: 'taskFolder',
+                            placeholder: 'Select a folder',
+                        },
                     },
-                })),
+                    // Only notes in the task folder are offered, so a GTD note
+                    // is always a task note; any note while no folder is set,
+                    // so the picker isn't left empty.
+                    ...GTD_NOTES.map((note) => ({
+                        name: `Note for ${note.name}`,
+                        desc: `Where "Move line(s) to ${note.name}" sends lines.`,
+                        control: {
+                            type: 'file' as const,
+                            key: note.key,
+                            placeholder: 'Select a note',
+                            filter: (file: TFile) => {
+                                const { taskFolder } = this.plugin.settings;
+                                if (taskFolder.length === 0) return file.extension === 'md';
+                                return isTaskNote(file, taskFolder);
+                            },
+                        },
+                    })),
+                ],
             },
             {
                 type: 'list',
@@ -207,7 +235,7 @@ export class RonaldSettingTab extends PluginSettingTab {
                 type: 'list',
                 // Each entry becomes its own command at load time, so a change
                 // here needs a plugin reload before the command shows up.
-                heading: 'Tags to clear from "taken" notes (reload after changing)',
+                heading: 'Tags to clear from task notes (reload after changing)',
                 cls: 'ronald-setting-tag-list',
                 emptyState: 'No tags to clear yet.',
                 addItem: {

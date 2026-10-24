@@ -13,6 +13,7 @@ import {
 } from './editor/editorcommands';
 import { freshCache } from './editor/freshcache';
 import { toggleCheckbox } from './editor/text';
+import { collectTaskNotes } from './tasksort/tasknotes';
 import { appendToNote } from './vault';
 import {
     NoteSuggestModal,
@@ -24,12 +25,8 @@ import {
 
 
 /** Open all task notes in new tabs. */
-export async function openTaakBestanden(app: App): Promise<void> {
-    const files = app.vault.getMarkdownFiles().filter((file) => {
-        if (file.path.startsWith('9-sjablonen/')) return false;
-        const cache = app.metadataCache.getFileCache(file);
-        return cache?.frontmatter?.type === 'taken';
-    });
+export async function openTaakBestanden(app: App, taskFolder: string): Promise<void> {
+    const files = collectTaskNotes(app, taskFolder);
 
     for (const file of files) {
         const leaf = app.workspace.getLeaf('tab');
@@ -318,19 +315,20 @@ export function toggleTag(editor: Editor, tag: string): void {
 }
 
 /**
- * Remove a `#tag` from every list item in every note whose frontmatter `type`
- * is "taken".
+ * Remove a `#tag` from every list item in every task note, the notes directly
+ * in `taskFolder`.
  *
  * Only list items are touched, matching {@link toggleTag}: the tag is a marker
  * on a task, and an occurrence in prose or in frontmatter is not one.
  */
-export async function removeTagFromTakenNotes(app: App, tag: string): Promise<void> {
+export async function removeTagFromTakenNotes(
+    app: App,
+    taskFolder: string,
+    tag: string,
+): Promise<void> {
     const present = tagPresence(tag);
 
-    const files = app.vault.getMarkdownFiles().filter((file) => {
-        const cache = app.metadataCache.getFileCache(file);
-        return cache?.frontmatter?.type === 'taken';
-    });
+    const files = collectTaskNotes(app, taskFolder);
 
     let notes = 0;
     let lines = 0;
@@ -354,7 +352,7 @@ export async function removeTagFromTakenNotes(app: App, tag: string): Promise<vo
 
     new Notice(
         notes === 0
-            ? `No #${tag} tags found in "taken" notes`
+            ? `No #${tag} tags found in ${taskFolder || 'task notes'}`
             : `Removed ${lines} #${tag} tag(s) from ${notes} note(s)`,
     );
 }

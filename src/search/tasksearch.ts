@@ -8,8 +8,9 @@ import {
 
 import { FilterBar, FilterChip } from '../ui/filterbar';
 import { openFileFromSearch, registerNewTabEnter } from '../ui/openfile';
+import { collectTaskNotes } from '../tasksort/tasknotes';
 
-/** One task line found in a "taken" note, with everything shown for it. */
+/** One task line found in a task note, with everything shown for it. */
 export interface TaskItem {
     file: TFile;
     /** Line number at collection time; only a hint, the file may change before a write. */
@@ -159,14 +160,12 @@ function collectFileTasks(
     return tasks;
 }
 
-/** Every task in every note whose frontmatter `type` is "taken". */
-export async function collectTakenTasks(app: App): Promise<TaskItem[]> {
-    const files = app.vault
-        .getMarkdownFiles()
-        .filter(
-            (file) =>
-                app.metadataCache.getFileCache(file)?.frontmatter?.type === 'taken',
-        );
+/** Every task in every task note, the notes directly in `taskFolder`. */
+export async function collectTaskNoteTasks(
+    app: App,
+    taskFolder: string,
+): Promise<TaskItem[]> {
+    const files = collectTaskNotes(app, taskFolder);
 
     const tasks: TaskItem[] = [];
 
@@ -251,7 +250,7 @@ export interface TaskSearchOptions {
 }
 
 /**
- * Search tasks across all "taken" notes by text, with clickable tag filters.
+ * Search tasks across all task notes by text, with clickable tag filters.
  *
  * Choosing a task opens its note at the right line — in the active tab, or in a
  * new one with Mod+Enter; ticking its checkbox writes the marker straight back
@@ -503,20 +502,21 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
 }
 
 /**
- * Collect the tasks in all "taken" notes and open the search modal.
+ * Collect the tasks in all task notes and open the search modal.
  *
  * A tag left blank in the settings would render a chip that filters on nothing,
  * so half-finished rows are dropped rather than shown.
  */
 export async function searchTasks(
     app: App,
+    taskFolder: string,
     filterTags: readonly FilterChip[],
     options: TaskSearchOptions = {},
 ): Promise<void> {
-    const tasks = await collectTakenTasks(app);
+    const tasks = await collectTaskNoteTasks(app, taskFolder);
 
     if (tasks.length === 0) {
-        new Notice('No tasks found in "taken" notes');
+        new Notice(`No tasks found in ${taskFolder || 'task notes'}`);
         return;
     }
 

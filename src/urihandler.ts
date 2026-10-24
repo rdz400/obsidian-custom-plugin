@@ -84,19 +84,20 @@ function parseTaskFilters(value: string | undefined): string[] {
  * Every parameter is optional: the bare URI opens the modal exactly as the
  * command does.
  *
- * The chips come from the plugin settings and are read at call time rather than
- * captured, so a tag added in settings is available to the next link without a
- * reload. `registerObsidianProtocolHandler` unregisters on unload, so nothing
+ * The chips and the task folder come from the plugin settings and are read at
+ * call time rather than captured, so a tag added in settings is available to the
+ * next link without a reload. `registerObsidianProtocolHandler` unregisters on unload, so nothing
  * extra is needed in `onunload`.
  */
 export function registerTasksUriHandler(
     plugin: Plugin,
+    taskFolder: () => string,
     filterTags: () => readonly FilterChip[],
 ): void {
     plugin.registerObsidianProtocolHandler(TASKS_URI_ACTION, (params) => {
         const { query, tags, done } = params as Partial<TasksUriParams>;
 
-        void searchTasks(plugin.app, filterTags(), {
+        void searchTasks(plugin.app, taskFolder(), filterTags(), {
             query,
             activeTags: parseValues(tags),
             showDone: done === 'true',
@@ -113,16 +114,18 @@ export function registerTasksUriHandler(
  * `options` carries the hooks the command wiring supplies — Shift+Enter handing
  * the project's name to the task search — so a project opened from a link
  * behaves the same as one opened from the command. It is read at call time
- * rather than captured for the same reason the task chips are.
+ * rather than captured for the same reason the task chips are, and so is the
+ * task folder.
  */
 export function registerProjectsUriHandler(
     plugin: Plugin,
+    taskFolder: () => string,
     options: () => ProjectSearchOptions,
 ): void {
     plugin.registerObsidianProtocolHandler(PROJECTS_URI_ACTION, (params) => {
         const { query, status, tasks } = params as Partial<ProjectsUriParams>;
 
-        void searchProjects(plugin.app, {
+        void searchProjects(plugin.app, taskFolder(), {
             ...options(),
             query,
             activeStatuses: parseValues(status),
