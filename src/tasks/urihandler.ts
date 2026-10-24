@@ -1,6 +1,6 @@
 import type { Plugin } from 'obsidian';
 
-import type { RonaldSettings } from '../settings';
+import type { TaskSettings } from './settings';
 import { parseValues } from '../shared/uri';
 import { searchTasks } from './search';
 
@@ -29,7 +29,7 @@ interface TasksUriParams extends Record<string, string> {
  */
 export function registerTasksUriHandler(
     plugin: Plugin,
-    settings: () => RonaldSettings,
+    settings: () => TaskSettings,
 ): void {
     plugin.registerObsidianProtocolHandler(TASKS_URI_ACTION, (params) => {
         const { query, tags, done } = params as Partial<TasksUriParams>;

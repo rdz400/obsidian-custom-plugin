@@ -9,7 +9,7 @@ import {
 import { addMissing, LINK_RE, linksOnLine } from '../shared/markdown';
 import { FilterBar, FilterChip } from '../shared/ui/filterbar';
 import { openFileFromSearch, registerNewTabEnter } from '../shared/ui/openfile';
-import type { RonaldSettings } from '../settings';
+import type { TaskSettings } from './settings';
 import { collectTaskNotes, type TaskNoteBadge, taskNoteBadge } from './tasknotes';
 import { isDoneMarker, taskMarker } from './taskline';
 
@@ -156,7 +156,7 @@ function collectFileTasks(
 /** Every task in every task note, the notes directly in the task folder. */
 export async function collectTaskNoteTasks(
     app: App,
-    settings: RonaldSettings,
+    settings: TaskSettings,
 ): Promise<TaskItem[]> {
     const files = collectTaskNotes(app, settings.taskFolder);
 
@@ -510,7 +510,7 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
  */
 export async function searchTasks(
     app: App,
-    settings: RonaldSettings,
+    settings: TaskSettings,
     options: TaskSearchOptions = {},
 ): Promise<void> {
     const tasks = await collectTaskNoteTasks(app, settings);

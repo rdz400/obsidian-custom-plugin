@@ -1,7 +1,7 @@
 import { App, Notice, Platform, SuggestModal, TFile, WorkspaceLeaf } from 'obsidian';
 
 import { GTD_NOTES } from './gtdnotes';
-import type { RonaldSettings } from '../settings';
+import type { TaskSettings } from './settings';
 import { TabRecency } from '../navigation/tabrecency';
 import { leafFilePath, switchToTab } from '../navigation/tabswitcher';
 
@@ -19,7 +19,7 @@ interface GtdItem {
  * Digits follow `GTD_NOTES` rather than this list, so an unset note leaves a
  * gap instead of shifting the shortcuts of the ones after it.
  */
-function collectGtdNotes(app: App, settings: RonaldSettings): GtdItem[] {
+function collectGtdNotes(app: App, settings: TaskSettings): GtdItem[] {
     return GTD_NOTES.flatMap((note, i) => {
         const file = app.vault.getFileByPath(settings[note.key]);
         return file ? [{ name: note.name, file, digit: i + 1 }] : [];
@@ -120,7 +120,7 @@ class GtdSwitcherModal extends SuggestModal<GtdItem> {
 /** Go to the GTD note with `id`, the one set in settings, like the switcher does. */
 export async function goToGtdNote(
     app: App,
-    settings: RonaldSettings,
+    settings: TaskSettings,
     recency: TabRecency,
     id: (typeof GTD_NOTES)[number]['id'],
 ): Promise<void> {
@@ -136,7 +136,7 @@ export async function goToGtdNote(
 /** Show the GTD notes in a modal and go to the chosen one. */
 export function showGtdSwitcher(
     app: App,
-    settings: RonaldSettings,
+    settings: TaskSettings,
     recency: TabRecency,
 ): void {
     const items = collectGtdNotes(app, settings);

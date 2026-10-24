@@ -2,7 +2,7 @@ import { App, Editor, Notice, TFile } from 'obsidian';
 
 import { replaceChanged, restoreCursor } from '../shared/editor/lines';
 import { freshCache } from '../shared/editor/freshcache';
-import type { RonaldSettings } from '../settings';
+import type { TaskSettings } from './settings';
 import { appendToNote } from '../shared/vault';
 import { GTD_NOTES } from './gtdnotes';
 import { takeByDestination } from './reorder';
@@ -22,7 +22,7 @@ type GtdNote = (typeof GTD_NOTES)[number];
  */
 export async function moveTasksToGtdNotes(
     app: App,
-    settings: RonaldSettings,
+    settings: TaskSettings,
     file: TFile,
     editor: Editor,
 ): Promise<void> {

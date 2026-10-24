@@ -4,7 +4,7 @@ import { replaceChanged, restoreCursor, selectedLineRange } from '../shared/edit
 import { freshCache } from '../shared/editor/freshcache';
 import { appendToNote } from '../shared/vault';
 import type RonaldPlugin from '../main';
-import type { RonaldSettings } from '../settings';
+import type { TaskSettings } from './settings';
 
 /**
  * The GTD notes lines can be sent to, each with its own command. `key` holds
@@ -18,8 +18,8 @@ export const GTD_NOTES = [
 ] as const satisfies readonly {
     id: string;
     name: string;
-    key: keyof RonaldSettings;
-    tagKey: keyof RonaldSettings;
+    key: keyof TaskSettings;
+    tagKey: keyof TaskSettings;
 }[];
 
 /**

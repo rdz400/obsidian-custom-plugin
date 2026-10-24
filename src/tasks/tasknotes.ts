@@ -2,7 +2,7 @@ import { App, Notice, TAbstractFile, TFile } from 'obsidian';
 
 import { GTD_NOTES } from './gtdnotes';
 import type RonaldPlugin from '../main';
-import type { RonaldSettings } from '../settings';
+import type { TaskSettings } from './settings';
 
 /**
  * Whether `file` is a task note: a note directly in the task folder. Notes in
@@ -41,7 +41,7 @@ export interface TaskNoteBadge {
  * whatever the notes are called. Any other task note gets its own first
  * letter in lowercase, which keeps it from passing for one of those four.
  */
-export function taskNoteBadge(file: TFile, settings: RonaldSettings): TaskNoteBadge {
+export function taskNoteBadge(file: TFile, settings: TaskSettings): TaskNoteBadge {
     const gtd = GTD_NOTES.find((note) => settings[note.key] === file.path);
     if (gtd) {
         return {
