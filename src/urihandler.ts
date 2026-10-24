@@ -1,12 +1,7 @@
 import { Plugin } from 'obsidian';
 
-import { searchProjects, type ProjectSearchOptions } from './search/projectsearch';
-import { parseValues } from './shared/uri';
 import { addTimeRecord } from './timerecord/addtimerecord';
 import { openTimeRecordNote } from './timerecord/timerecordnote';
-
-/** The protocol action that opens the project search modal. */
-export const PROJECTS_URI_ACTION = 'ronald-projects';
 
 /** The protocol action that opens the "tijdsregistratie" note. */
 export const TIJDSREGISTRATIE_URI_ACTION = 'ronald-tijdsregistratie';
@@ -14,68 +9,10 @@ export const TIJDSREGISTRATIE_URI_ACTION = 'ronald-tijdsregistratie';
 /** The protocol action that adds a time record to that note. */
 export const TIME_RECORD_URI_ACTION = 'ronald-timerecord';
 
-/** Parameters read by the project search action. */
-interface ProjectsUriParams extends Record<string, string> {
-    /** Text to put in the search field. */
-    query: string;
-    /** Comma-separated status chips, e.g. `status=actief,wachten`. */
-    status: string;
-    /**
-     * Which task chip to switch on: `"met"` for projects with open tasks,
-     * `"zonder"` for those without. The short words are what a hand-written
-     * link is likely to carry; they are mapped to the chip values here.
-     */
-    tasks: string;
-}
-
 /** Parameters read by the time record action. */
 interface TimeRecordUriParams extends Record<string, string> {
     /** The record's text; when given, it is added without showing the modal. */
     message: string;
-}
-
-/**
- * The task chips a `tasks` parameter asks for.
- *
- * Both the short form ("met", "zonder") and the chip values themselves are
- * accepted, so a link can be written either way; anything else yields no chip
- * and the bar simply stays as it is.
- */
-function parseTaskFilters(value: string | undefined): string[] {
-    return parseValues(value).flatMap((entry) => {
-        if (entry === 'met' || entry === 'met-taken') return ['met-taken'];
-        if (entry === 'zonder' || entry === 'zonder-taken') return ['zonder-taken'];
-        return [];
-    });
-}
-
-/**
- * Register `obsidian://ronald-projects` for the lifetime of the plugin.
- *
- * Every parameter is optional: the bare URI opens the modal exactly as the
- * command does.
- *
- * `options` carries the hooks the command wiring supplies — Shift+Enter handing
- * the project's name to the task search — so a project opened from a link
- * behaves the same as one opened from the command. It is read at call time
- * rather than captured for the same reason the task chips are, and so is the
- * task folder.
- */
-export function registerProjectsUriHandler(
-    plugin: Plugin,
-    taskFolder: () => string,
-    options: () => ProjectSearchOptions,
-): void {
-    plugin.registerObsidianProtocolHandler(PROJECTS_URI_ACTION, (params) => {
-        const { query, status, tasks } = params as Partial<ProjectsUriParams>;
-
-        void searchProjects(plugin.app, taskFolder(), {
-            ...options(),
-            query,
-            activeStatuses: parseValues(status),
-            activeTaskFilters: parseTaskFilters(tasks),
-        });
-    });
 }
 
 /**

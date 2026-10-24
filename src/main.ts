@@ -1,20 +1,8 @@
-import {
-    Editor,
-    Notice,
-    Plugin,
-    TFile,
-    WorkspaceLeaf,
-} from 'obsidian';
+import { Editor, Plugin } from 'obsidian';
 
 import { copyWikilink } from './links/copywikilink';
 import { applyNamingConvention } from './naming/renamefiles';
 import { searchBacklinks } from './search/backlinksearch';
-import {
-    moveProjectNotesToFolder,
-    insertProjectLink,
-    addProjectToFrontmatter,
-    setStatusInFrontmatter,
-} from './commands';
 import {
     extendSelectionByLine,
     moveLinesToEnd,
@@ -24,7 +12,7 @@ import {
 } from './editing/linecommands';
 import { searchOutgoingLinks } from './search/outgoinglinksearch';
 import { showOutline } from './search/outlinesearch';
-import { searchProjects, type ProjectSearchOptions } from './search/projectsearch';
+import { registerProjectFeatures } from './projects';
 import { showRecentNotes } from './search/recentnotes';
 import { addTimeRecord } from './timerecord/addtimerecord';
 import { openTimeRecordNote } from './timerecord/timerecordnote';
@@ -34,11 +22,9 @@ import {
     type RonaldSettings,
 } from './settings';
 import { registerTaskFeatures } from './tasks';
-import { searchTasks } from './tasks/search';
 import { TabRecency } from './tabs/tabrecency';
 import { showTabSwitcher } from './tabs/tabswitcher';
 import {
-    registerProjectsUriHandler,
     registerTijdsregistratieUriHandler,
     registerTimeRecordUriHandler,
 } from './urihandler';
@@ -66,44 +52,6 @@ export default class RonaldPlugin extends Plugin {
 
             },
         });
-
-
-        const openProjecten = async () => {
-            const projecten = this.app.vault.getFileByPath(
-                '0-werkruimte/bases/projecten.base',
-            );
-            if (!projecten) {
-                new Notice('Note "projecten" not found');
-                return;
-            }
-
-            let existing: WorkspaceLeaf | null = null;
-            this.app.workspace.iterateAllLeaves((leaf) => {
-                const file = (leaf.view as { file?: TFile }).file;
-                if (file?.path === projecten.path) {
-                    existing = leaf;
-                }
-            });
-            if (existing) {
-                await this.app.workspace.revealLeaf(existing);
-                return;
-            }
-
-            const leaf =
-                this.app.workspace.getMostRecentLeaf(
-                    this.app.workspace.rootSplit,
-                ) ?? this.app.workspace.getLeaf(false);
-            await leaf.openFile(projecten);
-        };
-
-        this.addCommand({
-            'id': 'open-projecten',
-            name: 'Open projecten',
-            icon: 'folder-open',
-            callback: openProjecten,
-        })
-
-        this.addRibbonIcon('folder-open', 'Open projecten', openProjecten);
 
         this.addCommand({
             id: 'move-lines-to-end',
@@ -148,34 +96,6 @@ export default class RonaldPlugin extends Plugin {
         });
 
         this.addCommand({
-            id: 'move-project-notes-to-folder',
-            name: 'Move "project" notes to 1-projecten folder',
-            icon: 'folder-input',
-            callback: () => moveProjectNotesToFolder(this.app),
-        });
-
-        this.addCommand({
-            id: 'insert-project-link',
-            name: 'Insert link to active project',
-            icon: 'link',
-            editorCallback: (editor: Editor) => insertProjectLink(this.app, editor),
-        });
-
-        this.addCommand({
-            id: 'add-project-to-frontmatter',
-            name: 'Add project to frontmatter',
-            icon: 'folder-plus',
-            callback: () => addProjectToFrontmatter(this.app),
-        });
-
-        this.addCommand({
-            id: 'set-status-in-frontmatter',
-            name: 'Set project status in frontmatter',
-            icon: 'circle-dot',
-            callback: () => setStatusInFrontmatter(this.app),
-        });
-
-        this.addCommand({
             id: 'open-tijdsregistratie-note',
             name: 'Open "tijdsregistratie" note',
             icon: 'timer',
@@ -190,15 +110,6 @@ export default class RonaldPlugin extends Plugin {
         });
 
         this.addRibbonIcon('timer', 'Add time record', () => addTimeRecord(this.app));
-
-        this.addCommand({
-            id: 'search-projects',
-            name: 'Search projects',
-            icon: 'search',
-            callback: () => void this.searchProjects(),
-        });
-
-        this.addRibbonIcon('search', 'Search projects', () => void this.searchProjects());
 
         this.addCommand({
             id: 'search-backlinks',
@@ -269,41 +180,13 @@ export default class RonaldPlugin extends Plugin {
         });
 
         registerTaskFeatures(this, this.tabRecency);
+        registerProjectFeatures(this);
 
-        registerProjectsUriHandler(
-            this,
-            () => this.settings.taskFolder,
-            () => this.projectSearchOptions(),
-        );
         registerTijdsregistratieUriHandler(this);
         registerTimeRecordUriHandler(this);
     }
 
     onunload() {}
-
-    /**
-     * How the project search behaves wherever it is opened from: Shift+Enter
-     * hands the chosen project's name to the task search as its query.
-     *
-     * Built per call rather than once, so the task chips it closes over are the
-     * ones in the settings at that moment — a tag added in settings reaches the
-     * next search without a reload.
-     */
-    private projectSearchOptions(): ProjectSearchOptions {
-        return {
-            onSearchTasks: (name) =>
-                void searchTasks(this.app, this.settings, { query: name }),
-        };
-    }
-
-    /** Open the project search from the command or the ribbon. */
-    private searchProjects(): Promise<void> {
-        return searchProjects(
-            this.app,
-            this.settings.taskFolder,
-            this.projectSearchOptions(),
-        );
-    }
 
     /** Open the recent notes list from the command or the ribbon. */
     private showRecentNotes(): void {

@@ -1,7 +1,39 @@
-import { App, Editor, MarkdownView, Notice, TFile } from 'obsidian';
+import { App, Editor, MarkdownView, Notice, TFile, WorkspaceLeaf } from 'obsidian';
 
-import { formatDate } from './shared/date';
-import { NoteSuggestModal, StringSuggestModal } from './shared/ui/modals';
+import { formatDate } from '../shared/date';
+import { NoteSuggestModal, StringSuggestModal } from '../shared/ui/modals';
+import { CLOSED_PROJECT_STATUSES, isOpenStatus, PROJECT_STATUSES } from './statuses';
+
+/** The base listing the projects, opened by "Open projecten". */
+const PROJECTS_BASE = '0-werkruimte/bases/projecten.base';
+
+/**
+ * Open the projects base: reveal the tab already showing it, or open it in the
+ * most recent tab of the main area.
+ */
+export async function openProjects(app: App): Promise<void> {
+    const projecten = app.vault.getFileByPath(PROJECTS_BASE);
+    if (!projecten) {
+        new Notice('Note "projecten" not found');
+        return;
+    }
+
+    let existing: WorkspaceLeaf | null = null;
+    app.workspace.iterateAllLeaves((leaf) => {
+        const file = (leaf.view as { file?: TFile }).file;
+        if (file?.path === projecten.path) {
+            existing = leaf;
+        }
+    });
+    if (existing) {
+        await app.workspace.revealLeaf(existing);
+        return;
+    }
+
+    const leaf =
+        app.workspace.getMostRecentLeaf(app.workspace.rootSplit) ?? app.workspace.getLeaf(false);
+    await leaf.openFile(projecten);
+}
 
 /** Move every note in "0-inbox" whose frontmatter `type` is "project" into "1-projecten". */
 export async function moveProjectNotesToFolder(app: App): Promise<void> {
@@ -37,7 +69,7 @@ export function insertProjectLink(app: App, editor: Editor): void {
     const projects = app.vault.getMarkdownFiles().filter((file) => {
         const fm = app.metadataCache.getFileCache(file)?.frontmatter;
         if (fm?.type !== 'project') return false;
-        return fm.status !== 'klaar' && fm.status !== 'geannuleerd';
+        return isOpenStatus(fm.status);
     });
 
     new NoteSuggestModal(
@@ -49,12 +81,6 @@ export function insertProjectLink(app: App, editor: Editor): void {
         projects,
     ).open();
 }
-
-/** Project statuses, in Dutch. */
-const PROJECT_STATUSES = ['actief', 'klaar', 'backlog', 'misschien', 'geannuleerd'];
-
-/** Statuses that mark a project as finished; these set the `eind` date. */
-const PROJECT_CLOSED_STATUSES = ['klaar', 'geannuleerd'];
 
 /**
  * Pick an active project via a fuzzy-search modal and append a link to it to the
@@ -71,7 +97,7 @@ export function addProjectToFrontmatter(app: App): void {
     const projects = app.vault.getMarkdownFiles().filter((f) => {
         const fm = app.metadataCache.getFileCache(f)?.frontmatter;
         if (fm?.type !== 'project') return false;
-        return fm.status !== 'klaar' && fm.status !== 'geannuleerd';
+        return isOpenStatus(fm.status);
     });
 
     new NoteSuggestModal(
@@ -110,7 +136,7 @@ export function setStatusInFrontmatter(app: App): void {
         app.fileManager.processFrontMatter(file, (fm) => {
             fm.status = status;
             // Closed projects get today as their end date; reopening clears it.
-            fm.eind = PROJECT_CLOSED_STATUSES.includes(status)
+            fm.eind = CLOSED_PROJECT_STATUSES.includes(status)
                 ? formatDate(new Date(), 'YYYY-MM-DD')
                 : null;
         });

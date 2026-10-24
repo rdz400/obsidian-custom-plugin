@@ -22,9 +22,7 @@ import {
 import { isDoneMarker, taskMarker } from '../tasks/taskline';
 import { collectTaskNotes } from '../tasks/tasknotes';
 import { templateMatcher } from '../shared/vault';
-
-/** Statuses that mark a project as no longer running. */
-const CLOSED_PROJECT_STATUSES = ['klaar', 'geannuleerd'];
+import { isOpenStatus } from './statuses';
 
 /** Order in which open projects are listed in the search modal. */
 const PROJECT_STATUS_ORDER = ['actief', 'backlog', 'wachten', 'misschien'];
@@ -191,11 +189,7 @@ export async function collectOpenProjects(
             if (isTemplate(file)) return false;
             const fm = app.metadataCache.getFileCache(file)?.frontmatter;
             if (fm?.type !== 'project') return false;
-            const status: unknown = fm.status;
-            return (
-                typeof status !== 'string' ||
-                !CLOSED_PROJECT_STATUSES.includes(status)
-            );
+            return isOpenStatus(fm.status);
         })
         .map((file) => toProjectItem(app, file, taskCounts))
         .sort(
