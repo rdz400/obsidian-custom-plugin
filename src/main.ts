@@ -49,6 +49,7 @@ import {
 } from './settings';
 import { searchTasks } from './search/tasksearch';
 import { TabRecency } from './tabs/tabrecency';
+import { showGtdSwitcher } from './tabs/gtdswitcher';
 import { showTabSwitcher } from './tabs/tabswitcher';
 import { noteType } from './ui/notetype';
 import {
@@ -427,6 +428,14 @@ export default class RonaldPlugin extends Plugin {
             name: 'Switch to open tab',
             icon: 'panels-top-left',
             callback: () => showTabSwitcher(this.app, this.tabRecency),
+        });
+
+        this.addCommand({
+            id: 'switch-to-gtd-note',
+            // eslint-disable-next-line obsidianmd/ui/sentence-case -- GTD is an acronym
+            name: 'Switch to GTD note',
+            icon: 'list-todo',
+            callback: () => showGtdSwitcher(this.app, this.settings, this.tabRecency),
         });
 
         registerTasksUriHandler(this, () => this.settings.taskFilterTags);
