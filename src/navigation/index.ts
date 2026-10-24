@@ -16,22 +16,22 @@
  *   pill, styled like in the link searches.
  * - "Switch to open tab" lists the open tabs, the most recently used first.
  *
- * The tab history (tabrecency.ts) is kept from the moment the plugin loads.
- * The GTD switcher in tasks/ uses it as well, to find the tab a note is in.
+ * The tab history is kept from the moment the plugin loads. It lives in
+ * shared/tabrecency.ts, with the tab helpers in shared/tabs.ts, because the
+ * GTD switcher in tasks/ uses them as well, to find the tab a note is in.
  *
  * Where the code is
  * -----------------
  * - outlinesearch.ts   the outline
  * - recentnotes.ts     recently created notes
  * - tabswitcher.ts     the tab switcher
- * - tabrecency.ts      the tab history
  * - settings.ts        the recent notes folders setting
  */
 
 import type RonaldPlugin from '../main';
 import { showOutline } from './outlinesearch';
 import { showRecentNotes } from './recentnotes';
-import type { TabRecency } from './tabrecency';
+import type { TabRecency } from '../shared/tabrecency';
 import { showTabSwitcher } from './tabswitcher';
 
 /** Register the navigation features, listing tabs by `recency`. */

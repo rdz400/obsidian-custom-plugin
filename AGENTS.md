@@ -47,11 +47,11 @@ npm run build
     src/
       main.ts           # Lifecycle: settings, tab history, one register call per feature
       settings/         # RonaldSettings (each feature's settings combined), the settings tab
-      shared/           # Code features share: ui/ (modals, filter bar), editor/ (line helpers), task lines and task notes, vault, markdown, date, uri
+      shared/           # Code features share: ui/ (modals, filter bar), editor/ (line helpers), task lines and task notes, tab history and tab helpers, vault, markdown, date, uri
       tasks/            # Task notes, task search, tags, GTD notes and switcher, estimates, task count
       projects/         # Project search (with open task counts), project commands and statuses
       links/            # Backlink and outgoing link searches, copy wikilink
-      navigation/       # Outline, recent notes, tab switcher and tab history
+      navigation/       # Outline, recent notes, tab switcher
       editing/          # Selecting and moving lines
       timerecord/       # The "tijdsregistratie" note
       naming/           # File naming convention
@@ -59,8 +59,8 @@ npm run build
 - **Settings per feature**: a feature with settings has a `settings.ts` with its settings interface, defaults and settings tab sections. `settings/index.ts` combines the interfaces into `RonaldSettings` and the defaults into `DEFAULT_SETTINGS`; `settings/tab.ts` lists each feature's sections. All keys are stored side by side in one `data.json`, so a key must be unique across features. Code inside a feature takes its own settings type (`TaskSettings`), not `RonaldSettings`.
 - **Dependency rules**:
     - `shared/` never imports from a feature folder.
-    - `tasks/` may use `shared/` and `navigation/`, never `projects/` or the other features, so it can become a plugin of its own later.
-    - All other features, `projects/` included, use only `shared/`. What two features both need (such as telling a task line, or finding the task notes) belongs in `shared/`.
+    - Every feature uses only `shared/`, never another feature. That keeps each feature separable; `tasks/` in particular could become a plugin of its own later.
+    - What two features both need (such as telling a task line, finding the task notes, or the tab history) belongs in `shared/`.
     - `settings/` imports each feature's `settings.ts`, and nothing else from the features.
     - Importing the `RonaldPlugin` type from `main.ts`, and `settings/section.ts` from a feature's `settings.ts`, is fine everywhere.
     - `npm run lint` enforces these rules (`no-restricted-imports`, set up from the `FEATURES` list in `eslint.config.mts`). A change to the rules is made there and here together.

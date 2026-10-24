@@ -4,12 +4,12 @@ import globals from 'globals';
 import { globalIgnores } from 'eslint/config';
 
 /**
- * The feature folders in src/, and which other features each may import.
- * These are the dependency rules in AGENTS.md; a new feature folder is added
- * here too.
+ * The feature folders in src/, and which other features each may import
+ * (none, for now). These are the dependency rules in AGENTS.md; a new feature
+ * folder is added here too.
  */
 const FEATURES: Record<string, string[]> = {
-	tasks: ['navigation'],
+	tasks: [],
 	projects: [],
 	links: [],
 	navigation: [],

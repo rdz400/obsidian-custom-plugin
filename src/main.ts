@@ -4,7 +4,7 @@ import { registerEditingCommands } from './editing';
 import { registerLinkFeatures } from './links';
 import { registerNaming } from './naming';
 import { registerNavigation } from './navigation';
-import { TabRecency } from './navigation/tabrecency';
+import { TabRecency } from './shared/tabrecency';
 import { registerProjectFeatures } from './projects';
 import {
     DEFAULT_SETTINGS,

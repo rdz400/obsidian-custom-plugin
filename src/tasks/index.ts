@@ -73,14 +73,15 @@
  * - urihandler.ts     obsidian://ronald-tasks
  *
  * Telling a task line and finding the task notes live in shared/, because the
- * project search counts open tasks too.
+ * project search counts open tasks too. So do the tab history and the tab
+ * helpers the GTD switcher uses, which the tab switcher in navigation/ shares.
  */
 
 import type { Editor } from 'obsidian';
 
 import type RonaldPlugin from '../main';
 import { isTaskNote } from '../shared/tasknotes';
-import type { TabRecency } from '../navigation/tabrecency';
+import type { TabRecency } from '../shared/tabrecency';
 import { toggleCheckBoxAdvanced } from './checkbox';
 import { registerEstimates } from './estimate';
 import { registerGtdNoteCommands } from './gtdnotes';

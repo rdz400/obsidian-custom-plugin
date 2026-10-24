@@ -8,7 +8,8 @@ import {
     setIcon,
 } from 'obsidian';
 
-import { TabRecency } from './tabrecency';
+import { TabRecency } from '../shared/tabrecency';
+import { leafFilePath, switchToTab } from '../shared/tabs';
 
 /** An open tab plus what is shown for it. */
 export interface TabItem {
@@ -21,17 +22,6 @@ export interface TabItem {
     lastActive: number;
     /** True for the tab the user is in now. */
     current: boolean;
-}
-
-/**
- * The path of the file `leaf` shows, or '' when it shows none.
- *
- * Read from the view state rather than `view.file`, because a background tab
- * is deferred and has no file view loaded yet — its state still names the file.
- */
-export function leafFilePath(leaf: WorkspaceLeaf): string {
-    const file: unknown = leaf.getViewState().state?.file;
-    return typeof file === 'string' ? file : '';
 }
 
 /** The folder part of `path`, '' when it sits in the vault root. */
@@ -119,15 +109,6 @@ export class TabSwitcherModal extends FuzzySuggestModal<TabItem> {
     onChooseItem(item: TabItem): void {
         void switchToTab(this.app, item.leaf);
     }
-}
-
-/**
- * Make `leaf` the active tab: bring its window and tab group forward, load it
- * if it was deferred, and put the cursor in it.
- */
-export async function switchToTab(app: App, leaf: WorkspaceLeaf): Promise<void> {
-    await app.workspace.revealLeaf(leaf);
-    app.workspace.setActiveLeaf(leaf, { focus: true });
 }
 
 /** Show the open tabs in a modal and switch to the chosen one. */

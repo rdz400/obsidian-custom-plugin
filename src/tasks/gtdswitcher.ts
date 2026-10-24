@@ -2,8 +2,8 @@ import { App, Notice, Platform, SuggestModal, TFile, WorkspaceLeaf } from 'obsid
 
 import { GTD_NOTES } from './gtdnotes';
 import type { TaskSettings } from './settings';
-import { TabRecency } from '../navigation/tabrecency';
-import { leafFilePath, switchToTab } from '../navigation/tabswitcher';
+import { TabRecency } from '../shared/tabrecency';
+import { leafFilePath, switchToTab } from '../shared/tabs';
 
 /** A GTD note that is set in settings and exists, plus its shortcut digit. */
 interface GtdItem {
