@@ -126,29 +126,40 @@ export function moveTaggedToTop(
 }
 
 /**
- * Take out the top-level tasks tagged `tag`, with their subtasks. `taken` is
- * their text in note order and `moved` how many there are. A `---` rule left
- * heading the body, as the one closing off tasks moved to the top would be,
- * goes too.
+ * Take out the top-level tasks, with their subtasks, that `destination` sends
+ * somewhere, given the root task's tags in the order they are written; it
+ * returns undefined for a task that stays. `taken` holds, per destination, the
+ * tasks' text in note order and how many there are. A `---` rule left heading
+ * the body, as the one closing off tasks moved to the top would be, goes too.
  */
-export function takeTagged(
+export function takeByDestination<D>(
     text: string,
     cache: TaskCache,
-    tag: string,
-): { text: string; taken: string; moved: number } {
+    destination: (tags: string[]) => D | undefined,
+): { text: string; taken: Map<D, { text: string; moved: number }> } {
     const lines = noteLines(text, cache);
-    const tagged = hierarchies(cache).filter((block) => rootTags(block, cache).includes(tag));
-    const taken = tagged.flatMap(({ from, to }) => lines.slice(from, to + 1));
+    const routed = hierarchies(cache).flatMap((block) => {
+        const to = destination(rootTags(block, cache));
+        return to === undefined ? [] : [{ block, to }];
+    });
 
-    let kept = takeOut(lines, tagged);
+    const taken = new Map<D, { text: string; moved: number }>();
+    for (const { block, to } of routed) {
+        const blockText = lines.slice(block.from, block.to + 1).map((line) => line.text).join('\n');
+        const entry = taken.get(to);
+        if (entry) {
+            entry.text += `\n${blockText}`;
+            entry.moved++;
+        } else {
+            taken.set(to, { text: blockText, moved: 1 });
+        }
+    }
+
+    let kept = takeOut(lines, routed.map(({ block }) => block));
     const first = firstBodyLine(kept, cache);
     if (first && first !== firstBodyLine(lines, cache) && first.text.trim() === '---') {
         const i = kept.indexOf(first);
         kept = [...kept.slice(0, i), ...kept.slice(i + 1)];
     }
-    return {
-        text: kept.map((line) => line.text).join('\n'),
-        taken: taken.map((line) => line.text).join('\n'),
-        moved: tagged.length,
-    };
+    return { text: kept.map((line) => line.text).join('\n'), taken };
 }

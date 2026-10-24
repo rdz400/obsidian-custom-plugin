@@ -6,13 +6,21 @@ import { appendToNote } from '../vault';
 import type RonaldPlugin from '../main';
 import type { RonaldSettings } from '../settings';
 
-/** The GTD notes lines can be sent to, each with its own command. */
+/**
+ * The GTD notes lines can be sent to, each with its own command. `key` holds
+ * the note's path in settings, `tagKey` the tag of the tasks that belong there.
+ */
 export const GTD_NOTES = [
-    { id: 'today', name: 'today', key: 'todayNote' },
-    { id: 'someday', name: 'someday', key: 'somedayNote' },
-    { id: 'overview', name: 'overview', key: 'overviewNote' },
-    { id: 'inbox', name: 'inbox', key: 'inboxNote' },
-] as const satisfies readonly { id: string; name: string; key: keyof RonaldSettings }[];
+    { id: 'today', name: 'today', key: 'todayNote', tagKey: 'todayTag' },
+    { id: 'someday', name: 'someday', key: 'somedayNote', tagKey: 'somedayTag' },
+    { id: 'overview', name: 'overview', key: 'overviewNote', tagKey: 'overviewTag' },
+    { id: 'inbox', name: 'inbox', key: 'inboxNote', tagKey: 'inboxTag' },
+] as const satisfies readonly {
+    id: string;
+    name: string;
+    key: keyof RonaldSettings;
+    tagKey: keyof RonaldSettings;
+}[];
 
 /**
  * One "Move line(s) to …" command per GTD note.

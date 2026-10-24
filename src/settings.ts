@@ -33,12 +33,6 @@ export interface RonaldSettings {
     clearTags: string[];
 
     /**
-     * Tags that get a "Move #tag tasks to note" command, in order: the tasks
-     * go to the note named after the tag.
-     */
-    moveTags: string[];
-
-    /**
      * Frontmatter `type` values called out in the two link searches, in the
      * order their chips are shown and numbered.
      *
@@ -73,6 +67,15 @@ export interface RonaldSettings {
     somedayNote: string;
     overviewNote: string;
     inboxNote: string;
+
+    /**
+     * The tag of the tasks that belong in each GTD note, lower case and
+     * without `#`; empty when none does. No two notes share a tag.
+     */
+    todayTag: string;
+    somedayTag: string;
+    overviewTag: string;
+    inboxTag: string;
 }
 
 export const DEFAULT_SETTINGS: RonaldSettings = {
@@ -86,7 +89,6 @@ export const DEFAULT_SETTINGS: RonaldSettings = {
     ],
     insertTags: ['buiten', 'prio', 'vandaag', 'computer'],
     clearTags: ['vandaag'],
-    moveTags: ['vandaag', 'misschien'],
     linkNoteTypes: [
         { value: 'project', icon: 'folder' },
         { value: 'taken', icon: 'list-checks' },
@@ -100,7 +102,16 @@ export const DEFAULT_SETTINGS: RonaldSettings = {
     somedayNote: '',
     overviewNote: '',
     inboxNote: '',
+    todayTag: 'vandaag',
+    somedayTag: 'misschien',
+    overviewTag: '',
+    inboxTag: '',
 };
+
+/** A tag as stored in settings: trimmed, lower case, without the `#`. */
+export function normaliseTag(value: string): string {
+    return value.trim().replace(/^#/, '').toLowerCase();
+}
 
 export class RonaldSettingTab extends PluginSettingTab {
     constructor(app: App, private readonly plugin: RonaldPlugin) {
@@ -117,10 +128,6 @@ export class RonaldSettingTab extends PluginSettingTab {
 
     private get clearTags(): string[] {
         return this.plugin.settings.clearTags;
-    }
-
-    private get moveTags(): string[] {
-        return this.plugin.settings.moveTags;
     }
 
     private get noteTypes(): NoteTypeSetting[] {
@@ -160,20 +167,41 @@ export class RonaldSettingTab extends PluginSettingTab {
                     // Only notes in the task folder are offered, so a GTD note
                     // is always a task note; any note while no folder is set,
                     // so the picker isn't left empty.
-                    ...GTD_NOTES.map((note) => ({
-                        name: `Note for ${note.name}`,
-                        desc: `Where "Move line(s) to ${note.name}" sends lines.`,
-                        control: {
-                            type: 'file' as const,
-                            key: note.key,
-                            placeholder: 'Select a note',
-                            filter: (file: TFile) => {
-                                const { taskFolder } = this.plugin.settings;
-                                if (taskFolder.length === 0) return file.extension === 'md';
-                                return isTaskNote(file, taskFolder);
+                    ...GTD_NOTES.flatMap((note) => [
+                        {
+                            name: `Note for ${note.name}`,
+                            desc: `Where "Move line(s) to ${note.name}" sends lines.`,
+                            control: {
+                                type: 'file' as const,
+                                key: note.key,
+                                placeholder: 'Select a note',
+                                filter: (file: TFile) => {
+                                    const { taskFolder } = this.plugin.settings;
+                                    if (taskFolder.length === 0) return file.extension === 'md';
+                                    return isTaskNote(file, taskFolder);
+                                },
                             },
                         },
-                    })),
+                        {
+                            name: `Tag for ${note.name}`,
+                            desc: `"Move tagged tasks to their GTD notes" sends tasks with this tag to the ${note.name} note.`,
+                            control: {
+                                type: 'text' as const,
+                                key: note.tagKey,
+                                placeholder: 'Tag',
+                                // A tag picks one note, so it can't be another's too.
+                                validate: (value: string) => {
+                                    const tag = normaliseTag(value);
+                                    const other = GTD_NOTES.find(
+                                        (o) => o !== note && this.plugin.settings[o.tagKey] === tag,
+                                    );
+                                    return tag.length > 0 && other
+                                        ? `Already the tag for ${other.name}`
+                                        : undefined;
+                                },
+                            },
+                        },
+                    ]),
                 ],
             },
             {
@@ -259,36 +287,6 @@ export class RonaldSettingTab extends PluginSettingTab {
                     searchable: false,
                     render: (setting: Setting) =>
                         this.renderPlainTagRow(setting, this.clearTags, index),
-                })),
-            },
-            {
-                type: 'list',
-                // Each entry becomes its own command at load time, like the
-                // tags to clear above.
-                heading: 'Tags to move to their own note (reload after changing)',
-                cls: 'ronald-setting-tag-list',
-                emptyState: 'No tags to move yet.',
-                addItem: {
-                    name: 'Add tag',
-                    action: () => {
-                        this.moveTags.push('');
-                        void this.save();
-                    },
-                },
-                onReorder: (oldIndex, newIndex) => {
-                    const [moved] = this.moveTags.splice(oldIndex, 1);
-                    if (moved !== undefined) this.moveTags.splice(newIndex, 0, moved);
-                    void this.save();
-                },
-                onDelete: (index) => {
-                    this.moveTags.splice(index, 1);
-                    void this.save();
-                },
-                items: this.moveTags.map((tag, index) => ({
-                    name: tag.length > 0 ? `#${tag}` : 'New tag',
-                    searchable: false,
-                    render: (setting: Setting) =>
-                        this.renderPlainTagRow(setting, this.moveTags, index),
                 })),
             },
             {
@@ -461,6 +459,12 @@ export class RonaldSettingTab extends PluginSettingTab {
     private async save(): Promise<void> {
         await this.plugin.saveSettings();
         this.update();
+    }
+
+    /** Stores a GTD note's tag the way it is matched: see `normaliseTag`. */
+    async setControlValue(key: string, value: unknown): Promise<void> {
+        const isTag = GTD_NOTES.some((note) => note.tagKey === key);
+        await super.setControlValue(key, isTag && typeof value === 'string' ? normaliseTag(value) : value);
     }
 }
 

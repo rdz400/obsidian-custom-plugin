@@ -36,7 +36,7 @@ import { showRecentNotes } from './search/recentnotes';
 import { registerTaskCount } from './statusbar/taskcount';
 import { registerGtdNoteCommands } from './tasksort/gtdnotes';
 import { isTaskNote, registerTaskNoteRenames } from './tasksort/tasknotes';
-import { moveTasksToTagNote } from './tasksort/movetonotes';
+import { moveTasksToGtdNotes } from './tasksort/movetonotes';
 import { moveTasksToTop } from './tasksort/sorttasks';
 import { addTimeRecord } from './timerecord/addtimerecord';
 import { openTimeRecordNote } from './timerecord/timerecordnote';
@@ -230,22 +230,18 @@ export default class RonaldPlugin extends Plugin {
             },
         });
 
-        // One command per tag, like the remove-tag commands above, so each can
-        // carry its own hotkey; an added tag needs a reload.
-        for (const tag of this.settings.moveTags) {
-            if (tag.length === 0) continue;
-            this.addCommand({
-                id: `move-${tag}-tasks-to-note`,
-                name: `Move #${tag} tasks to note "${tag}"`,
-                icon: 'file-output',
-                // Only offered in task notes.
-                editorCheckCallback: (checking, editor, ctx) => {
-                    if (!ctx.file || !isTaskNote(ctx.file, this.settings.taskFolder)) return false;
-                    if (!checking) void moveTasksToTagNote(this.app, ctx.file, editor, tag);
-                    return true;
-                },
-            });
-        }
+        this.addCommand({
+            id: 'move-tagged-tasks-to-gtd-notes',
+            // eslint-disable-next-line obsidianmd/ui/sentence-case -- GTD is an acronym
+            name: 'Move tagged tasks to their GTD notes',
+            icon: 'file-output',
+            // Only offered in task notes.
+            editorCheckCallback: (checking, editor, ctx) => {
+                if (!ctx.file || !isTaskNote(ctx.file, this.settings.taskFolder)) return false;
+                if (!checking) void moveTasksToGtdNotes(this.app, this.settings, ctx.file, editor);
+                return true;
+            },
+        });
 
         this.addCommand({
             id: 'move-lines-to-note',

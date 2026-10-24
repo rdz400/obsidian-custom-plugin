@@ -2,28 +2,40 @@ import { App, Editor, Notice, TFile } from 'obsidian';
 
 import { replaceChanged, restoreCursor } from '../editor/editorcommands';
 import { freshCache } from '../editor/freshcache';
+import type { RonaldSettings } from '../settings';
 import { appendToNote } from '../vault';
-import { takeTagged } from './reorder';
+import { GTD_NOTES } from './gtdnotes';
+import { takeByDestination } from './reorder';
+
+type GtdNote = (typeof GTD_NOTES)[number];
 
 /**
- * Move the top-level tasks in `file` tagged `tag`, with their subtasks, to the
- * end of the note named after the tag.
+ * Move every top-level task in `file` with a GTD note's tag, with its
+ * subtasks, to the end of that note, as set in settings.
  *
- * The tasks are added there before they are taken out of `file`.
+ * The first such tag on the task decides, so a task tagged for two notes goes
+ * to the one written first. A task whose note is `file` itself, or isn't set
+ * or doesn't exist, stays.
+ *
+ * The tasks are added to their notes before they are taken out of `file`, and
+ * taken out in one edit, so a single undo puts them all back.
  */
-export async function moveTasksToTagNote(
+export async function moveTasksToGtdNotes(
     app: App,
+    settings: RonaldSettings,
     file: TFile,
     editor: Editor,
-    tag: string,
 ): Promise<void> {
-    const note = app.vault.getMarkdownFiles().find((f) => f.basename === tag);
-    if (!note) {
-        new Notice(`Note "${tag}" not found`);
-        return;
+    // Read now rather than at load, so a changed tag or note needs no reload.
+    const byTag = new Map<string, { note: GtdNote; target: TFile | null }>();
+    for (const note of GTD_NOTES) {
+        const tag = settings[note.tagKey];
+        if (tag.length === 0) continue;
+        byTag.set(tag, { note, target: app.vault.getFileByPath(settings[note.key]) });
     }
-    if (note === file) {
-        new Notice(`Cannot move tasks from "${tag}" into itself`);
+    if (byTag.size === 0) {
+        // eslint-disable-next-line obsidianmd/ui/sentence-case -- GTD is an acronym
+        new Notice('No GTD note has a tag yet; set one in settings');
         return;
     }
 
@@ -34,21 +46,36 @@ export async function moveTasksToTagNote(
         return;
     }
 
-    const result = takeTagged(text, cache, tag);
-    if (result.moved === 0) {
-        new Notice(`No tasks with #${tag} in this note`);
+    const targets = new Map<GtdNote, TFile>();
+    const result = takeByDestination(text, cache, (tags) => {
+        const first = tags.find((tag) => byTag.has(tag));
+        if (first === undefined) return undefined;
+        const { note, target } = byTag.get(first)!;
+        if (!target || target === file) return undefined;
+        targets.set(note, target);
+        return note;
+    });
+    if (result.taken.size === 0) {
+        // eslint-disable-next-line obsidianmd/ui/sentence-case -- GTD is an acronym
+        new Notice('No tasks here to move to another GTD note');
         return;
     }
 
-    await appendToNote(app, note, result.taken);
+    for (const [note, taken] of result.taken) {
+        await appendToNote(app, targets.get(note)!, taken.text);
+    }
 
-    // Edits while writing would be overwritten; the tasks are in their note already.
+    const summary = [...result.taken]
+        .map(([note, taken]) => `${taken.moved} to ${note.name}`)
+        .join(', ');
+
+    // Edits while writing would be overwritten; the tasks are in their notes already.
     if (editor.getValue() !== text) {
-        new Notice(`Note changed while moving; copied ${result.moved} task(s) to ${tag} but left them here too`);
+        new Notice(`Note changed while moving; copied ${summary} but left them here too`);
         return;
     }
     const origin = editor.getCursor('from');
     replaceChanged(editor, result.text);
     restoreCursor(editor, origin);
-    new Notice(`Moved ${result.moved} task(s) to ${tag}`);
+    new Notice(`Moved tasks: ${summary}`);
 }
