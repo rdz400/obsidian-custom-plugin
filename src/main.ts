@@ -37,6 +37,7 @@ import { searchOutgoingLinks } from './search/outgoinglinksearch';
 import { showOutline } from './search/outlinesearch';
 import { searchProjects, type ProjectSearchOptions } from './search/projectsearch';
 import { showRecentNotes } from './search/recentnotes';
+import { registerGtdNoteCommands } from './tasksort/gtdnotes';
 import { moveTasksToTagNote } from './tasksort/movetonotes';
 import { moveTasksToTop } from './tasksort/sorttasks';
 import { addTimeRecord } from './timerecord/addtimerecord';
@@ -248,6 +249,8 @@ export default class RonaldPlugin extends Plugin {
             icon: 'file-output',
             editorCallback: (editor: Editor) => moveLinesToNote(this.app, editor),
         });
+
+        registerGtdNoteCommands(this);
 
         this.addCommand({
             id: 'toggle-checkbox-advanced',

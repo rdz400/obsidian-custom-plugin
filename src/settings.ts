@@ -4,8 +4,10 @@ import {
     PluginSettingTab,
     type Setting,
     type SettingDefinitionItem,
+    type TFile,
 } from 'obsidian';
 
+import { GTD_NOTES } from './tasksort/gtdnotes';
 import type { FilterChip } from './ui/filterbar';
 import type RonaldPlugin from './main';
 import type { NoteTypeSetting } from './ui/notetype';
@@ -53,6 +55,15 @@ export interface RonaldSettings {
      * every folder without one.
      */
     recentFolders: string[];
+
+    /**
+     * Vault paths of the GTD notes the "Move line(s) to …" commands send lines
+     * to; empty hides that command.
+     */
+    todayNote: string;
+    somedayNote: string;
+    overviewNote: string;
+    inboxNote: string;
 }
 
 export const DEFAULT_SETTINGS: RonaldSettings = {
@@ -75,6 +86,10 @@ export const DEFAULT_SETTINGS: RonaldSettings = {
         { value: 'persoon', icon: 'user' },
     ],
     recentFolders: ['0-inbox', '9-begrippen', '2-gebieden-ref', '1-projecten'],
+    todayNote: '',
+    somedayNote: '',
+    overviewNote: '',
+    inboxNote: '',
 };
 
 export class RonaldSettingTab extends PluginSettingTab {
@@ -117,6 +132,22 @@ export class RonaldSettingTab extends PluginSettingTab {
      */
     getSettingDefinitions(): SettingDefinitionItem[] {
         return [
+            {
+                type: 'group',
+                heading: 'GTD notes',
+                // The built-in file control stores the path and saves through
+                // the tab's default setControlValue.
+                items: GTD_NOTES.map((note) => ({
+                    name: `Note for ${note.name}`,
+                    desc: `Where "Move line(s) to ${note.name}" sends lines.`,
+                    control: {
+                        type: 'file',
+                        key: note.key,
+                        placeholder: 'Select a note',
+                        filter: (file: TFile) => file.extension === 'md',
+                    },
+                })),
+            },
             {
                 type: 'list',
                 heading: 'Task filter tags',
