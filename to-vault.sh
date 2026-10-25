@@ -11,6 +11,7 @@ cp main.js "$sample_plugin"/
 cp styles.css "$sample_plugin"/
 cp manifest.json "$sample_plugin"/
 
-obsidian plugin:reload id=plugin-van-ronald
+# Reload in the vault deployed to, not in whichever vault was focused last.
+obsidian vault="$(basename "$VAULT_OBSIDIAN")" plugin:reload id=plugin-van-ronald
 
 if [[ "${1:-}" == "restart" ]]; then obsidian restart; fi
