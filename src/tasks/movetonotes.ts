@@ -1,11 +1,12 @@
 import { App, Editor, Notice, TFile } from 'obsidian';
 
-import { replaceChanged, restoreCursor } from '../shared/editor/lines';
+import { restoreCursor } from '../shared/editor/lines';
 import { freshCache } from '../shared/editor/freshcache';
 import type { TaskSettings } from './settings';
 import { appendToNote } from '../shared/vault';
 import { GTD_NOTES } from './gtdnotes';
 import { takeByDestination } from './reorder';
+import { type Appended, removeMoved } from './undomove';
 
 type GtdNote = (typeof GTD_NOTES)[number];
 
@@ -18,7 +19,8 @@ type GtdNote = (typeof GTD_NOTES)[number];
  * or doesn't exist, stays.
  *
  * The tasks are added to their notes before they are taken out of `file`, and
- * taken out in one edit, so a single undo puts them all back.
+ * taken out in one edit, so a single undo puts them all back and takes them
+ * out of their notes again.
  */
 export async function moveTasksToGtdNotes(
     app: App,
@@ -61,8 +63,10 @@ export async function moveTasksToGtdNotes(
         return;
     }
 
+    const appended: Appended[] = [];
     for (const [note, taken] of result.taken) {
-        await appendToNote(app, targets.get(note)!, taken.text);
+        const file = targets.get(note)!;
+        appended.push({ file, text: await appendToNote(app, file, taken.text) });
     }
 
     const summary = [...result.taken]
@@ -75,7 +79,7 @@ export async function moveTasksToGtdNotes(
         return;
     }
     const origin = editor.getCursor('from');
-    replaceChanged(editor, result.text);
+    removeMoved(editor, result.text, appended);
     restoreCursor(editor, origin);
     new Notice(`Moved tasks: ${summary}`);
 }

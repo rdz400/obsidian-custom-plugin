@@ -46,6 +46,8 @@
  * - "Move finished tasks to klaar" moves finished tasks whose subtasks are
  *   all finished too to the end of the note "klaar", under a heading linking
  *   today's daily note. "Open klaar" opens that note.
+ * - Undo after any of these moves, except "to top", puts the tasks back and
+ *   takes them out of the note they went to again; redo moves them again.
  *
  * In the editor
  * - "Toggle checkbox status advanced" cycles a line through
@@ -69,6 +71,7 @@
  * - reorder.ts        finding top-level tasks with their subtasks, for both of the above
  * - tags.ts           the tag commands
  * - klaar.ts          the "klaar" note
+ * - undomove.ts       undo and redo of a move in the note it went to
  * - checkbox.ts       the checkbox cycle
  * - estimate/         time estimates
  * - taskcount.ts      the task count in the status bar
@@ -95,6 +98,7 @@ import { moveTasksToTop } from './sorttasks';
 import { insertTag, removeTagFromTaskNotes, toggleTag } from './tags';
 import { registerTaskCount } from './taskcount';
 import { openTaskNotes, registerTaskNoteRenames } from './tasknotes';
+import { undoableMoves } from './undomove';
 import { registerTasksUriHandler } from './urihandler';
 
 /**
@@ -180,6 +184,7 @@ export function registerTaskFeatures(plugin: RonaldPlugin, recency: TabRecency):
 
     registerGtdNoteCommands(plugin);
     registerTaskNoteRenames(plugin);
+    plugin.registerEditorExtension(undoableMoves(plugin.app));
 
     plugin.addCommand({
         id: 'toggle-checkbox-advanced',

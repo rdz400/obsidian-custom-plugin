@@ -1,8 +1,8 @@
 import { App, ListItemCache, MarkdownView, Notice } from 'obsidian';
 
 import { formatDate } from '../shared/date';
-import { removeLines } from '../shared/editor/lines';
 import { freshCache } from '../shared/editor/freshcache';
+import { removeMoved } from './undomove';
 
 /** The note finished tasks are moved to, and opened by "Open klaar". */
 const KLAAR_NOTE = 'klaar';
@@ -161,13 +161,18 @@ export async function moveFinishedTasksToKlaar(app: App): Promise<void> {
     // Tasks go under a `## [[<daily note>]]` heading for today, which is added
     // when the note doesn't already end with one.
     const content = await app.vault.read(target);
-    const withHeading = ensureTodayHeading(content, todayHeading(app));
-    await app.vault.modify(target, withHeading + moved + '\n');
+    const added = ensureTodayHeading(content, todayHeading(app)).slice(content.length) + moved + '\n';
+    await app.vault.modify(target, content + added);
 
-    // Remove from bottom to top so earlier ranges stay valid.
-    for (const block of [...blocks].reverse()) {
-        removeLines(editor, block.from, block.to);
+    // Edits while writing would shift the lines; they are in "klaar" already.
+    if (editor.getValue() !== text) {
+        new Notice(`Note changed while moving; copied to ${target.basename} but left here too`);
+        return;
     }
+    // One edit, so a single undo puts every task back and takes them (and a
+    // heading added for them) out of "klaar" again.
+    const kept = text.split('\n').filter((_, i) => !blocks.some((b) => i >= b.from && i <= b.to));
+    removeMoved(editor, kept.join('\n'), [{ file: target, text: added }]);
 
     new Notice(`Moved ${blocks.length} task(s) to ${target.basename}`);
 }

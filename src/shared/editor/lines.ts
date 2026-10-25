@@ -99,11 +99,13 @@ export function restoreCursor(editor: Editor, at: EditorPosition): void {
 }
 
 /**
- * Replace only the stretch of the note that differs from `next`, so text
- * around it (and whatever the editor tracks there, like folds) is left alone.
+ * The stretch of `current` that differs from `next`, as offsets into
+ * `current`, and the text to put there instead.
  */
-export function replaceChanged(editor: Editor, next: string): void {
-    const current = editor.getValue();
+export function changedRange(
+    current: string,
+    next: string,
+): { from: number; to: number; insert: string } {
     const max = Math.min(current.length, next.length);
 
     let start = 0;
@@ -117,9 +119,14 @@ export function replaceChanged(editor: Editor, next: string): void {
         end++;
     }
 
-    editor.replaceRange(
-        next.slice(start, next.length - end),
-        editor.offsetToPos(start),
-        editor.offsetToPos(current.length - end),
-    );
+    return { from: start, to: current.length - end, insert: next.slice(start, next.length - end) };
+}
+
+/**
+ * Replace only the stretch of the note that differs from `next`, so text
+ * around it (and whatever the editor tracks there, like folds) is left alone.
+ */
+export function replaceChanged(editor: Editor, next: string): void {
+    const { from, to, insert } = changedRange(editor.getValue(), next);
+    editor.replaceRange(insert, editor.offsetToPos(from), editor.offsetToPos(to));
 }

@@ -1,10 +1,11 @@
 import { App, Editor, ListItemCache, Notice, TFile } from 'obsidian';
 
-import { replaceChanged, restoreCursor, selectedLineRange } from '../shared/editor/lines';
+import { restoreCursor, selectedLineRange } from '../shared/editor/lines';
 import { freshCache } from '../shared/editor/freshcache';
 import { appendToNote } from '../shared/vault';
 import type RonaldPlugin from '../main';
 import type { TaskSettings } from './settings';
+import { removeMoved } from './undomove';
 
 /**
  * The GTD notes lines can be sent to, each with its own command. `key` holds
@@ -155,15 +156,16 @@ async function moveLinesWithSubtasks(
         new Set(indexes.flatMap((line, i) => (roots.has(line) ? [i] : []))),
     );
 
-    await appendToNote(app, target, taken.join('\n'));
+    const added = await appendToNote(app, target, taken.join('\n'));
 
     // Edits while writing would shift the lines; they are in the target already.
     if (editor.getValue() !== text) {
         new Notice(`Note changed while moving; copied to ${target.basename} but left here too`);
         return;
     }
-    // One replacement, so a single undo puts every line back.
-    replaceChanged(editor, withoutLines(lines, moved).join('\n'));
+    // One replacement, so a single undo puts every line back, and takes them
+    // out of the target again.
+    removeMoved(editor, withoutLines(lines, moved).join('\n'), [{ file: target, text: added }]);
     restoreCursor(editor, origin);
     new Notice(`Moved to ${target.basename}`);
 }
