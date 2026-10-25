@@ -1,5 +1,3 @@
-import { setIcon } from 'obsidian';
-
 import { findEstimate, formatMinutes } from '../estimate/estimate';
 import { type TaskItem, textParts } from '../taskitems';
 import type { Drafts } from './draft';
@@ -94,9 +92,6 @@ export class ListView {
         row.toggleClass('is-done', end.done);
         row.toggleClass('is-changed', drafts.isChanged(i));
 
-        const mark = row.createSpan({ cls: 'ronald-task-manager-mark', attr: { 'aria-hidden': 'true' } });
-        setIcon(mark, 'check');
-
         const estimate = findEstimate(task.text);
         const text = estimate
             ? `${task.text.slice(0, estimate.from)} ${task.text.slice(estimate.to)}`.replace(/\s+/g, ' ').trim()
@@ -107,14 +102,16 @@ export class ListView {
             else textEl.appendText(part.text);
         }
 
+        // Where it came from, its tags and its estimate, kept together.
+        const meta = row.createSpan({ cls: 'ronald-task-manager-meta' });
         if (end.path !== task.file.path) {
-            row.createSpan({
+            meta.createSpan({
                 cls: 'ronald-task-manager-from',
                 text: `from ${noteTitle(task.file.path, this.gtd)}`,
             });
         }
 
-        const tags = row.createSpan({ cls: 'ronald-task-manager-tags' });
+        const tags = meta.createSpan({ cls: 'ronald-task-manager-tags' });
         for (const tag of draft.ownTags) {
             const pill = tags.createSpan({ cls: 'ronald-task-manager-tag', text: `#${tag}` });
             if (!base.ownTags.includes(tag)) pill.addClass('is-added');
@@ -129,7 +126,7 @@ export class ListView {
         }
 
         if (estimate) {
-            row.createSpan({ cls: 'ronald-task-manager-estimate', text: formatMinutes(estimate.minutes) });
+            meta.createSpan({ cls: 'ronald-task-manager-estimate', text: formatMinutes(estimate.minutes) });
         }
         return row;
     }

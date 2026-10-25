@@ -141,9 +141,10 @@ there **(decided)**).
   shown and add no indent, but they still pass on their tags and links (as in
   `listLines`).
 - Row content, left to right:
-  1. Selection mark: an empty circle, or a filled accent circle with a check
-     when selected. Deliberately a circle, so it can't be mistaken for the
-     task's own checkbox.
+  1. No selection mark **(decided after trying it, 2026-10-25)**: a tap
+     anywhere on the row selects it, and a selected row shows by its tint
+     (and `aria-selected`). A circle took width from the text, which a phone
+     can't spare.
   2. Task text, with tags and the estimate stripped and wikilinks styled in
      place (`textParts`, as in the search). A finished task (in its draft) is
      struck through and muted.
@@ -191,7 +192,8 @@ chip, and a task finished in the draft is a done task.
 ### 3.3 The action bar
 
 Always visible **(decided)**. The change buttons are disabled while nothing is
-selected.
+selected; on a phone the tag and move rows are hidden then, so the list gets
+their room **(decided after trying it)**.
 
 - **Row 1:** the tally on the left; **Undo**, **Discard** and **Apply** on the
   right.
@@ -296,9 +298,12 @@ Designed for the phone first.
   height, no rounded outer corners, the action bar padded by
   `env(safe-area-inset-bottom)`.
 - Touch targets are at least 44px high: rows, chips, toolbar buttons.
-- Filter rows and toolbar rows scroll horizontally (`overflow-x: auto`, no
-  scrollbar) instead of wrapping, so the header stays short and the list keeps
+- All filter chips share one row, which scrolls horizontally (`overflow-x:
+  auto`, no scrollbar) **(decided after trying it)**; toolbar rows scroll the
+  same way instead of wrapping, so the header stays short and the list keeps
   its room.
+- Rows get more room than on desktop: more space around each, tags without
+  a border, the focus ring left out (a tap needs none).
 - The action bar sits at the bottom, within thumb reach, and stays put while
   the list scrolls. Apply sits at the right end of its first row, where the
   thumb is.
@@ -521,7 +526,7 @@ Obsidian variables only, no shadows, gradients or glows, weights no higher than
 500, no decorative icons.
 
 - Classes: `ronald-task-manager` on the modal, then
-  `ronald-task-manager-{header,list,group,group-heading,row,mark,text,from,
+  `ronald-task-manager-{header,list,group,group-heading,row,text,meta,from,
   tags,tag,tag-inherited,estimate,bar,tally,tag-button,move-button,finish,
   apply}`, with state classes `is-selected`, `is-focused`, `is-context`,
   `is-done`, `is-changed`, `is-added`, `is-removed`, `is-partial`, `is-all`.
@@ -534,13 +539,13 @@ Obsidian variables only, no shadows, gradients or glows, weights no higher than
 - Group heading: small, uppercase, widely tracked, `--text-muted`, like an H3
   label; the count in `--text-faint`.
 - Rows: no fill at rest, `--background-modifier-hover` on hover.
-  - Selected: `--background-modifier-active-hover`, with the mark filled in
-    `--interactive-accent` and a `check` icon in `--text-on-accent`.
-  - Focused: an inset 1px ring in `--background-modifier-border-focus`.
+  - Selected: `--background-modifier-active-hover`.
+  - Focused: an inset 1px outline (not a shadow) in
+    `--background-modifier-border-focus`.
   - Changed: a 2px `--interactive-accent` bar on the start edge
     (`border-inline-start`, with the padding reduced to match so nothing
     shifts).
-  - Context: `--text-faint`, no mark.
+  - Context: `--text-faint`.
   - Done: struck through, `--text-muted`.
   - "from inbox": `--font-ui-smaller`, `--text-faint`.
 - Tags: small pills, `--background-secondary` with a thin

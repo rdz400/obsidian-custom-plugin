@@ -24,6 +24,8 @@
  *   it keeps its own changes, and the notice says so. With nothing staged,
  *   Mod+Z undoes the last apply, as long as no note changed since.
  * - Closing with changes pending asks whether to apply them first.
+ * - On a phone it fills the screen; the chips share one row, and the tag
+ *   and move buttons show only while something is selected.
  *
  * Where the code is
  * -----------------

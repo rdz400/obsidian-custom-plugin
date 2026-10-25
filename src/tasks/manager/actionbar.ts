@@ -101,6 +101,8 @@ export class ActionBar {
     update(state: BarState): void {
         const idle = !state.applying;
         const some = state.selected > 0 && idle;
+        // On a phone the change rows give their room to the list while unused.
+        this.el.toggleClass('is-unselected', state.selected === 0);
 
         this.tally.setText(state.applying ? 'Applying…' : state.tally);
         this.undo.setDisabled(!state.canUndo || !idle);
