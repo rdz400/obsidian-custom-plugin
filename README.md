@@ -21,11 +21,12 @@ Requires the `VAULT_OBSIDIAN` environment variable to point to your vault direct
 
 ## URIs
 
-The plugin handles four `obsidian://` actions, for links in notes and for shortcuts outside Obsidian. It never builds these URIs itself; they are written by hand wherever they are used. Every parameter is optional, and the bare URI does what the matching command does.
+The plugin handles five `obsidian://` actions, for links in notes and for shortcuts outside Obsidian. It never builds these URIs itself; they are written by hand wherever they are used. Every parameter is optional, and the bare URI does what the matching command does.
 
 | URI | Does | Parameters |
 | --- | --- | --- |
 | `obsidian://ronald-tasks` | Opens **Search tasks** | `query`, `tags`, `notes`, `done` |
+| `obsidian://ronald-task-manager` | Opens **Manage tasks** | `tags`, `notes`, `done`, `toplevel` |
 | `obsidian://ronald-projects` | Opens **Search projects** | `query`, `status`, `tasks` |
 | `obsidian://ronald-timerecord` | Opens **Add time record** | `message` |
 | `obsidian://ronald-tijdsregistratie` | Opens the "tijdsregistratie" note at its last line | none |
@@ -39,6 +40,17 @@ The plugin handles four `obsidian://` actions, for links in notes and for shortc
 
 ```
 obsidian://ronald-tasks?query=bel&tags=prio,vandaag&notes=today,inbox&done=true
+```
+
+### `ronald-task-manager`
+
+- `tags`: comma-separated tag chips to switch on, such as `tags=prio,vandaag`. Only tags in **Task filter tags** have a chip; others are ignored.
+- `notes`: comma-separated GTD note chips to switch on: `today`, `someday`, `overview`, `inbox`.
+- `done=true`: switches on **Done**, so finished tasks show too.
+- `toplevel=true`: switches on **Top-level**, so only top-level tasks show.
+
+```
+obsidian://ronald-task-manager?tags=prio&notes=today,inbox&toplevel=true
 ```
 
 ### `ronald-projects`

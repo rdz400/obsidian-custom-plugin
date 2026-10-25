@@ -9,7 +9,9 @@
  *
  * How to use it
  * -------------
- * - "Manage tasks" (also a ribbon icon) opens it.
+ * - "Manage tasks" (also a ribbon icon) opens it, and so does
+ *   obsidian://ronald-task-manager, which can switch filters on as it opens:
+ *   `tags=prio,vandaag`, `notes=today,inbox`, `done=true`, `toplevel=true`.
  * - Filters: the tag chips (Mod+1…9, all must match), the GTD note chips
  *   (Alt+1…4, any may match), Done (D) to show finished tasks and Top-level
  *   (L) to show only top-level tasks. They look at where tasks end up.
@@ -42,6 +44,7 @@
  * - confirm.ts     "Apply n changes?" when closing
  * - listview.ts    the list of groups and rows
  * - actionbar.ts   the bar of buttons at the bottom
+ * - urihandler.ts  obsidian://ronald-task-manager
  * - testtasks.ts   for the tests: task notes from their text
  */
 
@@ -49,20 +52,21 @@ import type RonaldPlugin from '../../main';
 import type { TaskSettings } from '../settings';
 import { appliesDone } from './apply';
 import { loadTasks } from './load';
-import { TaskManagerModal } from './modal';
+import { type ManagerPreset, TaskManagerModal } from './modal';
+import { registerTaskManagerUriHandler } from './urihandler';
 
-/** Read the task notes and open the task manager on them. */
-async function manageTasks(plugin: RonaldPlugin, settings: TaskSettings): Promise<void> {
+/** Read the task notes and open the task manager on them, with `preset` filters on. */
+async function manageTasks(plugin: RonaldPlugin, settings: TaskSettings, preset?: ManagerPreset): Promise<void> {
     // An apply still writing would otherwise be read half done.
     await appliesDone();
     const data = await loadTasks(plugin.app, settings);
     const chips = settings.taskFilterTags.filter((chip) => chip.value.length > 0);
     // The settings as they are now, for reading the notes again after an apply.
     const reload = () => loadTasks(plugin.app, settings);
-    new TaskManagerModal(plugin.app, data, chips, reload).open();
+    new TaskManagerModal(plugin.app, data, chips, reload, preset).open();
 }
 
-/** Register "Manage tasks" and its ribbon icon. */
+/** Register "Manage tasks", its ribbon icon and its URI. */
 export function registerTaskManager(plugin: RonaldPlugin): void {
     plugin.addCommand({
         id: 'manage-tasks',
@@ -71,4 +75,5 @@ export function registerTaskManager(plugin: RonaldPlugin): void {
         callback: () => void manageTasks(plugin, plugin.settings),
     });
     plugin.addRibbonIcon('clipboard-list', 'Manage tasks', () => void manageTasks(plugin, plugin.settings));
+    registerTaskManagerUriHandler(plugin, (preset) => void manageTasks(plugin, plugin.settings, preset));
 }

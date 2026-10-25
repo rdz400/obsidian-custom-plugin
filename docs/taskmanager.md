@@ -25,13 +25,16 @@ In:
 - A tally of visible, selected and changed tasks, counts per note, estimates
   on rows.
 - A "Manage tasks" command and a ribbon icon.
+- A URI action, `obsidian://ronald-task-manager`, that can switch filter chips
+  on as it opens: `tags`, `notes`, `done=true`, `toplevel=true` (added
+  2026-10-25).
 
 Out (for now):
 
 - Text or fuzzy search **(decided)**.
 - Opening a task's note from the manager **(decided: not needed)**.
 - Editing a task's text, reordering tasks, collapsing groups.
-- A URI action, chips for task notes other than the GTD notes, an "Untagged"
+- Chips for task notes other than the GTD notes, an "Untagged"
   chip, a total of the selected tasks' estimates **(decided: not now)**.
 - Reverting a single task's changes (undo and Discard cover it for now).
 - Refreshing the list live while notes change elsewhere (Apply checks for
@@ -415,7 +418,9 @@ src/tasks/
                       so both the metadata cache (cacheSpans) and ListLine fit
   taglines.ts         pure tag edits on a line: hasOwnTag, addTag, removeTag
   manager/
-    index.ts          overview + registerTaskManager(plugin): command, ribbon
+    index.ts          overview + registerTaskManager(plugin): command, ribbon,
+                      URI
+    urihandler.ts     obsidian://ronald-task-manager and its filter parameters
     load.ts           reading the notes, their tasks and the GTD notes, on
                       opening and after an apply
     draft.ts          pure: the drafts, where a task ends up, changed tasks,

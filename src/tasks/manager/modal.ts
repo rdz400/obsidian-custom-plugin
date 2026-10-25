@@ -31,6 +31,15 @@ const VIEW_CHIPS: readonly FilterChip[] = [
     { value: 'top-level', type: 'view', label: 'Top-level', hint: 'L' },
 ];
 
+/** Filters to switch on as the manager opens; values with no chip are ignored. */
+export interface ManagerPreset {
+    tags?: readonly string[];
+    /** GTD notes: "today", "inbox", … */
+    notes?: readonly string[];
+    done?: boolean;
+    topLevel?: boolean;
+}
+
 /**
  * The task manager: every task in the task notes, grouped by note, to select
  * and change many at once. Changes are staged in `drafts` and the list shows
@@ -62,6 +71,7 @@ export class TaskManagerModal extends Modal implements KeyTarget {
         data: ManagerData,
         tagChips: readonly FilterChip[],
         reload: () => Promise<ManagerData>,
+        preset: ManagerPreset = {},
     ) {
         super(app);
         this.data = data;
@@ -104,6 +114,13 @@ export class TaskManagerModal extends Modal implements KeyTarget {
         const noteRow = header.createDiv({ cls: 'ronald-task-manager-note-row' });
         noteRow.append(this.noteBar.el, this.viewBar.el);
         this.contentEl.append(this.list.el, this.bar.el);
+
+        // Once the list and the bar exist, since each toggle refreshes them;
+        // `toggle` drops values with no chip.
+        for (const tag of preset.tags ?? []) this.tagBar.toggle(tag);
+        for (const note of preset.notes ?? []) this.noteBar.toggle(note);
+        if (preset.done === true) this.viewBar.toggle('done');
+        if (preset.topLevel === true) this.viewBar.toggle('top-level');
 
         // In the capture phase, so Obsidian's Mod+digit never sees a press
         // meant for a chip.

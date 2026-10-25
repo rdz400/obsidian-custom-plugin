@@ -153,7 +153,7 @@ In this example:
 - **Stable identifiers**: these are referenced from outside the code and must not be renamed:
     - Command IDs: hotkeys are bound to them.
     - Setting keys: they are the keys in `data.json`.
-    - URI actions (`ronald-tasks`, `ronald-projects`, `ronald-timerecord`, `ronald-tijdsregistratie`) and their parameters: links in notes and shortcuts use them.
+    - URI actions (`ronald-tasks`, `ronald-task-manager`, `ronald-projects`, `ronald-timerecord`, `ronald-tijdsregistratie`) and their parameters: links in notes and shortcuts use them.
     - CSS classes (`ronald-…`): `styles.css` and snippets use them.
     - Moving code between folders never requires changing any of these.
 - **Removing a setting**: drop it from the feature's interface and defaults. Its key stays in the user's `data.json` (settings are loaded with `Object.assign`), so say in the commit that the old key can be removed.
