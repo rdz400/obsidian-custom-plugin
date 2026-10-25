@@ -60,7 +60,7 @@ npm test
       main.ts           # Lifecycle: settings, tab history, one register call per feature
       settings/         # RonaldSettings (each feature's settings combined), the settings tab
       shared/           # Code features share: ui/ (modals, filter bar), editor/ (line helpers), task lines and task notes, tab history and tab helpers, vault, markdown, date, uri
-      tasks/            # Task notes, task search, tags, GTD notes and switcher, estimates, task count
+      tasks/            # Task notes, task search, task manager, tags, GTD notes and switcher, estimates, task count
       projects/         # Project search (with open task counts), project commands and statuses
       links/            # Backlink and outgoing link searches, copy wikilink
       navigation/       # Outline, recent notes, tab switcher
