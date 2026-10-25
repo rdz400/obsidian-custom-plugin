@@ -98,7 +98,8 @@ export class ListView {
             : task.text;
         const textEl = row.createSpan({ cls: 'ronald-task-manager-text' });
         for (const part of textParts(text)) {
-            if (part.link) textEl.createSpan({ cls: 'ronald-task-inline-link', text: part.text });
+            // Without the brackets the search keeps: styled as a link, it needs none.
+            if (part.link) textEl.createSpan({ cls: 'ronald-task-manager-link', text: part.text.slice(2, -2) });
             else textEl.appendText(part.text);
         }
 

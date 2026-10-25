@@ -969,6 +969,19 @@ body {
     min-width: 0;
 }
 
+/* Links without their brackets, a size smaller: they say where, the text says what. */
+.ronald-task-manager-link {
+    font-size: var(--font-ui-smaller);
+    color: var(--link-color);
+    text-decoration-line: var(--link-decoration);
+    text-decoration-thickness: var(--link-decoration-thickness);
+}
+
+.ronald-task-manager-row.is-done .ronald-task-manager-link,
+.ronald-task-manager-row.is-context .ronald-task-manager-link {
+    color: inherit;
+}
+
 .ronald-task-manager-meta {
     display: flex;
     flex-wrap: wrap;

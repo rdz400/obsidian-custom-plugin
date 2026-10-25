@@ -527,7 +527,7 @@ Obsidian variables only, no shadows, gradients or glows, weights no higher than
 
 - Classes: `ronald-task-manager` on the modal, then
   `ronald-task-manager-{header,list,group,group-heading,row,text,meta,from,
-  tags,tag,tag-inherited,estimate,bar,tally,tag-button,move-button,finish,
+  link,tags,tag,tag-inherited,estimate,bar,tally,tag-button,move-button,finish,
   apply}`, with state classes `is-selected`, `is-focused`, `is-context`,
   `is-done`, `is-changed`, `is-added`, `is-removed`, `is-partial`, `is-all`.
 - The filter rows reuse `.ronald-task-filters` and the chip styles from the
