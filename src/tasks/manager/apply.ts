@@ -1,37 +1,24 @@
-import { type App, Notice, type TFile } from 'obsidian';
+import { type App, Notice } from 'obsidian';
 
 import { processAndParse } from '../../shared/vault';
 import { withAppended } from '../listblocks';
-import type { TaskItem } from '../taskitems';
 import type { Drafts } from './draft';
 import type { ManagerData } from './load';
 import { compareNotes, noteTitle } from './model';
-import { planChanges, summaryLines, type TaskPlace } from './plan';
+import { planChanges, summaryLines } from './plan';
 
 /**
  * Writing the staged changes: check which notes changed since the manager
  * read them, plan without their changes, write every note once, and wait for
- * Obsidian to have parsed each, so reading the notes again sees what was
- * written. Also undoing that again, all or nothing.
+ * Obsidian to have parsed each. It runs after the modal has closed; opening
+ * the manager again waits for it, so it reads what was written.
  */
 
-/** One note an apply wrote, as it was before and after. */
-export interface WrittenNote {
-    file: TFile;
-    before: string;
-    after: string;
-}
-
-export interface ApplyResult {
-    /** The lines of the notice. */
-    notice: string[];
-    /** Per task, where it is after the apply. */
-    places: TaskPlace[];
-    written: WrittenNote[];
-}
-
-/** Write the changes in `drafts` to the notes in `data`. */
-export async function applyChanges(app: App, data: ManagerData, drafts: Drafts): Promise<ApplyResult> {
+/**
+ * Write the changes in `drafts` to the notes in `data`; returns the lines of
+ * the notice saying what was applied and what skipped.
+ */
+export async function applyChanges(app: App, data: ManagerData, drafts: Drafts): Promise<string[]> {
     const order = compareNotes(data.gtd);
     const files = new Map(data.notes.map((note) => [note.file.path, note.file]));
     const notes = data.notes
@@ -55,25 +42,23 @@ export async function applyChanges(app: App, data: ManagerData, drafts: Drafts):
         new Set(changed.keys()),
     );
 
-    const written: WrittenNote[] = [];
-    const raced: string[] = [];
-    for (const change of plan.changes) {
+    // Every note found before anything is written: tasks taken out of one
+    // note and not added to the next would be lost.
+    const writes = plan.changes.map((change) => {
         const file = files.get(change.path);
-        if (!file) continue;
-        let before = '';
-        let after = '';
+        if (!file) throw new Error(`${change.path} not found; nothing was changed`);
+        return { change, file };
+    });
+
+    const raced: string[] = [];
+    for (const { change, file } of writes) {
         await processAndParse(app, file, (current) => {
-            before = current;
-            if (current === change.base) after = change.text;
+            if (current === change.base) return change.text;
             // Appending doesn't depend on what the note holds.
-            else if (!change.edited) after = withAppended(current, change.appended);
-            else {
-                raced.push(change.path);
-                after = current;
-            }
-            return after;
+            if (!change.edited) return withAppended(current, change.appended);
+            raced.push(change.path);
+            return current;
         });
-        if (after !== before) written.push({ file, before, after });
     }
 
     const nameOf = (path: string) => noteTitle(path, data.gtd);
@@ -82,49 +67,34 @@ export async function applyChanges(app: App, data: ManagerData, drafts: Drafts):
         notice.push(`${nameOf(path)} changed while applying: tasks moved out of it are in both notes`);
     }
     if (notice.length === 0) notice.push('Nothing to apply');
-    return { notice, places: plan.places, written };
+    return notice;
 }
+
+/** The applies started, one after the other; settled once the last is written. */
+let applying: Promise<void> = Promise.resolve();
 
 /**
- * Put back every note the last apply wrote, if every one still holds what
- * was written: a half-undone move would lose or duplicate tasks. The notes
- * that got tasks back go first, so a failure leaves tasks in both notes.
+ * Apply the changes once any earlier apply is done, and say in a notice what
+ * was applied, or that it failed.
  */
-export async function undoApply(app: App, written: readonly WrittenNote[]): Promise<boolean> {
-    for (const { file, after } of written) {
-        if ((await app.vault.read(file)) !== after) return false;
-    }
-    for (const { file, before, after } of [...written].reverse()) {
-        await processAndParse(app, file, (current) => (current === after ? before : current));
-    }
-    return true;
-}
-
-/** The last apply, for undoing it: what each note held, and where each task was before. */
-export interface LastApply {
-    written: WrittenNote[];
-    /** By the index of a task as read after the apply. */
-    before: ReadonlyMap<number, TaskPlace>;
-}
-
-/**
- * Where each task read after an apply was before it: `now` maps the indexes
- * of `tasks`, as read before, onto those read after.
- */
-export function placesBefore(
-    tasks: readonly TaskItem[],
-    now: (i: number) => number | undefined,
-): Map<number, TaskPlace> {
-    const before = new Map<number, TaskPlace>();
-    tasks.forEach((task, i) => {
-        const at = now(i);
-        if (at !== undefined) before.set(at, { path: task.file.path, raw: task.raw });
+export function applyInBackground(app: App, data: ManagerData, drafts: Drafts): Promise<void> {
+    applying = applying.then(async () => {
+        try {
+            showNotice(await applyChanges(app, data, drafts));
+        } catch (error) {
+            new Notice(`Could not apply: ${error instanceof Error ? error.message : String(error)}`);
+        }
     });
-    return before;
+    return applying;
+}
+
+/** Settles once every apply started is written and parsed. */
+export function appliesDone(): Promise<void> {
+    return applying;
 }
 
 /** A notice of one or more lines. */
-export function showNotice(lines: readonly string[]): void {
+function showNotice(lines: readonly string[]): void {
     new Notice(
         createFragment((fragment) =>
             lines.forEach((line, i) => {

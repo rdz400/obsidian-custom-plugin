@@ -19,7 +19,7 @@ export interface KeyTarget {
     toggleDone(): void;
     toggleView(value: string): void;
     undo(): void;
-    apply(): Promise<void>;
+    apply(): void;
 }
 
 /**
@@ -54,7 +54,7 @@ export function handleManagerKey(event: KeyboardEvent, target: KeyTarget): boole
         } else if (key === 'z') {
             if (!event.repeat) target.undo();
         } else if (event.key === 'Enter') {
-            if (!event.repeat) void target.apply();
+            if (!event.repeat) target.apply();
         } else {
             return false;
         }

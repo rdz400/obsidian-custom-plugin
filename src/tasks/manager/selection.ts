@@ -1,5 +1,3 @@
-import type { TaskPlace } from './plan';
-
 /**
  * Which tasks are selected in the task manager, which one has the keyboard
  * focus, and the anchor a range is selected from. Tasks are known by their
@@ -97,51 +95,9 @@ export class Selection {
         if (this.anchor !== undefined && !shown.has(this.anchor)) this.anchor = undefined;
     }
 
-    /** Select exactly `indexes`, focus `focus`, as after reading the notes again. */
-    restore(indexes: Iterable<number>, focus: number | undefined): void {
-        this.selected = new Set(indexes);
-        this.beforeRange = new Set(this.selected);
-        this.focus = focus;
-        this.anchor = focus;
-    }
-
     private setAnchor(i: number): void {
         this.anchor = i;
         this.focus = i;
         this.beforeRange = new Set(this.selected);
     }
-}
-
-/**
- * The tasks at `places`, found again among `tasks` after the notes were read
- * again: each is the first task with that note and line not taken yet, so
- * identical lines are matched in order. A place not found is left out, and
- * `undefined` stands in for it.
- */
-export function findAgain(
-    places: readonly TaskPlace[],
-    tasks: readonly { file: { path: string }; raw: string }[],
-): (number | undefined)[] {
-    const taken = new Set<number>();
-    return places.map(({ path, raw }) => {
-        const i = tasks.findIndex((task, k) => !taken.has(k) && task.file.path === path && task.raw === raw);
-        if (i === -1) return undefined;
-        taken.add(i);
-        return i;
-    });
-}
-
-/**
- * How the tasks before a reload map onto the tasks after it: `placeOf` says
- * where each old task is now, and each is found again as `findAgain` does.
- */
-export function remap(
-    count: number,
-    placeOf: (i: number) => TaskPlace | undefined,
-    tasks: readonly { file: { path: string }; raw: string }[],
-): (i: number) => number | undefined {
-    const olds = Array.from({ length: count }, (_, i) => i).filter((i) => placeOf(i) !== undefined);
-    const found = findAgain(olds.map((i) => placeOf(i)!), tasks);
-    const map = new Map(olds.map((old, k) => [old, found[k]]));
-    return (i) => map.get(i);
 }

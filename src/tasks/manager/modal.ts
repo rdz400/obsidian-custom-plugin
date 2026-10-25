@@ -1,8 +1,8 @@
-import { App, Modal, Notice } from 'obsidian';
+import { App, Modal } from 'obsidian';
 
 import { FilterBar, type FilterChip } from '../../shared/ui/filterbar';
 import { ActionBar } from './actionbar';
-import { applyChanges, type LastApply, placesBefore, showNotice, undoApply } from './apply';
+import { applyInBackground } from './apply';
 import { ConfirmCloseModal } from './confirm';
 import { Drafts, type GtdId } from './draft';
 import { handleManagerKey, type KeyTarget } from './keys';
@@ -23,8 +23,7 @@ import {
     tallyText,
     visibleTasks,
 } from './model';
-import type { TaskPlace } from './plan';
-import { remap, Selection } from './selection';
+import { Selection } from './selection';
 
 /** The view chips at the end of the note row, toggled with their letter. */
 const VIEW_CHIPS: readonly FilterChip[] = [
@@ -38,9 +37,8 @@ const VIEW_CHIPS: readonly FilterChip[] = [
  * where they lead; nothing is written until Apply.
  */
 export class TaskManagerModal extends Modal implements KeyTarget {
-    private data: ManagerData;
-    private drafts: Drafts;
-    private readonly reload: () => Promise<ManagerData>;
+    private readonly data: ManagerData;
+    private readonly drafts: Drafts;
     // Not "selection": Modal keeps the text selection it restores there.
     readonly picked = new Selection();
     readonly tags: readonly string[];
@@ -54,20 +52,12 @@ export class TaskManagerModal extends Modal implements KeyTarget {
     private ends: EndState[] = [];
     /** The selectable rows, in list order. */
     rows: number[] = [];
-    /** While writing, the bar says so and input is ignored. */
-    private applying = false;
-    private lastApply: LastApply | undefined;
+    /** Set once Apply hands the changes over: from then on the modal is done. */
+    private applied = false;
 
-    /** `reload` reads the notes again, as they were read for `data`. */
-    constructor(
-        app: App,
-        data: ManagerData,
-        tagChips: readonly FilterChip[],
-        reload: () => Promise<ManagerData>,
-    ) {
+    constructor(app: App, data: ManagerData, tagChips: readonly FilterChip[]) {
         super(app);
         this.data = data;
-        this.reload = reload;
         this.drafts = new Drafts(data.tasks, data.targets);
         this.tags = tagChips.map((chip) => chip.value);
 
@@ -84,7 +74,6 @@ export class TaskManagerModal extends Modal implements KeyTarget {
         this.viewBar = new FilterBar({ chips: VIEW_CHIPS, onChange: onFilter, shortcuts: false });
 
         this.list = new ListView(data.gtd, (i, event) => {
-            if (this.applying) return;
             if (event.shiftKey) this.picked.extendTo(this.rows, i);
             else this.picked.toggle(i);
             this.refresh();
@@ -98,7 +87,7 @@ export class TaskManagerModal extends Modal implements KeyTarget {
                 this.drafts.discard();
                 this.refresh();
             },
-            onApply: () => void this.apply(),
+            onApply: () => this.apply(),
         });
 
         const header = this.contentEl.createDiv({ cls: 'ronald-task-manager-header' });
@@ -112,7 +101,7 @@ export class TaskManagerModal extends Modal implements KeyTarget {
         this.modalEl.addEventListener(
             'keydown',
             (event) => {
-                if (!this.applying && !handleManagerKey(event, this)) return;
+                if (!this.applied && !handleManagerKey(event, this)) return;
                 event.preventDefault();
                 event.stopPropagation();
             },
@@ -133,7 +122,6 @@ export class TaskManagerModal extends Modal implements KeyTarget {
      * overrides it the same way.
      */
     onEscapeKey(): void {
-        if (this.applying) return;
         if (this.picked.size === 0) {
             this.close();
             return;
@@ -147,9 +135,8 @@ export class TaskManagerModal extends Modal implements KeyTarget {
      * (✕, Escape, a tap outside, the back gesture) comes through here.
      */
     close(): void {
-        if (this.applying) return;
         const pending = this.drafts.changed().length;
-        if (pending === 0) {
+        if (this.applied || pending === 0) {
             super.close();
             return;
         }
@@ -159,10 +146,7 @@ export class TaskManagerModal extends Modal implements KeyTarget {
                 super.close();
                 return;
             }
-            void (async () => {
-                await this.apply();
-                if (this.drafts.changed().length === 0) super.close();
-            })();
+            this.apply();
         }).open();
     }
 
@@ -218,13 +202,10 @@ export class TaskManagerModal extends Modal implements KeyTarget {
             tally: tallyText(this.rows.length, selected.length, changed),
             changed,
             selected: selected.length,
-            canUndo: this.drafts.canUndo || this.lastApply !== undefined,
-            undoLabel: !this.drafts.canUndo && this.lastApply ? 'Undo apply' : 'Undo',
+            canUndo: this.drafts.canUndo,
             tags: new Map(this.tags.map((tag) => [tag, tagState(this.drafts, selected, tag)])),
             allIn: new Set(gtd.filter(({ path }) => allIn(this.ends, selected, path)).map(({ id }) => id)),
             allDone: allDone(this.drafts, selected),
-            applying: this.applying,
-            canApply: true,
         });
         this.list.revealFocus();
     }
@@ -253,75 +234,21 @@ export class TaskManagerModal extends Modal implements KeyTarget {
         this.act(() => this.drafts.move(selected, to));
     }
 
-    /** Step back one staged action; with none left, undo the last apply. */
+    /** Step back one staged action. */
     undo(): void {
-        if (this.drafts.canUndo) this.act(() => this.drafts.undo());
-        else void this.undoApply();
+        this.act(() => this.drafts.undo());
     }
 
     /**
-     * Write the pending changes, then read the notes again, with the
-     * selection and the tasks on screen found again where they went. The
-     * modal stays open.
+     * Close at once and write the pending changes behind it. The changes are
+     * the modal's last state: once applied it takes no more input, and
+     * opening the manager again waits for the writes, so it reads their
+     * result.
      */
-    async apply(): Promise<void> {
-        if (this.applying || this.drafts.changed().length === 0) return;
-        await this.writing(async () => {
-            const tasks = this.data.tasks;
-            const result = await applyChanges(this.app, this.data, this.drafts);
-            showNotice(result.notice);
-            const now = await this.reloadWith((i) => result.places[i]);
-            this.lastApply =
-                result.written.length > 0 ? { written: result.written, before: placesBefore(tasks, now) } : undefined;
-        });
-    }
-
-    /** Put the notes back as they were before the last apply, if none changed since. */
-    private async undoApply(): Promise<void> {
-        const last = this.lastApply;
-        if (!last || this.applying) return;
-        await this.writing(async () => {
-            this.lastApply = undefined;
-            if (!(await undoApply(this.app, last.written))) {
-                new Notice("Notes changed since applying; can't undo");
-                return;
-            }
-            await this.reloadWith((i) => last.before.get(i));
-            new Notice('Undid the last apply');
-        });
-    }
-
-    /** Run `write` with the bar showing "Applying…" and input ignored. */
-    private async writing(write: () => Promise<void>): Promise<void> {
-        this.applying = true;
-        this.refresh();
-        try {
-            await write();
-        } catch (error) {
-            new Notice(`Could not apply: ${error instanceof Error ? error.message : String(error)}`);
-        } finally {
-            this.applying = false;
-            this.refresh();
-        }
-    }
-
-    /**
-     * Read the notes again, and find the selection, the focus and the tasks
-     * on screen again: `placeOf` says where each task is now. Staged changes
-     * and their history start afresh. Returns how old indexes map to new ones.
-     */
-    private async reloadWith(placeOf: (i: number) => TaskPlace | undefined): Promise<(i: number) => number | undefined> {
-        const { length } = this.data.tasks;
-        const selected = this.picked.values();
-        const focus = this.picked.focus;
-        const shown = this.rows;
-
-        this.data = await this.reload();
-        this.drafts = new Drafts(this.data.tasks, this.data.targets);
-        const now = remap(length, placeOf, this.data.tasks);
-        const keep = (indexes: readonly number[]) => indexes.flatMap((i) => now(i) ?? []);
-        this.picked.restore(keep(selected), focus === undefined ? undefined : now(focus));
-        this.pinned = new Set(keep(shown));
-        return now;
+    apply(): void {
+        if (this.applied || this.drafts.changed().length === 0) return;
+        this.applied = true;
+        super.close();
+        void applyInBackground(this.app, this.data, this.drafts);
     }
 }

@@ -22,7 +22,6 @@ In:
 - Selecting tasks with tap or click, Shift+click, the keyboard, and Mod+A.
 - Staged changes to the selection: toggle tags, move to a GTD note, finish or
   reopen; then Apply, Discard, or step back with undo.
-- An undo for the last apply.
 - A tally of visible, selected and changed tasks, counts per note, estimates
   on rows.
 - A "Manage tasks" command and a ribbon icon.
@@ -199,15 +198,14 @@ their room **(decided after trying it)**.
   right.
   - Tally: `42 tasks`, `3 of 42 selected`, then `· 3 changed` while there are
     pending changes. "42" counts visible, selectable tasks (no context rows).
-  - Undo (icon `undo-2`, Mod+Z) steps back one staged action. With no staged
-    action left, it undoes the last apply (§7.4), and its tooltip says
-    so: "Undo apply". It's disabled when there's neither.
+  - Undo (icon `undo-2`, Mod+Z) steps back one staged action; disabled
+    without any.
   - Discard resets every pending change; disabled without any. It doesn't ask
     first: Mod+Z can't bring the changes back afterwards, but nothing was
     written, so nothing in the notes is lost.
-  - **Apply n** (`--interactive-accent`, Mod+Enter) writes the pending changes;
-    disabled without any. While writing, the bar shows "Applying…" and
-    ignores input.
+  - **Apply n** (`--interactive-accent`, Mod+Enter) closes the manager at
+    once and writes the pending changes behind it **(decided after trying it,
+    2026-10-25)**; disabled without any. See §7.3.
 - **Row 2: tag buttons (decided: tri-state, inline in the toolbar, no picker).**
   One per filter tag, in settings order, numbered 1…9.
   - State, over the draft's own tags of the selected tasks (exact tag, not
@@ -251,9 +249,8 @@ the subtree along.
 - The *focus* is a separate keyboard cursor: a subtle ring, distinct from
   the selected state. It skips headings and context rows.
 - **The selection stays after every action (decided)**: a staged change
-  doesn't change which task a row is, so this needs nothing extra. After an
-  apply or an undo of an apply the notes are read again, and the selection is
-  found again as in §7.5.
+  doesn't change which task a row is, so this needs nothing extra. Apply
+  closes the manager, so no selection outlives it.
 
 ---
 
@@ -277,7 +274,7 @@ are free because there is no text field. Ignore `event.repeat` for actions.
 | D / L | Toggle the Done / Top-level chip |
 | Mod+1…9 | Toggle tag filter chip |
 | Alt+1…4 | Toggle GTD note chip |
-| Mod+Z | Undo (a staged action, else the last apply) |
+| Mod+Z | Undo a staged action |
 | Mod+Enter | Apply |
 
 - Escape: register it on the modal's `scope` and return `false` while
@@ -373,39 +370,25 @@ new text of every note that changes, where each changed task ends up
   - If a source note changes between that check and its write (a race), its
     tasks are already appended elsewhere. They are then left in both notes,
     and the notice says so, like the existing command.
-- Each note's text before and after the write is kept, for undoing the apply.
-- Then: wait for the metadata cache to have parsed each written note
-  (`processAndParse`), read the notes again, rebuild the list, restore the
-  selection (§7.5) and clear the history. The modal stays open **(decided)**.
+- Every note to write is found before anything is written: tasks taken out
+  of one note and not added to the next would be lost.
+- Each write waits for the metadata cache to have parsed the note
+  (`processAndParse`).
+- **The modal closes as soon as Apply is pressed (decided after trying it,
+  2026-10-25)**, and the writes run behind it, one apply after the other.
+  Opening the manager again waits for them, so it always reads their result
+  and never offers changes already applied. The modal takes no input once
+  Apply is pressed, so a second press does nothing.
 - One notice sums it up: `Applied: 4 moved to today, 3 tagged, 2 finished`,
   then any skips: `Skipped 2 changes in huis: the note changed since opening`.
-  Skipped changes are dropped; the list now shows the note as it is, so they
-  can be made again.
+  Skipped changes are dropped; the manager shows the note as it is next time,
+  so they can be made again. A failure says `Could not apply: …`.
 
-### 7.4 Undoing the last apply
+### 7.4 Undoing an apply
 
-**(decided: staged undo, plus undo of the last apply.)**
-
-- One level: the last apply's before and after text per written note.
-- Undo checks first that *every* note still holds exactly its "after" text.
-  If any changed, nothing is restored, with the notice
-  `Notes changed since applying; can't undo`. It's all or nothing: a
-  half-undone move would lose or duplicate tasks.
-- Then it writes "before" back to each note, reads the notes again, and
-  restores the selection. The changes don't come back as pending: the notes
-  are simply as they were.
-- No redo. It's gone when the modal closes or after the next apply.
-- These writes don't touch an editor's undo history; a note open in an editor
-  picks them up as with any outside write.
-
-### 7.5 Finding the selection again after a reload
-
-Only needed after an apply or its undo. Row identity is the index in the
-collected task list, which doesn't survive a reload. The plan gives
-`{ path, raw }` for every task as it is after the apply (for an undo: as it was
-before). After the reload, each selected task is matched to the first row with
-that path and raw text not yet taken, so duplicate lines are matched in order.
-A task not found again drops out of the selection.
+There is none any more **(decided after trying it)**: it lived in the modal,
+which now closes on Apply. The notes' own history (an open editor's undo,
+File recovery) covers a mistake.
 
 ---
 
@@ -439,7 +422,7 @@ src/tasks/
                       again by { path, raw }
     plan.ts           pure: base texts + list lines + drafts → new texts,
                       where tasks end up, summary
-    apply.ts          conflict check, writes, parse wait, undo of the apply
+    apply.ts          conflict check, writes, parse wait, after the modal closed
     modal.ts          TaskManagerModal: layout, filters, close guard
     keys.ts           the keyboard, split off to keep modal.ts short
     listview.ts       renders groups and rows, mouse handling
@@ -601,7 +584,8 @@ TestVault before the main vault.
 - Mod+Z through several staged actions; Discard; the count drops to 0.
 - Edit a note in the editor while changes are pending, then Apply: that
   note's changes are skipped and reported, the rest applied.
-- Undo an apply; edit a note in between and check that undo refuses.
+- Apply: the manager closes at once; opening it straight away shows the
+  result with nothing pending.
 - Close with pending changes by Escape, ✕ and a tap outside: the confirm
   appears each time.
 - Shift+↓ ranges, Mod+A, then Escape twice.

@@ -3,7 +3,7 @@ import { test } from 'node:test';
 
 import { Drafts } from './draft';
 import { endStates, type Filters, groupRows, matching, selectableRows } from './model';
-import { findAgain, remap, Selection } from './selection';
+import { Selection } from './selection';
 import { notesOf } from './testtasks';
 
 const ROWS = [10, 11, 12, 13, 14];
@@ -94,35 +94,4 @@ test('the focus skips context rows', () => {
     const selection = new Selection();
     assert.equal(selection.moveFocus(rows, 1), 1);
     assert.equal(selection.moveFocus(rows, 1), 2);
-});
-
-test('findAgain matches duplicate lines in order, and drops what is gone', () => {
-    const file = (path: string) => ({ path });
-    const tasks = [
-        { file: file('a.md'), raw: '- [ ] Bel' },
-        { file: file('b.md'), raw: '- [ ] Bel' },
-        { file: file('b.md'), raw: '- [ ] Bel' },
-    ];
-    assert.deepEqual(
-        findAgain(
-            [
-                { path: 'b.md', raw: '- [ ] Bel' },
-                { path: 'b.md', raw: '- [ ] Bel' },
-                { path: 'b.md', raw: '- [ ] Bel' },
-                { path: 'a.md', raw: '- [x] Bel' },
-            ],
-            tasks,
-        ),
-        [1, 2, undefined, undefined],
-    );
-});
-
-test('remap carries indexes over a reload, through where each task went', () => {
-    const tasks = [
-        { file: { path: 'today.md' }, raw: '- [ ] Twee' },
-        { file: { path: 'inbox.md' }, raw: '- [x] Een' },
-    ];
-    const places = [{ path: 'inbox.md', raw: '- [x] Een' }, undefined, { path: 'today.md', raw: '- [ ] Twee' }];
-    const map = remap(3, (i) => places[i], tasks);
-    assert.deepEqual([0, 1, 2].map(map), [1, undefined, 0]);
 });

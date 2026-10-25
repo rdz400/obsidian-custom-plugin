@@ -1,20 +1,69 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { Drafts } from './draft';
-import { planChanges, summaryLines } from './plan';
+import type { TaskItem } from '../taskitems';
+import { Drafts, sameTags } from './draft';
+import { type Plan, planChanges, summaryLines } from './plan';
 import { notesOf, taskIndex } from './testtasks';
 
 const INBOX = '1-taken/inbox.md';
 const TODAY = '1-taken/today.md';
 const SOMEDAY = '1-taken/someday.md';
 
+/**
+ * Check what a plan does once written: read the notes again, and every task
+ * is there once, where and as its draft says (or as it was, in a skipped
+ * note); every other line is still there; and planning again finds nothing
+ * left to change.
+ */
+function checkWritten(
+    texts: Record<string, string>,
+    tasks: readonly TaskItem[],
+    drafts: Drafts,
+    plan: Plan,
+    skip: ReadonlySet<string>,
+): void {
+    const after = { ...texts };
+    for (const change of plan.changes) after[change.path] = change.text;
+    const again = notesOf(after);
+    assert.equal(again.tasks.length, tasks.length, 'no task lost or doubled');
+
+    const found = new Set<number>();
+    tasks.forEach((task, i) => {
+        const skipped = skip.has(task.file.path);
+        const place = plan.places[i]!;
+        const want = skipped ? drafts.base(i) : drafts.draft(i);
+        assert.equal(place.path, skipped ? task.file.path : drafts.destination(i), `where "${task.text}" is`);
+        const k = again.tasks.findIndex((t, j) => !found.has(j) && t.file.path === place.path && t.raw === place.raw);
+        assert.notEqual(k, -1, `"${task.text}" found again`);
+        found.add(k);
+        assert.ok(sameTags(again.tasks[k]!.ownTags, want.ownTags), `tags of "${task.text}"`);
+        assert.equal(again.tasks[k]!.done, want.done, `checkbox of "${task.text}"`);
+    });
+
+    const others = (notes: Record<string, string>) =>
+        Object.values(notes)
+            .flatMap((text) => text.split('\n'))
+            .filter((line) => line.trim() !== '' && !/^\s*[-*+] /.test(line))
+            .sort();
+    assert.deepEqual(others(after), others(texts), 'other lines kept');
+
+    const fresh = new Drafts(again.tasks, again.targets);
+    const notes = again.notes.map(({ file, text, lines }) => ({ path: file.path, text, lines }));
+    assert.deepEqual(planChanges(notes, again.tasks, fresh).changes, [], 'nothing left to change');
+}
+
 function session(texts: Record<string, string>) {
     const { notes, tasks, targets } = notesOf(texts);
     const drafts = new Drafts(tasks, targets);
     const at = (text: string) => taskIndex(tasks, text);
     const planNotes = notes.map(({ file, text, lines }) => ({ path: file.path, text, lines }));
-    const plan = (skip?: Set<string>) => planChanges(planNotes, tasks, drafts, skip);
+    // Every plan made in a test is checked once written too.
+    const plan = (skip = new Set<string>()) => {
+        const result = planChanges(planNotes, tasks, drafts, skip);
+        checkWritten(texts, tasks, drafts, result, skip);
+        return result;
+    };
     const textOf = (result: ReturnType<typeof plan>, path: string) =>
         result.changes.find((change) => change.path === path)?.text;
     return { tasks, drafts, at, plan, textOf };

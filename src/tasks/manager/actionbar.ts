@@ -23,14 +23,10 @@ export interface BarState {
     changed: number;
     selected: number;
     canUndo: boolean;
-    /** The tooltip of Undo: what it would undo. */
-    undoLabel: string;
     tags: ReadonlyMap<string, TagState>;
     /** The GTD notes every selected task already ends up in. */
     allIn: ReadonlySet<GtdId>;
     allDone: boolean;
-    applying: boolean;
-    canApply: boolean;
 }
 
 /** Show a key in a button's tooltip and to assistive technology. */
@@ -63,10 +59,12 @@ export class ActionBar {
         this.tally = first.createSpan({ cls: 'ronald-task-manager-tally', attr: { 'aria-live': 'polite' } });
         const buttons = first.createDiv({ cls: 'ronald-task-manager-bar-end' });
         this.undo = new ButtonComponent(buttons).setIcon('undo-2').onClick(handlers.onUndo);
+        setKey(this.undo.buttonEl, 'Undo', 'Mod+Z');
+        this.undo.buttonEl.setAttribute('aria-label', 'Undo');
         this.discard = new ButtonComponent(buttons).setButtonText('Discard').onClick(handlers.onDiscard);
         this.apply = new ButtonComponent(buttons).setCta().onClick(handlers.onApply);
         this.apply.buttonEl.addClass('ronald-task-manager-apply');
-        setKey(this.apply.buttonEl, 'Apply the changes', 'Mod+Enter');
+        setKey(this.apply.buttonEl, 'Apply the changes and close', 'Mod+Enter');
 
         const tagRow = this.el.createDiv({ cls: 'ronald-task-manager-bar-row ronald-task-manager-tag-row' });
         tags.forEach((tag, index) => {
@@ -99,18 +97,15 @@ export class ActionBar {
     }
 
     update(state: BarState): void {
-        const idle = !state.applying;
-        const some = state.selected > 0 && idle;
+        const some = state.selected > 0;
         // On a phone the change rows give their room to the list while unused.
         this.el.toggleClass('is-unselected', state.selected === 0);
 
-        this.tally.setText(state.applying ? 'Applying…' : state.tally);
-        this.undo.setDisabled(!state.canUndo || !idle);
-        setKey(this.undo.buttonEl, state.undoLabel, 'Mod+Z');
-        this.undo.buttonEl.setAttribute('aria-label', state.undoLabel);
-        this.discard.setDisabled(state.changed === 0 || !idle);
+        this.tally.setText(state.tally);
+        this.undo.setDisabled(!state.canUndo);
+        this.discard.setDisabled(state.changed === 0);
         this.apply.setButtonText(state.changed > 0 ? `Apply ${state.changed}` : 'Apply');
-        this.apply.setDisabled(state.changed === 0 || !state.canApply || !idle);
+        this.apply.setDisabled(state.changed === 0);
 
         for (const [tag, button] of this.tagButtons) {
             const tagState = state.tags.get(tag) ?? 'none';
