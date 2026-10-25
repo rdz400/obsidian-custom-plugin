@@ -77,8 +77,9 @@
  * - taskcount.ts      the task count in the status bar
  * - urihandler.ts     obsidian://ronald-tasks
  *
- * Telling a task line and finding the task notes live in shared/, because the
- * project search counts open tasks too. So do the tab history and the tab
+ * Telling a task line, finding the task notes and reading their list items
+ * with the tags and links they inherit live in shared/, because the project
+ * search counts open tasks too. So do the tab history and the tab
  * helpers the GTD switcher uses, which the tab switcher in navigation/ shares.
  */
 

@@ -1,17 +1,16 @@
 import {
     App,
-    ListItemCache,
     Notice,
     SuggestModal,
     TFile,
 } from 'obsidian';
 
-import { addMissing, LINK_RE, linksOnLine } from '../shared/markdown';
+import { LINK_RE, TAG_RE } from '../shared/markdown';
 import { FilterBar, FilterChip } from '../shared/ui/filterbar';
 import { openFileFromSearch, registerNewTabEnter } from '../shared/ui/openfile';
 import type { TaskSettings } from './settings';
-import { isDoneMarker, taskMarker } from '../shared/taskline';
-import { collectTaskNotes } from '../shared/tasknotes';
+import { isDoneMarker } from '../shared/taskline';
+import { readTaskNoteLines } from '../shared/tasknotes';
 import { GTD_NOTES, type GtdNote, gtdNoteOf } from './gtdnotes';
 import { type TaskNoteBadge, taskNoteBadge } from './tasknotes';
 
@@ -38,16 +37,9 @@ export interface TaskItem {
     links: string[];
 }
 
-const TAG_RE = /#([\w/-]+)/g;
-
 /** Set the checkbox marker of a task line, e.g. "- [ ] Foo" -> "- [x] Foo". */
 function setTaskMarker(line: string, marker: string): string {
     return line.replace(/^(\s*[-*+]\s+)\[[^\]]\]/, `$1[${marker}]`);
-}
-
-/** The inline "#tag"s written on one line, lowercased. */
-function tagsOnLine(raw: string): string[] {
-    return Array.from(raw.matchAll(TAG_RE)).map((m) => (m[1] as string).toLowerCase());
 }
 
 /**
@@ -101,80 +93,37 @@ export function textParts(text: string): TextPart[] {
 }
 
 /**
- * Collect every checkbox line in `file` as a flat list of items.
+ * Every task in every task note, the notes directly in the task folder.
  *
- * `listItems` is flat and ordered by position, with `parent` holding the start
- * line of the containing item (negative for a top-level item, where it encodes
- * the section instead). Since a parent always appears before its children, one
- * forward pass indexed by start line is enough to accumulate each line's own
- * tags and links on top of everything its ancestors carry — which is how a
- * subtask inherits the context of the bullet or task it hangs under. The same
- * pass counts the depth: one more than the depth of the parent item.
- *
- * Plain bullets take part in that inheritance but are not collected themselves:
- * only checkboxes are tasks. They do count towards the depth, so a subtask of a
- * plain bullet is at depth 2 just like a subtask of a task.
+ * Plain bullets pass their tags and links on to the tasks below them and count
+ * towards their depth, see `listLines`, but are not collected themselves: only
+ * checkboxes are tasks.
  */
-function collectFileTasks(
-    items: ListItemCache[],
-    lines: string[],
-    file: TFile,
-    note: TaskNoteBadge,
-    gtd: GtdNote['id'] | undefined,
-): TaskItem[] {
-    const inherited = new Map<
-        number,
-        { tags: string[]; links: string[]; depth: number }
-    >();
-    const tasks: TaskItem[] = [];
-
-    for (const item of items) {
-        const line = item.position.start.line;
-        const raw = lines[line];
-        if (raw === undefined) continue;
-
-        const parent = item.parent < 0 ? undefined : inherited.get(item.parent);
-        const tags = addMissing(tagsOnLine(raw), parent?.tags ?? []);
-        const links = addMissing(linksOnLine(raw), parent?.links ?? []);
-        const depth = (parent?.depth ?? 0) + 1;
-        inherited.set(line, { tags, links, depth });
-
-        const marker = taskMarker(raw);
-        if (marker === undefined) continue;
-
-        tasks.push({
-            file,
-            note,
-            gtd,
-            line,
-            raw,
-            text: taskText(raw),
-            done: isDoneMarker(marker),
-            depth,
-            tags,
-            links,
-        });
-    }
-
-    return tasks;
-}
-
-/** Every task in every task note, the notes directly in the task folder. */
 export async function collectTaskNoteTasks(
     app: App,
     settings: TaskSettings,
 ): Promise<TaskItem[]> {
-    const files = collectTaskNotes(app, settings.taskFolder);
-
     const tasks: TaskItem[] = [];
 
-    for (const file of files) {
-        const items = app.metadataCache.getFileCache(file)?.listItems ?? [];
-        if (items.length === 0) continue;
-
-        const lines = (await app.vault.cachedRead(file)).split('\n');
+    for (const { file, lines } of await readTaskNoteLines(app, settings.taskFolder)) {
+        const note = taskNoteBadge(file, settings);
         const gtd = gtdNoteOf(file, settings)?.id;
-        tasks.push(...collectFileTasks(items, lines, file, taskNoteBadge(file, settings), gtd));
+
+        for (const { line, raw, marker, depth, tags, links } of lines) {
+            if (marker === undefined) continue;
+            tasks.push({
+                file,
+                note,
+                gtd,
+                line,
+                raw,
+                text: taskText(raw),
+                done: isDoneMarker(marker),
+                depth,
+                tags,
+                links,
+            });
+        }
     }
 
     return tasks;

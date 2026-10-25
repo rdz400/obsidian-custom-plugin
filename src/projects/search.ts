@@ -1,6 +1,5 @@
 import {
     App,
-    ListItemCache,
     MarkdownView,
     Notice,
     SuggestModal,
@@ -8,7 +7,6 @@ import {
     setIcon,
 } from 'obsidian';
 
-import { addMissing, linksOnLine } from '../shared/markdown';
 import { FilterBar, FilterChip } from '../shared/ui/filterbar';
 import {
     openFileFromSearch,
@@ -16,8 +14,8 @@ import {
     registerNewTabEnter,
     wantsAltAction,
 } from '../shared/ui/openfile';
-import { isDoneMarker, taskMarker } from '../shared/taskline';
-import { collectTaskNotes } from '../shared/tasknotes';
+import { isDoneMarker } from '../shared/taskline';
+import { readTaskNoteLines } from '../shared/tasknotes';
 import { templateMatcher } from '../shared/vault';
 import { isOpenStatus } from './statuses';
 
@@ -85,50 +83,16 @@ export interface ProjectItem {
 }
 
 /**
- * Count the open checkbox lines in one note against the project each links to.
- *
- * `listItems` is flat and ordered by position, with `parent` holding the start
- * line of the containing item (negative for a top-level item, where it encodes
- * the section instead). Since a parent always appears before its children, one
- * forward pass indexed by start line is enough to give every line the links its
- * ancestors carry on top of its own — so a subtask under "- [ ] Bel [[Tuin]]"
- * counts towards Tuin even though its own line names no project. Plain bullets
- * take part in that inheritance without being tasks themselves.
- *
- * A task linking to several projects counts once for each of them.
- */
-function countFileTasks(
-    items: ListItemCache[],
-    lines: string[],
-    counts: Map<string, number>,
-): void {
-    const inherited = new Map<number, string[]>();
-
-    for (const item of items) {
-        const line = item.position.start.line;
-        const raw = lines[line];
-        if (raw === undefined) continue;
-
-        const parent = item.parent < 0 ? undefined : inherited.get(item.parent);
-        const links = addMissing(linksOnLine(raw), parent ?? []);
-        inherited.set(line, links);
-
-        const marker = taskMarker(raw);
-        if (marker === undefined || isDoneMarker(marker)) continue;
-
-        for (const link of links) {
-            const key = link.toLowerCase();
-            counts.set(key, (counts.get(key) ?? 0) + 1);
-        }
-    }
-}
-
-/**
  * How many open tasks each linked note has, keyed by lowercased link target.
  *
- * Only task notes are scanned, matching where tasks are kept; the count is
- * looked up per project by note name, so a link written as a path or with a
- * display text only lands on the project when it reads as the note's name.
+ * Only task notes are scanned, matching where tasks are kept. A task counts
+ * for the links on its own line and on the list items it hangs under (see
+ * `listLines`), so a subtask under "- [ ] Bel [[Tuin]]" counts towards Tuin.
+ * A task linking to several projects counts once for each of them.
+ *
+ * The count is looked up per project by note name, so a link written as a
+ * path or with a display text only lands on the project when it reads as
+ * the note's name.
  */
 async function collectOpenTaskCounts(
     app: App,
@@ -136,14 +100,15 @@ async function collectOpenTaskCounts(
 ): Promise<Map<string, number>> {
     const counts = new Map<string, number>();
 
-    const files = collectTaskNotes(app, taskFolder);
+    for (const { lines } of await readTaskNoteLines(app, taskFolder)) {
+        for (const { marker, links } of lines) {
+            if (marker === undefined || isDoneMarker(marker)) continue;
 
-    for (const file of files) {
-        const items = app.metadataCache.getFileCache(file)?.listItems ?? [];
-        if (items.length === 0) continue;
-
-        const lines = (await app.vault.cachedRead(file)).split('\n');
-        countFileTasks(items, lines, counts);
+            for (const link of links) {
+                const key = link.toLowerCase();
+                counts.set(key, (counts.get(key) ?? 0) + 1);
+            }
+        }
     }
 
     return counts;
