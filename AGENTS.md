@@ -123,6 +123,14 @@ In this example:
     ```
 - The script expects `$VAULT_OBSIDIAN` to point at the vault and deploys to `<Vault>/.obsidian/plugins/plugin-van-ronald/`.
 - Enable the plugin once in **Settings → Community plugins**.
+- **Test in the TestVault first.** `$VAULT_OBSIDIAN` points at the main vault, so deploy a change to the TestVault (vault name `TestVault`, path in `$VAULT_TEST`) by overriding it, and only deploy to the main vault once it works there:
+    ```bash
+    VAULT_OBSIDIAN="$VAULT_TEST" ./to-vault.sh
+    ```
+    If `$VAULT_TEST` isn't set, ask for the TestVault's path rather than guessing it.
+- The TestVault has the main vault's folders and notes made to exercise each feature: task notes and GTD notes in `1-taken`, projects with every status, notes to rename in `0-inbox`, and more. `0-werkruimte/testvault-handleiding.md` in it says what to try where. `make-testvault.sh` (local, not in git) creates those notes again; it skips notes that exist.
+- Check a change there with the Obsidian CLI, always with `vault=TestVault` first: run a command with `obsidian vault=TestVault eval code="app.commands.executeCommandById('plugin-van-ronald:search-tasks')"`, read the result from the DOM or the note on disk, and look for errors with `obsidian vault=TestVault dev:errors`. Changes to test data in the TestVault are fine; don't touch the main vault.
+- Two things to know when doing that: the TestVault doesn't focus new tabs, so open a note with `app.workspace.getLeaf(false).openFile(…)` before running a command on the active note; and undo a move with `app.workspace.activeEditor.editor.undo()`, since the `editor:undo` command does nothing while the editor has no focus.
 - After a change that moves code around without meaning to change behaviour, compare the plugin's commands before and after, for example with the Obsidian CLI: `obsidian eval code="Object.keys(app.commands.commands).filter(id => id.startsWith('plugin-van-ronald:')).sort().join('\n')"`.
 
 ## Commands & settings
