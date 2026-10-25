@@ -1,4 +1,4 @@
-import { App, Modal } from 'obsidian';
+import { App, Modal, Notice } from 'obsidian';
 
 import { FilterBar, type FilterChip } from '../../shared/ui/filterbar';
 import { ActionBar } from './actionbar';
@@ -37,8 +37,10 @@ const VIEW_CHIPS: readonly FilterChip[] = [
  * where they lead; nothing is written until Apply.
  */
 export class TaskManagerModal extends Modal implements KeyTarget {
-    private readonly data: ManagerData;
-    private readonly drafts: Drafts;
+    private data: ManagerData;
+    private drafts: Drafts;
+    /** Reads the notes again, as `data` was read. */
+    private readonly reload: () => Promise<ManagerData>;
     // Not "selection": Modal keeps the text selection it restores there.
     readonly picked = new Selection();
     readonly tags: readonly string[];
@@ -52,12 +54,18 @@ export class TaskManagerModal extends Modal implements KeyTarget {
     private ends: EndState[] = [];
     /** The selectable rows, in list order. */
     rows: number[] = [];
-    /** Set once Apply hands the changes over: from then on the modal is done. */
-    private applied = false;
+    /** While writing: the bar says so and input is ignored. */
+    private applying = false;
 
-    constructor(app: App, data: ManagerData, tagChips: readonly FilterChip[]) {
+    constructor(
+        app: App,
+        data: ManagerData,
+        tagChips: readonly FilterChip[],
+        reload: () => Promise<ManagerData>,
+    ) {
         super(app);
         this.data = data;
+        this.reload = reload;
         this.drafts = new Drafts(data.tasks, data.targets);
         this.tags = tagChips.map((chip) => chip.value);
 
@@ -74,6 +82,7 @@ export class TaskManagerModal extends Modal implements KeyTarget {
         this.viewBar = new FilterBar({ chips: VIEW_CHIPS, onChange: onFilter, shortcuts: false });
 
         this.list = new ListView(data.gtd, (i, event) => {
+            if (this.applying) return;
             if (event.shiftKey) this.picked.extendTo(this.rows, i);
             else this.picked.toggle(i);
             this.refresh();
@@ -87,7 +96,7 @@ export class TaskManagerModal extends Modal implements KeyTarget {
                 this.drafts.discard();
                 this.refresh();
             },
-            onApply: () => this.apply(),
+            onApply: () => void this.apply(),
         });
 
         const header = this.contentEl.createDiv({ cls: 'ronald-task-manager-header' });
@@ -101,7 +110,7 @@ export class TaskManagerModal extends Modal implements KeyTarget {
         this.modalEl.addEventListener(
             'keydown',
             (event) => {
-                if (!this.applied && !handleManagerKey(event, this)) return;
+                if (!this.applying && !handleManagerKey(event, this)) return;
                 event.preventDefault();
                 event.stopPropagation();
             },
@@ -136,7 +145,8 @@ export class TaskManagerModal extends Modal implements KeyTarget {
      */
     close(): void {
         const pending = this.drafts.changed().length;
-        if (this.applied || pending === 0) {
+        // While writing, the changes are on their way: nothing to ask.
+        if (this.applying || pending === 0) {
             super.close();
             return;
         }
@@ -146,7 +156,7 @@ export class TaskManagerModal extends Modal implements KeyTarget {
                 super.close();
                 return;
             }
-            this.apply();
+            void this.apply().then(() => super.close());
         }).open();
     }
 
@@ -206,6 +216,7 @@ export class TaskManagerModal extends Modal implements KeyTarget {
             tags: new Map(this.tags.map((tag) => [tag, tagState(this.drafts, selected, tag)])),
             allIn: new Set(gtd.filter(({ path }) => allIn(this.ends, selected, path)).map(({ id }) => id)),
             allDone: allDone(this.drafts, selected),
+            applying: this.applying,
         });
         this.list.revealFocus();
     }
@@ -240,15 +251,27 @@ export class TaskManagerModal extends Modal implements KeyTarget {
     }
 
     /**
-     * Close at once and write the pending changes behind it. The changes are
-     * the modal's last state: once applied it takes no more input, and
-     * opening the manager again waits for the writes, so it reads their
-     * result.
+     * Write the pending changes, then read the notes again: the modal stays
+     * open on what the notes now say, with nothing pending and nothing
+     * selected, so Escape closes it. The notes are read again even when
+     * writing failed, so a change is never offered twice.
      */
-    apply(): void {
-        if (this.applied || this.drafts.changed().length === 0) return;
-        this.applied = true;
-        super.close();
-        void applyInBackground(this.app, this.data, this.drafts);
+    async apply(): Promise<void> {
+        if (this.applying || this.drafts.changed().length === 0) return;
+        this.applying = true;
+        this.refresh();
+        try {
+            await applyInBackground(this.app, this.data, this.drafts);
+            this.data = await this.reload();
+            this.drafts = new Drafts(this.data.tasks, this.data.targets);
+            this.picked.clear();
+            this.picked.focus = undefined;
+        } catch (error) {
+            new Notice(`Could not read the notes again: ${error instanceof Error ? error.message : String(error)}`);
+            super.close();
+        } finally {
+            this.applying = false;
+        }
+        this.refresh(true);
     }
 }

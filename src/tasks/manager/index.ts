@@ -19,22 +19,24 @@
  *   button per filter tag (1…9), Move to today, someday, overview, inbox
  *   (T, S, O, I), Finish or Reopen (X). Mod+Z undoes the last action,
  *   Discard drops every change.
- * - Apply (Mod+Enter) closes the manager and writes the changes, each note
- *   once; a notice says what was applied. A note changed since the manager
- *   read it keeps its own changes, and the notice says so. Opening the
- *   manager again waits for the writes to finish.
+ * - Apply (Mod+Enter) writes the changes, each note once, and reads the
+ *   notes again; the manager stays open with nothing pending or selected,
+ *   so Escape closes it. A notice says what was applied; a note changed
+ *   since the manager read it keeps its own changes, and the notice says so.
+ *   Closing while it writes lets the writes finish; opening the manager
+ *   again waits for them.
  * - Closing with changes pending asks whether to apply them first.
  * - On a phone it fills the screen; the chips share one row, and the tag
  *   and move buttons show only while something is selected.
  *
  * Where the code is
  * -----------------
- * - load.ts        reading the task notes and their tasks, when it opens
+ * - load.ts        reading the task notes and their tasks
  * - draft.ts       the staged changes: each task's end state and the history
  * - model.ts       end states, filters, the grouped tree, counts and button states
  * - selection.ts   selection, focus and range anchor
  * - plan.ts        the new text of every note an apply changes
- * - apply.ts       writing the plan, after the modal has closed
+ * - apply.ts       writing the plan
  * - modal.ts       the modal: layout, filters, apply, closing
  * - keys.ts        its keyboard
  * - confirm.ts     "Apply n changes?" when closing
@@ -55,7 +57,9 @@ async function manageTasks(plugin: RonaldPlugin, settings: TaskSettings): Promis
     await appliesDone();
     const data = await loadTasks(plugin.app, settings);
     const chips = settings.taskFilterTags.filter((chip) => chip.value.length > 0);
-    new TaskManagerModal(plugin.app, data, chips).open();
+    // The settings as they are now, for reading the notes again after an apply.
+    const reload = () => loadTasks(plugin.app, settings);
+    new TaskManagerModal(plugin.app, data, chips, reload).open();
 }
 
 /** Register "Manage tasks" and its ribbon icon. */

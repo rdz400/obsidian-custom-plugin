@@ -10,8 +10,9 @@ import { planChanges, summaryLines } from './plan';
 /**
  * Writing the staged changes: check which notes changed since the manager
  * read them, plan without their changes, write every note once, and wait for
- * Obsidian to have parsed each. It runs after the modal has closed; opening
- * the manager again waits for it, so it reads what was written.
+ * Obsidian to have parsed each. Applies run one after the other, and opening
+ * the manager waits for them, so a manager closed while writing never leaves
+ * the next one reading half-written notes.
  */
 
 /**

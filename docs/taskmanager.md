@@ -203,9 +203,9 @@ their room **(decided after trying it)**.
   - Discard resets every pending change; disabled without any. It doesn't ask
     first: Mod+Z can't bring the changes back afterwards, but nothing was
     written, so nothing in the notes is lost.
-  - **Apply n** (`--interactive-accent`, Mod+Enter) closes the manager at
-    once and writes the pending changes behind it **(decided after trying it,
-    2026-10-25)**; disabled without any. See §7.3.
+  - **Apply n** (`--interactive-accent`, Mod+Enter) writes the pending
+    changes and the manager stays open; disabled without any. While writing,
+    the bar shows "Applying…" and ignores input. See §7.3.
 - **Row 2: tag buttons (decided: tri-state, inline in the toolbar, no picker).**
   One per filter tag, in settings order, numbered 1…9.
   - State, over the draft's own tags of the selected tasks (exact tag, not
@@ -249,8 +249,8 @@ the subtree along.
 - The *focus* is a separate keyboard cursor: a subtle ring, distinct from
   the selected state. It skips headings and context rows.
 - **The selection stays after every action (decided)**: a staged change
-  doesn't change which task a row is, so this needs nothing extra. Apply
-  closes the manager, so no selection outlives it.
+  doesn't change which task a row is, so this needs nothing extra. An apply
+  clears it (§7.3).
 
 ---
 
@@ -374,11 +374,13 @@ new text of every note that changes, where each changed task ends up
   of one note and not added to the next would be lost.
 - Each write waits for the metadata cache to have parsed the note
   (`processAndParse`).
-- **The modal closes as soon as Apply is pressed (decided after trying it,
-  2026-10-25)**, and the writes run behind it, one apply after the other.
-  Opening the manager again waits for them, so it always reads their result
-  and never offers changes already applied. The modal takes no input once
-  Apply is pressed, so a second press does nothing.
+- **The modal stays open (decided, tried both ways, 2026-10-25).** After
+  writing, the notes are read again, also when writing failed, so a change
+  is never offered twice: the modal shows what the notes now say, with
+  nothing pending and nothing selected, so one Escape closes it. Applies run
+  one after the other; closing while one writes (no confirm needed: the
+  changes are on their way) lets it finish, and opening the manager again
+  waits for it.
 - One notice sums it up: `Applied: 4 moved to today, 3 tagged, 2 finished`,
   then any skips: `Skipped 2 changes in huis: the note changed since opening`.
   Skipped changes are dropped; the manager shows the note as it is next time,
@@ -386,9 +388,9 @@ new text of every note that changes, where each changed task ends up
 
 ### 7.4 Undoing an apply
 
-There is none any more **(decided after trying it)**: it lived in the modal,
-which now closes on Apply. The notes' own history (an open editor's undo,
-File recovery) covers a mistake.
+There is none **(decided after trying it)**: Mod+Z undoes staged actions
+only. The notes' own history (an open editor's undo, File recovery) covers a
+mistake.
 
 ---
 
@@ -586,8 +588,9 @@ TestVault before the main vault.
 - Mod+Z through several staged actions; Discard; the count drops to 0.
 - Edit a note in the editor while changes are pending, then Apply: that
   note's changes are skipped and reported, the rest applied.
-- Apply: the manager closes at once; opening it straight away shows the
-  result with nothing pending.
+- Apply: the manager stays open on the result, nothing pending or selected;
+  one Escape closes it. Close while it writes and open it again at once: it
+  shows the result.
 - Close with pending changes by Escape, ✕ and a tap outside: the confirm
   appears each time.
 - Shift+↓ ranges, Mod+A, then Escape twice.

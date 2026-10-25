@@ -27,6 +27,8 @@ export interface BarState {
     /** The GTD notes every selected task already ends up in. */
     allIn: ReadonlySet<GtdId>;
     allDone: boolean;
+    /** While writing, the bar says so and its buttons wait. */
+    applying: boolean;
 }
 
 /** Show a key in a button's tooltip and to assistive technology. */
@@ -64,7 +66,7 @@ export class ActionBar {
         this.discard = new ButtonComponent(buttons).setButtonText('Discard').onClick(handlers.onDiscard);
         this.apply = new ButtonComponent(buttons).setCta().onClick(handlers.onApply);
         this.apply.buttonEl.addClass('ronald-task-manager-apply');
-        setKey(this.apply.buttonEl, 'Apply the changes and close', 'Mod+Enter');
+        setKey(this.apply.buttonEl, 'Apply the changes', 'Mod+Enter');
 
         const tagRow = this.el.createDiv({ cls: 'ronald-task-manager-bar-row ronald-task-manager-tag-row' });
         tags.forEach((tag, index) => {
@@ -97,15 +99,16 @@ export class ActionBar {
     }
 
     update(state: BarState): void {
-        const some = state.selected > 0;
+        const idle = !state.applying;
+        const some = state.selected > 0 && idle;
         // On a phone the change rows give their room to the list while unused.
         this.el.toggleClass('is-unselected', state.selected === 0);
 
-        this.tally.setText(state.tally);
-        this.undo.setDisabled(!state.canUndo);
-        this.discard.setDisabled(state.changed === 0);
+        this.tally.setText(state.applying ? 'Applying…' : state.tally);
+        this.undo.setDisabled(!state.canUndo || !idle);
+        this.discard.setDisabled(state.changed === 0 || !idle);
         this.apply.setButtonText(state.changed > 0 ? `Apply ${state.changed}` : 'Apply');
-        this.apply.setDisabled(state.changed === 0);
+        this.apply.setDisabled(state.changed === 0 || !idle);
 
         for (const [tag, button] of this.tagButtons) {
             const tagState = state.tags.get(tag) ?? 'none';
