@@ -11,7 +11,7 @@ export const TASKS_URI_ACTION = 'ronald-tasks';
 interface TasksUriParams extends Record<string, string> {
     /** Text to put in the search field. */
     query: string;
-    /** Comma-separated tag values to switch on, e.g. `tags=nu,vandaag`. */
+    /** Comma-separated tag values to switch on, e.g. `tags=prio,vandaag`. */
     tags: string;
     /** Comma-separated GTD notes to switch on, e.g. `notes=today,inbox`. */
     notes: string;

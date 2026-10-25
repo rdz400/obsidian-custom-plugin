@@ -53,7 +53,7 @@ export interface TaskSettings {
 
 export const DEFAULT_TASK_SETTINGS: TaskSettings = {
     taskFilterTags: [
-        { value: 'nu', type: 'time' },
+        { value: 'prio', type: 'other' },
         { value: 'vandaag', type: 'time' },
         { value: 'week', type: 'time' },
         { value: 'buiten', type: 'context' },

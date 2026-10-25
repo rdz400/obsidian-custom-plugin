@@ -32,12 +32,12 @@ The plugin handles four `obsidian://` actions, for links in notes and for shortc
 ### `ronald-tasks`
 
 - `query`: text to put in the search field.
-- `tags`: comma-separated tag chips to switch on, such as `tags=nu,vandaag`. Only tags in **Task filter tags** have a chip; others are ignored.
+- `tags`: comma-separated tag chips to switch on, such as `tags=prio,vandaag`. Only tags in **Task filter tags** have a chip; others are ignored.
 - `notes`: comma-separated GTD note chips to switch on: `today`, `someday`, `overview`, `inbox`.
 - `done=true`: also lists finished tasks.
 
 ```
-obsidian://ronald-tasks?query=bel&tags=nu,vandaag&notes=today,inbox&done=true
+obsidian://ronald-tasks?query=bel&tags=prio,vandaag&notes=today,inbox&done=true
 ```
 
 ### `ronald-projects`
@@ -60,7 +60,7 @@ obsidian://ronald-timerecord?message=Lunch
 
 ### How values are read
 
-In `tags`, `notes` and `status`, a leading `#` is dropped and capitals are folded to lower case, so `tags=#Nu` works. A value without a matching chip is ignored rather than reported. URL-encode spaces and special characters in `query` and `message` (`Overleg%20met%20Jan`).
+In `tags`, `notes` and `status`, a leading `#` is dropped and capitals are folded to lower case, so `tags=#Prio` works. A value without a matching chip is ignored rather than reported. URL-encode spaces and special characters in `query` and `message` (`Overleg%20met%20Jan`).
 
 ### Where the code is
 

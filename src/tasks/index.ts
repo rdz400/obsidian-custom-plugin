@@ -20,7 +20,7 @@
  *   more than one on, a task can be in any of them. A letter shows which note
  *   a task is in: T, S, O, I for the GTD notes. Ticking a checkbox writes
  *   straight to the note; Enter opens the task's line, Mod+Enter in a new tab.
- * - obsidian://ronald-tasks?query=bel&tags=nu,vandaag&notes=today,inbox&done=true
+ * - obsidian://ronald-tasks?query=bel&tags=prio,vandaag&notes=today,inbox&done=true
  *   opens the same search from a link; every parameter is optional.
  *
  * Getting to the notes
@@ -29,7 +29,7 @@
  * - "Open taken" opens every task note in its own tab.
  *
  * Tagging
- * - "Toggle #nu tag" (and #misschien, #vandaag, #week) toggles the tag on the
+ * - "Toggle #prio tag" (and #misschien, #vandaag, #week) toggles the tag on the
  *   selected list items; "Insert tag at end of line" asks which one, from
  *   "Tags to insert at end of line".
  * - "Remove #tag from all task notes" exists for each tag in "Tags to clear
@@ -134,7 +134,7 @@ export function registerTaskFeatures(plugin: RonaldPlugin, recency: TabRecency):
         callback: () => openTaskNotes(plugin.app, plugin.settings.taskFolder),
     });
 
-    for (const tag of ['nu', 'misschien', 'vandaag', 'week']) {
+    for (const tag of ['prio', 'misschien', 'vandaag', 'week']) {
         plugin.addCommand({
             id: `toggle-${tag}-tag`,
             name: `Toggle #${tag} tag`,
