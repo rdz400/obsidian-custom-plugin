@@ -1,7 +1,7 @@
 import type { Setting, SettingDefinitionItem } from 'obsidian';
 
 import type RonaldPlugin from '../main';
-import { shortcutName, type SettingSectionContext } from '../settings/section';
+import { editableList, shortcutName, type SettingSectionContext } from '../settings/section';
 import type { NoteTypeSetting } from '../shared/ui/notetype';
 
 export interface LinkSettings {
@@ -31,36 +31,18 @@ export function linkSettingSections({ plugin, save }: SettingSectionContext): Se
     const noteTypes = plugin.settings.linkNoteTypes;
 
     return [
-        {
-            type: 'list',
+        editableList(save, {
             // The bar adds "overige" itself, after these; saying so here
             // keeps it from reading as a type someone forgot to add. The
             // icon field takes any Lucide name.
             heading: 'Note types to filter links on (plus "overige")',
-            cls: 'ronald-setting-tag-list',
             emptyState: 'No note types yet.',
-            addItem: {
-                name: 'Add type',
-                action: () => {
-                    noteTypes.push({ value: '', icon: '' });
-                    void save();
-                },
-            },
-            onReorder: (oldIndex, newIndex) => {
-                const [moved] = noteTypes.splice(oldIndex, 1);
-                if (moved) noteTypes.splice(newIndex, 0, moved);
-                void save();
-            },
-            onDelete: (index) => {
-                noteTypes.splice(index, 1);
-                void save();
-            },
-            items: noteTypes.map((type, index) => ({
-                name: type.value.length > 0 ? type.value : 'New type',
-                searchable: false,
-                render: (setting: Setting) => renderNoteTypeRow(plugin, setting, type, index),
-            })),
-        },
+            addName: 'Add type',
+            entries: noteTypes,
+            newEntry: () => ({ value: '', icon: '' }),
+            itemName: (type) => (type.value.length > 0 ? type.value : 'New type'),
+            render: (setting, type, index) => renderNoteTypeRow(plugin, setting, type, index),
+        }),
     ];
 }
 

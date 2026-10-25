@@ -1,7 +1,7 @@
 import type { Setting, SettingDefinitionItem, TFile } from 'obsidian';
 
 import type RonaldPlugin from '../main';
-import { shortcutName, type SettingSectionContext } from '../settings/section';
+import { editableList, shortcutName, type SettingSectionContext } from '../settings/section';
 import { isTaskNote } from '../shared/tasknotes';
 import type { FilterChip } from '../shared/ui/filterbar';
 import { GTD_NOTES } from './gtdnotes';
@@ -161,92 +161,41 @@ export function taskSettingSections({ plugin, save }: SettingSectionContext): Se
                 ]),
             ],
         },
-        {
-            type: 'list',
+        editableList(save, {
             heading: 'Task filter tags',
-            cls: 'ronald-setting-tag-list',
             emptyState: 'No filter tags yet.',
-            addItem: {
-                name: 'Add tag',
-                action: () => {
-                    tags.push({ value: '', type: 'other' });
-                    void save();
-                },
-            },
-            onReorder: (oldIndex, newIndex) => {
-                const [moved] = tags.splice(oldIndex, 1);
-                if (moved) tags.splice(newIndex, 0, moved);
-                void save();
-            },
-            onDelete: (index) => {
-                tags.splice(index, 1);
-                void save();
-            },
-            items: tags.map((chip, index) => ({
-                name: chip.value.length > 0 ? `#${chip.value}` : 'New tag',
-                searchable: false,
-                render: (setting: Setting) => renderTagRow(plugin, setting, chip, index),
-            })),
-        },
-        {
-            type: 'list',
+            addName: 'Add tag',
+            entries: tags,
+            newEntry: () => ({ value: '', type: 'other' }),
+            itemName: (chip) => (chip.value.length > 0 ? `#${chip.value}` : 'New tag'),
+            render: (setting, chip, index) => renderTagRow(plugin, setting, chip, index),
+        }),
+        editableList(save, {
             heading: 'Tags to insert at end of line',
-            cls: 'ronald-setting-tag-list',
             emptyState: 'No insert tags yet.',
-            addItem: {
-                name: 'Add tag',
-                action: () => {
-                    insertTags.push('');
-                    void save();
-                },
-            },
-            onReorder: (oldIndex, newIndex) => {
-                const [moved] = insertTags.splice(oldIndex, 1);
-                if (moved !== undefined) insertTags.splice(newIndex, 0, moved);
-                void save();
-            },
-            onDelete: (index) => {
-                insertTags.splice(index, 1);
-                void save();
-            },
-            items: insertTags.map((tag, index) => ({
-                name: tag.length > 0 ? `#${tag}` : 'New tag',
-                searchable: false,
-                render: (setting: Setting) =>
-                    renderPlainTagRow(plugin, setting, insertTags, index),
-            })),
-        },
-        {
-            type: 'list',
+            addName: 'Add tag',
+            entries: insertTags,
+            newEntry: () => '',
+            itemName: plainTagName,
+            render: (setting, _tag, index) => renderPlainTagRow(plugin, setting, insertTags, index),
+        }),
+        editableList(save, {
             // Each entry becomes its own command at load time, so a change
             // here needs a plugin reload before the command shows up.
             heading: 'Tags to clear from task notes (reload after changing)',
-            cls: 'ronald-setting-tag-list',
             emptyState: 'No tags to clear yet.',
-            addItem: {
-                name: 'Add tag',
-                action: () => {
-                    clearTags.push('');
-                    void save();
-                },
-            },
-            onReorder: (oldIndex, newIndex) => {
-                const [moved] = clearTags.splice(oldIndex, 1);
-                if (moved !== undefined) clearTags.splice(newIndex, 0, moved);
-                void save();
-            },
-            onDelete: (index) => {
-                clearTags.splice(index, 1);
-                void save();
-            },
-            items: clearTags.map((tag, index) => ({
-                name: tag.length > 0 ? `#${tag}` : 'New tag',
-                searchable: false,
-                render: (setting: Setting) =>
-                    renderPlainTagRow(plugin, setting, clearTags, index),
-            })),
-        },
+            addName: 'Add tag',
+            entries: clearTags,
+            newEntry: () => '',
+            itemName: plainTagName,
+            render: (setting, _tag, index) => renderPlainTagRow(plugin, setting, clearTags, index),
+        }),
     ];
+}
+
+/** The row name of a bare tag in a list. */
+function plainTagName(tag: string): string {
+    return tag.length > 0 ? `#${tag}` : 'New tag';
 }
 
 /**

@@ -1,7 +1,7 @@
 import type { Setting, SettingDefinitionItem } from 'obsidian';
 
 import type RonaldPlugin from '../main';
-import { shortcutName, type SettingSectionContext } from '../settings/section';
+import { editableList, shortcutName, type SettingSectionContext } from '../settings/section';
 
 export interface NavigationSettings {
     /**
@@ -27,35 +27,17 @@ export function navigationSettingSections({
     const recentFolders = plugin.settings.recentFolders;
 
     return [
-        {
-            type: 'list',
+        editableList(save, {
             // The bar adds "overige" itself, after these, so every note in
             // the list is reachable by some chip.
             heading: 'Folders to filter recent notes on (plus "overige")',
-            cls: 'ronald-setting-tag-list',
             emptyState: 'No folders yet.',
-            addItem: {
-                name: 'Add folder',
-                action: () => {
-                    recentFolders.push('');
-                    void save();
-                },
-            },
-            onReorder: (oldIndex, newIndex) => {
-                const [moved] = recentFolders.splice(oldIndex, 1);
-                if (moved !== undefined) recentFolders.splice(newIndex, 0, moved);
-                void save();
-            },
-            onDelete: (index) => {
-                recentFolders.splice(index, 1);
-                void save();
-            },
-            items: recentFolders.map((folder, index) => ({
-                name: folder.length > 0 ? folder : 'New folder',
-                searchable: false,
-                render: (setting: Setting) => renderFolderRow(plugin, setting, recentFolders, index),
-            })),
-        },
+            addName: 'Add folder',
+            entries: recentFolders,
+            newEntry: () => '',
+            itemName: (folder) => (folder.length > 0 ? folder : 'New folder'),
+            render: (setting, _folder, index) => renderFolderRow(plugin, setting, recentFolders, index),
+        }),
     ];
 }
 
