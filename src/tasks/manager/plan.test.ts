@@ -109,6 +109,9 @@ test('a note that is both source and target gets one text with both', () => {
     const change = result.changes.find((c) => c.path === INBOX)!;
     assert.equal(change.edited, true);
     assert.equal(change.appended, ['- [ ] Kind', '\t- [ ] Kleinkind', '- [ ] Al hier'].join('\n'));
+    assert.deepEqual(summaryLines(result.summary, (path) => path.slice(8, -3)), [
+        'Applied: 3 moved to inbox, 2 moved to today',
+    ]);
 });
 
 test("a changed note's own changes are dropped, moves into it still go", () => {

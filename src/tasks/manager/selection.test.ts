@@ -3,7 +3,7 @@ import { test } from 'node:test';
 
 import { Drafts } from './draft';
 import { endStates, type Filters, groupRows, matching, selectableRows } from './model';
-import { findAgain, Selection } from './selection';
+import { findAgain, remap, Selection } from './selection';
 import { notesOf } from './testtasks';
 
 const ROWS = [10, 11, 12, 13, 14];
@@ -115,4 +115,14 @@ test('findAgain matches duplicate lines in order, and drops what is gone', () =>
         ),
         [1, 2, undefined, undefined],
     );
+});
+
+test('remap carries indexes over a reload, through where each task went', () => {
+    const tasks = [
+        { file: { path: 'today.md' }, raw: '- [ ] Twee' },
+        { file: { path: 'inbox.md' }, raw: '- [x] Een' },
+    ];
+    const places = [{ path: 'inbox.md', raw: '- [x] Een' }, undefined, { path: 'today.md', raw: '- [ ] Twee' }];
+    const map = remap(3, (i) => places[i], tasks);
+    assert.deepEqual([0, 1, 2].map(map), [1, undefined, 0]);
 });

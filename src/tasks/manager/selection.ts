@@ -130,3 +130,18 @@ export function findAgain(
         return i;
     });
 }
+
+/**
+ * How the tasks before a reload map onto the tasks after it: `placeOf` says
+ * where each old task is now, and each is found again as `findAgain` does.
+ */
+export function remap(
+    count: number,
+    placeOf: (i: number) => TaskPlace | undefined,
+    tasks: readonly { file: { path: string }; raw: string }[],
+): (i: number) => number | undefined {
+    const olds = Array.from({ length: count }, (_, i) => i).filter((i) => placeOf(i) !== undefined);
+    const found = findAgain(olds.map((i) => placeOf(i)!), tasks);
+    const map = new Map(olds.map((old, k) => [old, found[k]]));
+    return (i) => map.get(i);
+}

@@ -139,6 +139,13 @@ export function planChanges(
         const text = added.length > 0 ? withAppended(body, added) : body;
         if (text !== base) changes.push({ path, base, text, appended: added, edited: kept.has(path) });
     }
+    // The notice names the notes in group order too.
+    const rank = (path: string) => {
+        const index = notes.findIndex((note) => note.path === path);
+        return index === -1 ? notes.length : index;
+    };
+    summary.moved = new Map([...summary.moved].sort(([a], [b]) => rank(a) - rank(b)));
+
     // Stable, so the notes stay in group order within both parts.
     changes.sort((a, b) => Number(b.appended.length > 0) - Number(a.appended.length > 0));
 

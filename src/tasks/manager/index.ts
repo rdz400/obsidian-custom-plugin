@@ -19,6 +19,11 @@
  *   button per filter tag (1…9), Move to today, someday, overview, inbox
  *   (T, S, O, I), Finish or Reopen (X). Mod+Z undoes the last action,
  *   Discard drops every change.
+ * - Apply (Mod+Enter) writes the changes, each note once, and reads the
+ *   notes again; the modal stays open. A note changed since the manager read
+ *   it keeps its own changes, and the notice says so. With nothing staged,
+ *   Mod+Z undoes the last apply, as long as no note changed since.
+ * - Closing with changes pending asks whether to apply them first.
  *
  * Where the code is
  * -----------------
@@ -27,7 +32,10 @@
  * - model.ts       end states, filters, the grouped tree, counts and button states
  * - selection.ts   selection, focus and range anchor
  * - plan.ts        the new text of every note an apply changes
- * - modal.ts       the modal: layout, filters, keyboard
+ * - apply.ts       writing the plan, and undoing the last apply
+ * - modal.ts       the modal: layout, filters, apply, closing
+ * - keys.ts        its keyboard
+ * - confirm.ts     "Apply n changes?" when closing
  * - listview.ts    the list of groups and rows
  * - actionbar.ts   the bar of buttons at the bottom
  * - testtasks.ts   for the tests: task notes from their text
@@ -42,7 +50,9 @@ import { TaskManagerModal } from './modal';
 async function manageTasks(plugin: RonaldPlugin, settings: TaskSettings): Promise<void> {
     const data = await loadTasks(plugin.app, settings);
     const chips = settings.taskFilterTags.filter((chip) => chip.value.length > 0);
-    new TaskManagerModal(plugin.app, data, chips).open();
+    // The settings as they are now, for reading the notes again after an apply.
+    const reload = () => loadTasks(plugin.app, settings);
+    new TaskManagerModal(plugin.app, data, chips, reload).open();
 }
 
 /** Register "Manage tasks" and its ribbon icon. */

@@ -435,7 +435,8 @@ src/tasks/
     plan.ts           pure: base texts + list lines + drafts → new texts,
                       where tasks end up, summary
     apply.ts          conflict check, writes, parse wait, undo of the apply
-    modal.ts          TaskManagerModal: layout, filters, keyboard, close guard
+    modal.ts          TaskManagerModal: layout, filters, close guard
+    keys.ts           the keyboard, split off to keep modal.ts short
     listview.ts       renders groups and rows, mouse handling
     actionbar.ts      tally, undo/discard/apply, tag buttons, move and finish
     confirm.ts        the "Apply n changes?" modal
