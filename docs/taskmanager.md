@@ -412,11 +412,14 @@ A subfolder of the task feature, like `estimate/`:
 
 ```
 src/tasks/
-  taskitems.ts        TaskItem, collectTaskNoteTasks, taskText, textParts,
-                      setTaskMarker, line lookup — moved out of search.ts
+  taskitems.ts        TaskItem, noteTaskItems, taskText, textParts,
+                      setTaskMarker, findTaskLine — moved out of search.ts;
+                      free of Obsidian values, so the tests can build tasks
+                      from a note's text
+  tasknotes.ts        gains collectTaskNoteTasks, which reads the vault
   listblocks.ts       listItemLines, outdent, withoutLines — moved out of
-                      gtdnotes.ts, working on { start, end, parent } so both
-                      the metadata cache and ListLine fit
+                      gtdnotes.ts, working on ListSpan { start, end, parent }
+                      so both the metadata cache (cacheSpans) and ListLine fit
   taglines.ts         pure tag edits on a line: hasOwnTag, addTag, removeTag
   manager/
     index.ts          overview + registerTaskManager(plugin): command, ribbon
@@ -438,6 +441,7 @@ src/tasks/
     model.test.ts
     selection.test.ts
     plan.test.ts
+  taskitems.test.ts
   taglines.test.ts
   listblocks.test.ts
 ```

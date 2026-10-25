@@ -19,6 +19,10 @@ export function isDoneMarker(marker: string): boolean {
 export interface ListLine {
     /** The line the item starts on. */
     line: number;
+    /** The item's last line: `line`, unless its text runs on below it. Subitems are not part of it. */
+    end: number;
+    /** The line the parent item starts on, or undefined for a top-level item. */
+    parent: number | undefined;
     /** That full source line. */
     raw: string;
     /** The checkbox marker, or undefined for a plain bullet. */
@@ -56,6 +60,8 @@ export function listLines(items: ListItemCache[], lines: string[]): ListLine[] {
         const parent = item.parent < 0 ? undefined : byLine.get(item.parent);
         const listLine: ListLine = {
             line,
+            end: item.position.end.line,
+            parent: parent?.line,
             raw,
             marker: taskMarker(raw),
             depth: (parent?.depth ?? 0) + 1,

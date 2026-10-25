@@ -76,6 +76,11 @@ export interface FilterChip {
     type: string;
     /** Chip text, if not the value itself prefixed with "#". */
     label?: string;
+    /**
+     * The key the host toggles the chip with, for a bar without digit
+     * shortcuts: shown in the tooltip and read out like a digit shortcut.
+     */
+    hint?: string;
 }
 
 /** Everything the bar needs to know about the world it is placed in. */
@@ -89,6 +94,12 @@ export interface FilterBarOptions {
      * macOS and Ctrl elsewhere), or "cmd", "ctrl" or "alt" to name one outright.
      */
     modifier?: ShortcutModifier;
+    /**
+     * Whether the chips answer to <modifier>+<digit> (the default). Without,
+     * `handleKeyDown` leaves every press alone and a chip's tooltip shows its
+     * `hint`, for a host that toggles them with keys of its own.
+     */
+    shortcuts?: boolean;
 }
 
 /** How many results each value stands for, keyed by value; missing means zero. */
@@ -113,14 +124,16 @@ export class FilterBar {
     private readonly chips: readonly FilterChip[];
     private readonly onChange: (active: ReadonlySet<string>) => void;
     private readonly modifier: ShortcutModifier;
+    private readonly shortcuts: boolean;
     private readonly chipEls = new Map<string, HTMLElement>();
     private readonly counts = new Map<string, HTMLElement>();
     private readonly active = new Set<string>();
 
-    constructor({ chips, onChange, modifier = 'mod' }: FilterBarOptions) {
+    constructor({ chips, onChange, modifier = 'mod', shortcuts = true }: FilterBarOptions) {
         this.chips = chips;
         this.onChange = onChange;
         this.modifier = modifier;
+        this.shortcuts = shortcuts;
         this.el = createDiv({ cls: 'ronald-task-filters' });
 
         chips.forEach((chip, index) => this.renderChip(chip, index));
@@ -131,7 +144,7 @@ export class FilterBar {
         return this.active;
     }
 
-    private renderChip({ value, type, label }: FilterChip, index: number): void {
+    private renderChip({ value, type, label, hint }: FilterChip, index: number): void {
         const chip = this.el.createSpan({
             cls: `ronald-task-filter ronald-task-filter-type-${type}`,
         });
@@ -146,16 +159,22 @@ export class FilterBar {
 
         // The count has the only badge, so the shortcut is not written on the
         // chip: it lives in the tooltip and in the label read out instead.
-        const shortcut = shortcutFor(index);
+        const shortcut = this.shortcutLabel(index) ?? hint;
         if (shortcut !== undefined) {
-            const label = modifierLabel(this.modifier);
-            chip.setAttribute('aria-keyshortcuts', `${label}+${shortcut}`);
-            chip.setAttribute('aria-label', `${text} (${label}+${shortcut})`);
-            chip.setAttribute('title', `${label}+${shortcut}`);
+            chip.setAttribute('aria-keyshortcuts', shortcut);
+            chip.setAttribute('aria-label', `${text} (${shortcut})`);
+            chip.setAttribute('title', shortcut);
         }
 
         chip.addEventListener('click', () => this.toggle(value));
         this.chipEls.set(value, chip);
+    }
+
+    /** "Cmd+1" for the first chip, and so on; none past the ninth or without shortcuts. */
+    private shortcutLabel(index: number): string | undefined {
+        const digit = shortcutFor(index);
+        if (!this.shortcuts || digit === undefined) return undefined;
+        return `${modifierLabel(this.modifier)}+${digit}`;
     }
 
     /**
@@ -196,7 +215,7 @@ export class FilterBar {
      * its own modifier (see `modifierHeld`), so their digits never collide.
      */
     handleKeyDown(event: KeyboardEvent): boolean {
-        if (!modifierHeld(event, this.modifier)) return false;
+        if (!this.shortcuts || !modifierHeld(event, this.modifier)) return false;
 
         const value = this.valueForShortcut(event);
         if (value === undefined) return false;

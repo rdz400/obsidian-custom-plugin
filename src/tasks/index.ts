@@ -62,14 +62,18 @@
  * Where the code is
  * -----------------
  * - settings.ts       the task settings and their part of the settings tab
- * - tasknotes.ts      task note badges, keeping settings right on rename, "Open taken"
+ * - tasknotes.ts      task note badges, reading their tasks, keeping settings right
+ *                     on rename, "Open taken"
+ * - taskitems.ts      a task as the search shows it, and edits to its line
  * - search.ts         the task search
  * - gtdnotes.ts       the GTD notes and "Move line(s) to …"
+ * - listblocks.ts     taking list items out with their subitems, for "Move line(s) to …"
  * - gtdswitcher.ts    "Switch to GTD note" and "Open inbox"
  * - movetonotes.ts    "Move tagged tasks to their GTD notes"
  * - sorttasks.ts      "Move tasks with a tag to top"
  * - reorder.ts        finding top-level tasks with their subtasks, for both of the above
  * - tags.ts           the tag commands
+ * - taglines.ts       finding, adding and removing a tag on a line, for those
  * - klaar.ts          the "klaar" note
  * - undomove.ts       undo and redo of a move in the note it went to
  * - checkbox.ts       the checkbox cycle

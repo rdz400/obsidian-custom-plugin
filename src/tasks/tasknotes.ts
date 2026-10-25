@@ -1,9 +1,10 @@
 import { App, Notice, TAbstractFile, TFile } from 'obsidian';
 
-import { collectTaskNotes, isTaskNote } from '../shared/tasknotes';
+import { collectTaskNotes, isTaskNote, readTaskNoteLines } from '../shared/tasknotes';
 import { GTD_NOTES, gtdNoteOf } from './gtdnotes';
 import type RonaldPlugin from '../main';
 import type { TaskSettings } from './settings';
+import { noteTaskItems, type TaskItem } from './taskitems';
 
 /** How a task note is marked next to its tasks in the task search. */
 export interface TaskNoteBadge {
@@ -30,6 +31,20 @@ export function taskNoteBadge(file: TFile, settings: TaskSettings): TaskNoteBadg
     // Spread so a name starting with an emoji or other surrogate pair keeps it whole.
     const first = [...file.basename][0] ?? '?';
     return { letter: first.toLowerCase(), label: file.basename };
+}
+
+/**
+ * Every task in every task note, the notes directly in the task folder, for
+ * the task search and the task manager; see `noteTaskItems`.
+ */
+export async function collectTaskNoteTasks(
+    app: App,
+    settings: TaskSettings,
+): Promise<TaskItem[]> {
+    const notes = await readTaskNoteLines(app, settings.taskFolder);
+    return notes.flatMap(({ file, lines }) =>
+        noteTaskItems(file, taskNoteBadge(file, settings), gtdNoteOf(file, settings)?.id, lines),
+    );
 }
 
 /** `path` after a rename of `oldPath` to `newPath`, which may be a parent of it. */
