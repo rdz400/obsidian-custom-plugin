@@ -1,4 +1,4 @@
-import { App, ListItemCache, MarkdownView, Notice } from 'obsidian';
+import { App, ListItemCache, MarkdownView, Notice, type TFile } from 'obsidian';
 
 import { formatDate } from '../shared/date';
 import { freshCache } from '../shared/editor/freshcache';
@@ -6,6 +6,14 @@ import { removeMoved } from './undomove';
 
 /** The note finished tasks are moved to, and opened by "Open klaar". */
 const KLAAR_NOTE = 'klaar';
+
+/**
+ * The "klaar" note, resolved the way `[[klaar]]` is: in any folder, and the
+ * same note for moving and opening when more than one note is called that.
+ */
+function findKlaarNote(app: App): TFile | null {
+    return app.metadataCache.getFirstLinkpathDest(KLAAR_NOTE, '');
+}
 
 /** A finished checkbox is `[x]` or `[X]`. */
 function isDoneTask(item: ListItemCache): boolean {
@@ -55,7 +63,7 @@ export async function moveFinishedTasksToKlaar(app: App): Promise<void> {
         return;
     }
 
-    const target = app.vault.getMarkdownFiles().find((f) => f.basename === KLAAR_NOTE);
+    const target = findKlaarNote(app);
     if (!target) {
         new Notice('Note "klaar" not found');
         return;
@@ -179,7 +187,7 @@ export async function moveFinishedTasksToKlaar(app: App): Promise<void> {
 
 /** Open the "klaar" note in the most recent tab of the main area. */
 export async function openKlaar(app: App): Promise<void> {
-    const note = app.metadataCache.getFirstLinkpathDest(KLAAR_NOTE, '');
+    const note = findKlaarNote(app);
     if (!note) {
         new Notice(`Note "${KLAAR_NOTE}" not found`);
         return;
