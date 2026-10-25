@@ -292,9 +292,12 @@ are free because there is no text field. Ignore `event.repeat` for actions.
 Designed for the phone first.
 
 - On a phone (`body.is-phone`) the modal fills the screen: full width and
-  height, no rounded outer corners, the action bar padded by
-  `env(safe-area-inset-bottom)`.
-- Touch targets are at least 44px high: rows, chips, toolbar buttons.
+  height, no rounded outer corners. It keeps clear of the status bar, the
+  notch and the home indicator with Obsidian's `--safe-area-inset-*`: a
+  transparent border at the top and sides (so the close button, placed
+  absolutely, moves too) and the action bar's bottom padding.
+- Touch targets are at least 44px high: rows and toolbar buttons; the chips,
+  in a row of their own, 36px **(decided after trying it)**.
 - All filter chips share one row, which scrolls horizontally (`overflow-x:
   auto`, no scrollbar) **(decided after trying it)**; toolbar rows scroll the
   same way instead of wrapping, so the header stays short and the list keeps
@@ -524,7 +527,7 @@ Obsidian variables only, no shadows, gradients or glows, weights no higher than
 - Group heading: small, uppercase, widely tracked, `--text-muted`, like an H3
   label; the count in `--text-faint`.
 - Rows: no fill at rest, `--background-modifier-hover` on hover; close
-  together, kept apart by a dotted `--background-modifier-border` line
+  together, kept apart by a dotted `--text-faint` line (the divider colour)
   **(decided after trying it)**.
   - Selected: `--background-modifier-active-hover`.
   - Focused: an inset 1px outline (not a shadow) in
