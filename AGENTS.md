@@ -8,7 +8,7 @@
 
 ## Environment & tooling
 
-- Node.js: use current LTS (Node 18+ recommended).
+- Node.js: use current LTS. The tests need Node 22.18 or later, which runs TypeScript without a build step.
 - **Package manager: npm** (required for this sample - `package.json` defines npm scripts and dependencies).
 - **Bundler: esbuild** (required for this sample - `esbuild.config.mjs` and build scripts depend on it). Alternative bundlers like Rollup or webpack are acceptable for other projects if they bundle all external dependencies into `main.js`.
 - Types: `obsidian` type definitions.
@@ -32,6 +32,18 @@ npm run dev
 ```bash
 npm run build
 ```
+
+### Tests
+
+```bash
+npm test
+```
+
+- Unit tests use Node's own runner (`node:test`), no test framework. A test sits next to the module it tests, named after it: `convention.ts` → `convention.test.ts`.
+- Only code that runs without Obsidian can be tested this way: a module may import types from `obsidian` (`import type`), but no values. Keep logic like that in files of its own (`convention.ts`, `estimate.ts`, `reorder.ts`) and test it there.
+- Code that reads Obsidian's metadata cache takes a cache built from a note's text by `cacheOf` in `shared/testcache.ts`.
+- `test-resolve.mjs` lets Node resolve the extensionless imports in `src/`; the build doesn't use it, and test files are never bundled into `main.js`.
+- Add or change tests with a change to that logic, and run `npm test` before deploying.
 
 ## Linting
 
@@ -69,7 +81,7 @@ npm run build
     - Something that doesn't fit any feature gets a new feature folder: an `index.ts` with an overview and a `register…(plugin)` function, one call to it in `main.ts`, and a line for it in the layout above. Decide its dependency rule, add it to the list above and add the folder to `FEATURES` in `eslint.config.mts`; a folder missing there isn't checked.
     - Code moves to `shared/` only once a second feature needs it, and it stays free of feature knowledge (no commands, no feature settings).
 - **Feature overviews**: each feature's `index.ts` starts with an explanation of the feature: what it is for, how to use it (commands, ribbon icons, URIs, settings), and which file does what. Update it in the same change as the feature: a new or renamed command, URI parameter, setting or file.
-- **File names**: lower case, no separators (`tasknotes.ts`, `linecommands.ts`). The main file of a feature is `index.ts`; settings are in `settings.ts`; URI handlers in `urihandler.ts`.
+- **File names**: lower case, no separators (`tasknotes.ts`, `linecommands.ts`). The main file of a feature is `index.ts`; settings are in `settings.ts`; URI handlers in `urihandler.ts`; tests in `<module>.test.ts`.
 - **Do not commit build artifacts**: Never commit `node_modules/`, `main.js`, or other generated files to version control.
 - Keep the plugin small. Avoid large dependencies. Prefer browser-compatible packages.
 - The build writes `main.js` to the project root; `to-vault.sh` copies it with `manifest.json` and `styles.css` to the top level of the plugin folder in the vault.

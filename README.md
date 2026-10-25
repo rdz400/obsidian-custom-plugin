@@ -6,6 +6,7 @@ A personal Obsidian plugin for custom functionality tailored to my workflow.
 
 - `npm i` to install dependencies
 - `npm run dev` to start compilation in watch mode
+- `npm test` to run the unit tests (Node 22.18 or later)
 
 ## Installation
 

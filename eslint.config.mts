@@ -70,6 +70,7 @@ export default tseslint.config(
 		'node_modules',
 		'dist',
 		'esbuild.config.mjs',
+		'test-resolve.mjs',
 		'version-bump.mjs',
 		'versions.json',
 		'main.js',
@@ -93,4 +94,13 @@ export default tseslint.config(
 	},
 	...obsidianmd.configs.recommended,
 	...dependencyRules,
+	// Tests run in Node with node:test, never in Obsidian: they import Node's
+	// own modules, and node:test's `test()` returns a promise the runner tracks.
+	{
+		files: ['src/**/*.test.ts'],
+		rules: {
+			'import/no-nodejs-modules': 'off',
+			'@typescript-eslint/no-floating-promises': 'off',
+		},
+	},
 );
