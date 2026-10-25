@@ -940,12 +940,12 @@ body {
 }
 
 /*
- * Every other row a faint shade darker, for scanning across a wide row.
+ * Every other row half a shade darker, for scanning across a wide row.
  * Each group starts afresh: its heading is the first child. Hover and
  * selection come after, so they still show on a shaded row.
  */
 .ronald-task-manager-row:nth-child(odd) {
-    background: var(--background-primary-alt);
+    background: color-mix(in srgb, var(--background-primary-alt) 50%, var(--background-primary));
 }
 
 .ronald-task-manager-row:hover {

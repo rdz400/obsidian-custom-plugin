@@ -528,7 +528,8 @@ Obsidian variables only, no shadows, gradients or glows, weights no higher than
   label; the count in `--text-faint`.
 - Rows: no fill at rest, `--background-modifier-hover` on hover; close
   together, kept apart by a dotted `--text-faint` line (the divider colour),
-  every other row in each group shaded `--background-primary-alt`
+  every other row in each group shaded halfway between
+  `--background-primary` and `--background-primary-alt`
   **(decided after trying it)**.
   - Selected: `--background-modifier-active-hover`.
   - Focused: an inset 1px outline (not a shadow) in
