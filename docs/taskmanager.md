@@ -437,6 +437,7 @@ src/tasks/
     listview.ts       renders groups and rows, mouse handling
     actionbar.ts      tally, undo/discard/apply, tag buttons, move and finish
     confirm.ts        the "Apply n changes?" modal
+    testtasks.ts      for tests: task notes and their tasks from their text
     draft.test.ts
     model.test.ts
     selection.test.ts

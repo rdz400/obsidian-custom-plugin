@@ -71,6 +71,12 @@ export function outdent(taken: string[], roots: Set<number>): string[] {
     });
 }
 
+/** `content` with `text` added at the end on lines of its own, as `appendToNote` adds it. */
+export function withAppended(content: string, text: string): string {
+    const separator = content.length > 0 && !content.endsWith('\n') ? '\n' : '';
+    return content + separator + text + '\n';
+}
+
 /**
  * `lines` without the ones in `moved`. A run taken out from between two blank
  * lines takes one of them along, so no double gap is left behind.

@@ -78,6 +78,8 @@
  * - undomove.ts       undo and redo of a move in the note it went to
  * - checkbox.ts       the checkbox cycle
  * - estimate/         time estimates
+ * - manager/          the task manager: staged changes and planning their writes
+ *                     (draft, model, selection, plan); the modal is still to come
  * - taskcount.ts      the task count in the status bar
  * - urihandler.ts     obsidian://ronald-tasks
  *
