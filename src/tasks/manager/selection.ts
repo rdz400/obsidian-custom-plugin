@@ -52,11 +52,29 @@ export class Selection {
 
     /** Move the focus `step` rows down (or up, when negative), staying within `rows`. */
     moveFocus(rows: readonly number[], step: number): number | undefined {
+        this.focus = this.neighbour(rows, step);
+        return this.focus;
+    }
+
+    /**
+     * Move the focus `step` rows and select from the anchor to it, as
+     * Shift+↓ does. Without an anchor, the range starts where the focus was.
+     */
+    extendBy(rows: readonly number[], step: number): void {
+        const target = this.neighbour(rows, step);
+        if (target === undefined) return;
+        if (this.anchor === undefined || !rows.includes(this.anchor)) {
+            this.setAnchor(this.focus !== undefined && rows.includes(this.focus) ? this.focus : target);
+        }
+        this.extendTo(rows, target);
+    }
+
+    /** The row `step` rows from the focus, within `rows`; the first or last without a focus. */
+    private neighbour(rows: readonly number[], step: number): number | undefined {
         if (rows.length === 0) return undefined;
         const at = this.focus === undefined ? -1 : rows.indexOf(this.focus);
         const next = at === -1 ? (step > 0 ? 0 : rows.length - 1) : at + step;
-        this.focus = rows[Math.max(0, Math.min(rows.length - 1, next))];
-        return this.focus;
+        return rows[Math.max(0, Math.min(rows.length - 1, next))];
     }
 
     /** Select every one of `rows`. */

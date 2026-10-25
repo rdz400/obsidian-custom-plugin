@@ -36,6 +36,11 @@
  *   from task notes", for example to clear #vandaag at the end of the day.
  *   Changing that list needs a plugin reload.
  *
+ * Managing tasks
+ * - "Manage tasks" (also a ribbon icon) lists every task grouped by note, to
+ *   select many and toggle their tags, move them to a GTD note or finish
+ *   them. Changes are staged until Apply; see manager/index.ts.
+ *
  * Moving tasks
  * - "Move line(s) to today" (and someday, overview, inbox) sends the selected
  *   list items, with their subtasks, to the end of that GTD note.
@@ -78,8 +83,7 @@
  * - undomove.ts       undo and redo of a move in the note it went to
  * - checkbox.ts       the checkbox cycle
  * - estimate/         time estimates
- * - manager/          the task manager: staged changes and planning their writes
- *                     (draft, model, selection, plan); the modal is still to come
+ * - manager/          the task manager
  * - taskcount.ts      the task count in the status bar
  * - urihandler.ts     obsidian://ronald-tasks
  *
@@ -97,6 +101,7 @@ import type { TabRecency } from '../shared/tabrecency';
 import { toggleCheckBoxAdvanced } from './checkbox';
 import { registerEstimates } from './estimate';
 import { registerGtdNoteCommands } from './gtdnotes';
+import { registerTaskManager } from './manager';
 import { goToGtdNote, showGtdSwitcher } from './gtdswitcher';
 import { moveFinishedTasksToKlaar, openKlaar } from './klaar';
 import { moveTasksToGtdNotes } from './movetonotes';
@@ -240,4 +245,5 @@ export function registerTaskFeatures(plugin: RonaldPlugin, recency: TabRecency):
 
     registerTaskCount(plugin);
     registerEstimates(plugin);
+    registerTaskManager(plugin);
 }

@@ -837,3 +837,104 @@ body {
     color: var(--ronald-estimate-color);
     font-variant-numeric: tabular-nums;
 }
+
+/*
+ * Task manager modal ("Manage tasks" command): filters at the top, the list
+ * scrolling in the middle, the action bar pinned at the bottom. The full
+ * styling and the phone layout follow; this is the layout it works with.
+ */
+.ronald-task-manager {
+    width: min(960px, 92vw);
+    height: 85vh;
+}
+
+.ronald-task-manager .modal-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.ronald-task-manager-note-row {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.ronald-task-manager-note-row .ronald-task-filters {
+    border-bottom: none;
+}
+
+.ronald-task-manager-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--size-4-2) 0;
+}
+
+.ronald-task-manager-row {
+    display: flex;
+    align-items: center;
+    gap: var(--size-4-2);
+    padding: var(--size-4-1) var(--size-4-2);
+    padding-inline-start: calc(var(--size-4-2) + var(--size-4-5) * (var(--depth, 1) - 1));
+    cursor: pointer;
+}
+
+.ronald-task-manager-row.is-selected {
+    background: var(--background-modifier-active-hover);
+}
+
+.ronald-task-manager-row.is-focused {
+    box-shadow: inset 0 0 0 1px var(--background-modifier-border-focus);
+}
+
+.ronald-task-manager-row.is-context {
+    color: var(--text-faint);
+    cursor: default;
+}
+
+.ronald-task-manager-row.is-done .ronald-task-manager-text {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
+.ronald-task-manager-row:not(.is-selected) .ronald-task-manager-mark svg,
+.ronald-task-manager-row.is-context .ronald-task-manager-mark {
+    visibility: hidden;
+}
+
+.ronald-task-manager-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.ronald-task-manager-tag.is-removed {
+    text-decoration: line-through;
+}
+
+.ronald-task-manager-bar {
+    flex-shrink: 0;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.ronald-task-manager-bar-row {
+    display: flex;
+    align-items: center;
+    gap: var(--size-4-2);
+    padding: var(--size-4-1) var(--size-4-2);
+}
+
+.ronald-task-manager-bar-end {
+    margin-inline-start: auto;
+    display: flex;
+    gap: var(--size-4-2);
+}
+
+.ronald-task-manager-move-letter {
+    display: none;
+}
+
+.ronald-task-manager-finish {
+    margin-inline-start: auto;
+}

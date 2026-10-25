@@ -423,6 +423,8 @@ src/tasks/
   taglines.ts         pure tag edits on a line: hasOwnTag, addTag, removeTag
   manager/
     index.ts          overview + registerTaskManager(plugin): command, ribbon
+    load.ts           reading the notes, their tasks and the GTD notes, on
+                      opening and after an apply
     draft.ts          pure: the drafts, where a task ends up, changed tasks,
                       the history stack, discard
     model.ts          pure: filters, tree rows (groups, indent, moved tasks at

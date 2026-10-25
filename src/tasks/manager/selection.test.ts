@@ -44,6 +44,17 @@ test('without an anchor a range starts at the focus', () => {
     assert.deepEqual(selection.values().sort(), [11, 12, 13]);
 });
 
+test('extending by a row starts the range at the focus, and shrinks back', () => {
+    const selection = new Selection();
+    selection.moveFocus(ROWS, 1);
+    selection.extendBy(ROWS, 1);
+    selection.extendBy(ROWS, 1);
+    assert.deepEqual(selection.values().sort(), [10, 11, 12]);
+    selection.extendBy(ROWS, -1);
+    assert.deepEqual(selection.values().sort(), [10, 11]);
+    assert.equal(selection.focus, 11);
+});
+
 test('the focus stays within the rows', () => {
     const selection = new Selection();
     assert.equal(selection.moveFocus(ROWS, -1), 14, 'up from nothing starts at the end');

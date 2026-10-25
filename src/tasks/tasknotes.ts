@@ -1,6 +1,6 @@
 import { App, Notice, TAbstractFile, TFile } from 'obsidian';
 
-import { collectTaskNotes, isTaskNote, readTaskNoteLines } from '../shared/tasknotes';
+import { collectTaskNotes, isTaskNote, readTaskNoteLines, type TaskNoteLines } from '../shared/tasknotes';
 import { GTD_NOTES, gtdNoteOf } from './gtdnotes';
 import type RonaldPlugin from '../main';
 import type { TaskSettings } from './settings';
@@ -41,7 +41,11 @@ export async function collectTaskNoteTasks(
     app: App,
     settings: TaskSettings,
 ): Promise<TaskItem[]> {
-    const notes = await readTaskNoteLines(app, settings.taskFolder);
+    return tasksOfNotes(await readTaskNoteLines(app, settings.taskFolder), settings);
+}
+
+/** The tasks among the list items of `notes`, read before. */
+export function tasksOfNotes(notes: readonly TaskNoteLines[], settings: TaskSettings): TaskItem[] {
     return notes.flatMap(({ file, lines }) =>
         noteTaskItems(file, taskNoteBadge(file, settings), gtdNoteOf(file, settings)?.id, lines),
     );
