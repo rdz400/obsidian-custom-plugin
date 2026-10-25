@@ -923,14 +923,17 @@ body {
     align-items: center;
     column-gap: var(--size-4-2);
     row-gap: var(--size-2-1);
-    min-height: var(--size-4-9);
     padding: var(--size-2-2) var(--size-4-3);
     padding-inline-start: calc(var(--size-4-3) + var(--size-4-5) * (var(--depth, 1) - 1));
     border-inline-start: calc(var(--border-width) * 2) solid transparent;
-    border-radius: var(--radius-s);
     font-size: var(--font-ui-small);
     color: var(--text-normal);
     cursor: var(--cursor);
+}
+
+/* Rows sit close together, kept apart by a faint dotted line. */
+.ronald-task-manager-row + .ronald-task-manager-row {
+    border-top: var(--border-width) dotted var(--background-modifier-border);
 }
 
 .ronald-task-manager-row:hover {
@@ -1211,16 +1214,15 @@ body.is-phone .ronald-task-manager-header > .ronald-task-filters {
 }
 
 /*
- * Rows get room to breathe: more space around each, the circle level with
- * the first line of text rather than the middle of the row, and quieter
- * tags, which carry no border here.
+ * Rows stay touch sized, with their tags on a line of their own below the
+ * text; the tags carry no border here, to keep the row quiet.
  */
 body.is-phone .ronald-task-manager-row {
     align-items: flex-start;
     min-height: var(--ronald-tm-touch);
-    padding-block: var(--size-4-3);
+    padding-block: var(--size-2-3);
     padding-inline-start: calc(var(--size-4-3) + var(--size-4-5) * (min(var(--depth, 1), 4) - 1));
-    row-gap: var(--size-4-1);
+    row-gap: var(--size-2-1);
 }
 
 /* The focus is a keyboard cursor; a tap needs none. */
@@ -1228,13 +1230,6 @@ body.is-phone .ronald-task-manager-row.is-focused {
     outline: none;
 }
 
-body.is-phone .ronald-task-manager-group + .ronald-task-manager-group {
-    margin-top: var(--size-4-6);
-}
-
-body.is-phone .ronald-task-manager-group-heading {
-    padding-block: var(--size-4-2);
-}
 
 body.is-phone .ronald-task-manager-tag {
     border-color: transparent;

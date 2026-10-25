@@ -299,7 +299,7 @@ Designed for the phone first.
   auto`, no scrollbar) **(decided after trying it)**; toolbar rows scroll the
   same way instead of wrapping, so the header stays short and the list keeps
   its room.
-- Rows get more room than on desktop: more space around each, tags without
+- Rows are touch sized, with their tags on a line below the text, tags without
   a border, the focus ring left out (a tap needs none).
 - The action bar sits at the bottom, within thumb reach, and stays put while
   the list scrolls. Apply sits at the right end of its first row, where the
@@ -521,7 +521,9 @@ Obsidian variables only, no shadows, gradients or glows, weights no higher than
   Touch height `calc(var(--size-4-9) + var(--size-4-2))` (44px).
 - Group heading: small, uppercase, widely tracked, `--text-muted`, like an H3
   label; the count in `--text-faint`.
-- Rows: no fill at rest, `--background-modifier-hover` on hover.
+- Rows: no fill at rest, `--background-modifier-hover` on hover; close
+  together, kept apart by a dotted `--background-modifier-border` line
+  **(decided after trying it)**.
   - Selected: `--background-modifier-active-hover`.
   - Focused: an inset 1px outline (not a shadow) in
     `--background-modifier-border-focus`.
