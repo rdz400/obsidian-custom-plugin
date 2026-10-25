@@ -3,6 +3,19 @@ import { App, Editor, Notice } from 'obsidian';
 import { selectedLineRange } from '../shared/editor/lines';
 import { collectTaskNotes } from '../shared/tasknotes';
 import { TagSuggestModal } from '../shared/ui/modals';
+import { addTag, hasOwnTag, removeTag } from './taglines';
+
+/** A list item's line: a bullet or a task. */
+const LIST_ITEM_RE = /^\s*[-*]\s/;
+
+/** Toggle a `#tag` on each list item in lines [from, to]. */
+function toggleTagOnLines(editor: Editor, tag: string, from: number, to: number): void {
+    for (let i = from; i <= to; i++) {
+        const line = editor.getLine(i);
+        if (!LIST_ITEM_RE.test(line)) continue;
+        editor.setLine(i, hasOwnTag(line, tag) ? removeTag(line, tag) : addTag(line, tag));
+    }
+}
 
 /**
  * Open a modal to pick a tag and toggle it at the end of each selected list item.
@@ -15,55 +28,14 @@ export function insertTag(app: App, editor: Editor, tags: string[]): void {
     const choices = tags.map((t) => t.trim()).filter((t) => t.length > 0);
 
     new TagSuggestModal(app, choices, (tag: string) => {
-        const tagRe = new RegExp(`(?<!\\w)#${tag}\\b`);
-        for (let i = from; i <= to; i++) {
-            const line = editor.getLine(i);
-            if (!/^\s*[-*]\s/.test(line)) continue;
-            if (tagRe.test(line)) {
-                editor.setLine(i, line.replace(new RegExp(` ?#${tag}\\b ?`, 'g'), (m, offset, str: string) => {
-                    if (offset === 0) return '';
-                    if (offset + m.length === str.length) return '';
-                    return ' ';
-                }));
-            } else {
-                const separator = line.endsWith(' ') ? '' : ' ';
-                editor.setLine(i, line + separator + `#${tag}`);
-            }
-        }
+        toggleTagOnLines(editor, tag, from, to);
     }).open();
-}
-
-/** Matches an occurrence of `#tag`, not preceded by a word character. */
-function tagPresence(tag: string): RegExp {
-    return new RegExp(`(?<!\\w)#${tag}\\b`);
-}
-
-/**
- * The line with every `#tag` removed, collapsing the space it leaves behind so
- * no double space or trailing space remains.
- */
-function stripTag(line: string, tag: string): string {
-    const strip = new RegExp(` ?(?<!\\w)#${tag}\\b ?`, 'g');
-    return line.replace(strip, (m, offset: number, str: string) => {
-        if (offset === 0) return '';
-        if (offset + m.length === str.length) return '';
-        return ' ';
-    });
 }
 
 /** Toggle a `#tag` on each selected list item. */
 export function toggleTag(editor: Editor, tag: string): void {
-    const present = tagPresence(tag);
     const { from, to } = selectedLineRange(editor);
-    for (let i = from; i <= to; i++) {
-        const line = editor.getLine(i);
-        if (!/^\s*[-*]\s/.test(line)) continue;
-        if (present.test(line)) {
-            editor.setLine(i, stripTag(line, tag));
-        } else {
-            editor.setLine(i, line + ` #${tag}`);
-        }
-    }
+    toggleTagOnLines(editor, tag, from, to);
 }
 
 /**
@@ -78,8 +50,6 @@ export async function removeTagFromTaskNotes(
     taskFolder: string,
     tag: string,
 ): Promise<void> {
-    const present = tagPresence(tag);
-
     const files = collectTaskNotes(app, taskFolder);
 
     let notes = 0;
@@ -89,10 +59,10 @@ export async function removeTagFromTaskNotes(
         let changed = 0;
         await app.vault.process(file, (content) => {
             const result = content.split('\n').map((line) => {
-                if (!/^\s*[-*]\s/.test(line)) return line;
-                if (!present.test(line)) return line;
+                if (!LIST_ITEM_RE.test(line)) return line;
+                if (!hasOwnTag(line, tag)) return line;
                 changed++;
-                return stripTag(line, tag);
+                return removeTag(line, tag);
             });
             return changed > 0 ? result.join('\n') : content;
         });

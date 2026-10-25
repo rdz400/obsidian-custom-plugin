@@ -1,14 +1,31 @@
-import type { ListItemCache, Loc, Pos, TagCache } from 'obsidian';
+import type { ListItemCache, Loc, Pos, TagCache, TFile } from 'obsidian';
+
+/**
+ * For tests only: a stand-in for the note at `path`, with the fields the task
+ * code reads. A real `TFile` can't be made outside Obsidian.
+ */
+export function testFile(path: string): TFile {
+    const name = path.slice(path.lastIndexOf('/') + 1);
+    const file = {
+        path,
+        name,
+        basename: name.replace(/\.md$/, ''),
+        extension: 'md',
+    };
+    // eslint-disable-next-line obsidianmd/no-tfile-tfolder-cast -- no instanceof outside Obsidian
+    return file as TFile;
+}
 
 /**
  * For tests only: the parts of Obsidian's metadata cache that the task code
  * reads, built from a note's text, so code that takes a cache can be tested
  * without Obsidian.
  *
- * Covers what the tests write: list items of one line each, nested by
- * indentation, with or without a checkbox; inline tags; and frontmatter at the
- * top. A top-level item's `parent` is -1, where Obsidian puts the negated line
- * of the section; the code only checks that it is negative.
+ * Covers what the tests write: list items nested by indentation, with or
+ * without a checkbox, whose text may run on in indented lines right below;
+ * inline tags; and frontmatter at the top. A top-level item's `parent` is -1,
+ * where Obsidian puts the negated line of the section; the code only checks
+ * that it is negative.
  */
 export interface TestCache {
     listItems: ListItemCache[];
@@ -48,7 +65,14 @@ export function cacheOf(text: string): TestCache {
         }
 
         const item = LIST_ITEM_RE.exec(raw);
-        if (!item) continue;
+        if (!item) {
+            // An indented line right below an item is more of its text.
+            const last = cache.listItems[cache.listItems.length - 1];
+            if (last?.position.end.line === line - 1 && /^\s+\S/.test(raw)) {
+                last.position.end = loc(line, raw.length);
+            }
+            continue;
+        }
         const indent = (item[1] ?? '').replace(/\t/g, '    ').length;
         while (open.length > 0 && open[open.length - 1]!.indent >= indent) open.pop();
         cache.listItems.push({

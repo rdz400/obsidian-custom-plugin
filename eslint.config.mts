@@ -41,20 +41,24 @@ const dependencyRules = [
 	]),
 	// A feature imports shared/ and the features it is allowed; from settings/
 	// only the section helpers, since its own settings live in the feature.
-	...Object.entries(FEATURES).map(([feature, allowed]) => {
+	// How many "../" lead to src/settings/ depends on how deep the file is:
+	// from a subfolder, "../settings" is the feature's own settings.ts.
+	...Object.entries(FEATURES).flatMap(([feature, allowed]) => {
 		const others = Object.keys(FEATURES).filter(
 			(other) => other !== feature && !allowed.includes(other),
 		);
-		return restrict(`src/${feature}/**/*.ts`, [
-			{
-				regex: importOf(others),
-				message: `${feature}/ must not import from ${others.join(', ')}. ${RULES_MESSAGE}`,
-			},
-			{
-				regex: '^(\\.\\./)+settings(/(?!section$).*)?$',
-				message: `Features import only settings/section from settings/. ${RULES_MESSAGE}`,
-			},
-		]);
+		return [1, 2, 3].map((depth) =>
+			restrict(`src/${feature}/${'*/'.repeat(depth - 1)}*.ts`, [
+				{
+					regex: importOf(others),
+					message: `${feature}/ must not import from ${others.join(', ')}. ${RULES_MESSAGE}`,
+				},
+				{
+					regex: `^(\\.\\./){${depth}}settings(/(?!section$).*)?$`,
+					message: `Features import only settings/section from settings/. ${RULES_MESSAGE}`,
+				},
+			]),
+		);
 	}),
 	// The settings combine each feature's settings.ts and need nothing else.
 	restrict('src/settings/**/*.ts', [

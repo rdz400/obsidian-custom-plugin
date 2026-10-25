@@ -837,3 +837,485 @@ body {
     color: var(--ronald-estimate-color);
     font-variant-numeric: tabular-nums;
 }
+
+/*
+ * Task manager modal ("Manage tasks" command): filters at the top, the list
+ * scrolling in the middle, the action bar pinned at the bottom. Designed for
+ * the phone first; see the end of this part for the phone layout.
+ */
+.ronald-task-manager {
+    --ronald-tm-touch: calc(var(--size-4-9) + var(--size-4-2));
+    width: min(960px, 92vw);
+    height: 85vh;
+    max-height: 85vh;
+}
+
+.ronald-task-manager .modal-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.ronald-task-manager-header {
+    flex-shrink: 0;
+}
+
+.ronald-task-manager-note-row {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: var(--border-width) solid var(--background-modifier-border);
+}
+
+.ronald-task-manager-note-row .ronald-task-filters {
+    border-bottom: none;
+}
+
+/* The tag row sits on the note row: one block, one separator. */
+.ronald-task-manager-header > .ronald-task-filters {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.ronald-task-manager-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--size-4-2) 0;
+}
+
+.ronald-task-manager-list:focus-visible {
+    outline: none;
+}
+
+.ronald-task-manager-empty {
+    padding: var(--size-4-6) var(--size-4-4);
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    text-align: center;
+}
+
+/*
+ * Group headings read as quiet labels, like an H3, on a band a step darker
+ * than the row stripes, so each note stands out when scanning.
+ */
+.ronald-task-manager-group + .ronald-task-manager-group {
+    margin-top: var(--size-4-3);
+}
+
+.ronald-task-manager-group-heading {
+    padding: var(--size-4-1) var(--size-4-4);
+    background: var(--background-secondary);
+    font-size: var(--font-ui-smaller);
+    font-weight: var(--font-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+}
+
+.ronald-task-manager-group-count {
+    color: var(--text-faint);
+}
+
+/*
+ * A row. The start edge always has its border, transparent at rest, so a
+ * changed row can colour it without anything shifting.
+ */
+.ronald-task-manager-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--size-4-2);
+    row-gap: var(--size-2-1);
+    padding: var(--size-2-2) var(--size-4-3);
+    padding-inline-start: calc(var(--size-4-3) + var(--size-4-5) * (var(--depth, 1) - 1));
+    border-inline-start: calc(var(--border-width) * 2) solid transparent;
+    font-size: var(--font-ui-small);
+    color: var(--text-normal);
+    cursor: var(--cursor);
+}
+
+/*
+ * Rows sit close together, kept apart by a dotted line. In the divider
+ * colour of the style guide: the border colour, dotted, all but vanishes.
+ */
+.ronald-task-manager-row + .ronald-task-manager-row {
+    border-top: var(--border-width) dotted var(--text-faint);
+}
+
+/*
+ * Every other row half a shade darker, for scanning across a wide row.
+ * Each group starts afresh: its heading is the first child. Hover and
+ * selection come after, so they still show on a shaded row.
+ */
+.ronald-task-manager-row:nth-child(odd) {
+    background: color-mix(in srgb, var(--background-primary-alt) 50%, var(--background-primary));
+}
+
+.ronald-task-manager-row:hover {
+    background: var(--background-modifier-hover);
+}
+
+.ronald-task-manager-row.is-selected {
+    background: var(--background-modifier-active-hover);
+}
+
+.ronald-task-manager-row.is-focused {
+    outline: var(--border-width) solid var(--background-modifier-border-focus);
+    outline-offset: calc(var(--border-width) * -1);
+}
+
+.ronald-task-manager-row.is-changed {
+    border-inline-start-color: var(--interactive-accent);
+}
+
+.ronald-task-manager-row.is-context {
+    color: var(--text-faint);
+    cursor: default;
+}
+
+.ronald-task-manager-row.is-context:hover {
+    background: none;
+}
+
+.ronald-task-manager-row.is-done .ronald-task-manager-text {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
+.ronald-task-manager-text {
+    flex: 1 1 12em;
+    min-width: 0;
+}
+
+/* Links without their brackets, a size smaller: they say where, the text says what. */
+.ronald-task-manager-link {
+    font-size: var(--font-ui-smaller);
+    color: var(--link-color);
+    text-decoration-line: var(--link-decoration);
+    text-decoration-thickness: var(--link-decoration-thickness);
+}
+
+.ronald-task-manager-row.is-done .ronald-task-manager-link,
+.ronald-task-manager-row.is-context .ronald-task-manager-link {
+    color: inherit;
+}
+
+.ronald-task-manager-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--size-4-2);
+}
+
+.ronald-task-manager-meta:empty {
+    display: none;
+}
+
+.ronald-task-manager-from {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-faint);
+}
+
+.ronald-task-manager-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-2-2);
+}
+
+.ronald-task-manager-tags:empty {
+    display: none;
+}
+
+.ronald-task-manager-tag {
+    padding: 0 var(--size-2-3);
+    border: var(--border-width) solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    background: var(--background-secondary);
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+}
+
+/* Inherited: not on the task's own line, so no tag button removes it there. */
+.ronald-task-manager-tag-inherited {
+    border-style: dashed;
+    background: transparent;
+    color: var(--text-faint);
+}
+
+.ronald-task-manager-tag.is-added {
+    border-color: var(--interactive-accent);
+}
+
+.ronald-task-manager-tag.is-removed {
+    text-decoration: line-through;
+    color: var(--text-faint);
+}
+
+.ronald-task-manager-estimate {
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
+    font-variant-numeric: tabular-nums;
+    color: var(--text-faint);
+}
+
+/* The action bar: always there, never squeezed by the list. */
+.ronald-task-manager-bar {
+    container: ronald-task-manager-bar / inline-size;
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: var(--size-4-4);
+    flex-shrink: 0;
+    padding: var(--size-4-1) 0;
+    border-top: var(--border-width) solid var(--background-modifier-border);
+    background: var(--background-secondary);
+}
+
+.ronald-task-manager-bar-row {
+    display: flex;
+    align-items: center;
+    gap: var(--size-4-2);
+    padding: var(--size-2-2) var(--size-4-3);
+}
+
+/* The tally row spans the bar; tags and moves may share the line below. */
+.ronald-task-manager-bar-row:first-child {
+    flex-basis: 100%;
+}
+
+.ronald-task-manager-move-row {
+    flex: 1;
+}
+
+.ronald-task-manager-tally {
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.ronald-task-manager-bar-end {
+    display: flex;
+    gap: var(--size-4-2);
+    margin-inline-start: auto;
+}
+
+.ronald-task-manager-move-label {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-faint);
+}
+
+/* Quiet buttons: Apply is the only one in the accent colour. */
+.ronald-task-manager-bar button {
+    box-shadow: none;
+    font-size: var(--font-ui-small);
+}
+
+.ronald-task-manager-bar button:not(.mod-cta) {
+    background: transparent;
+    border: var(--border-width) solid var(--background-modifier-border);
+    color: var(--text-normal);
+}
+
+.ronald-task-manager-bar button:not(.mod-cta):not(:disabled):hover {
+    background: var(--background-modifier-hover);
+}
+
+.ronald-task-manager-bar button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.ronald-task-manager-tag-button.is-partial {
+    border-style: dashed;
+    border-color: var(--interactive-accent);
+}
+
+.ronald-task-manager-bar .ronald-task-manager-tag-button.is-all {
+    background: hsla(var(--interactive-accent-hsl), 0.15);
+    border-color: var(--interactive-accent);
+}
+
+.ronald-task-manager-tag-state:not(:empty) {
+    margin-inline-end: var(--size-2-2);
+    color: var(--interactive-accent);
+}
+
+.ronald-task-manager-finish {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--size-2-3);
+    margin-inline-start: auto;
+}
+
+.ronald-task-manager-finish-icon {
+    display: flex;
+}
+
+.ronald-task-manager-finish-icon svg {
+    width: var(--icon-s);
+    height: var(--icon-s);
+}
+
+.ronald-task-manager-move-letter {
+    display: none;
+}
+
+/* Too narrow for the names: the moves show their letter only. */
+@container ronald-task-manager-bar (max-width: 520px) {
+    .ronald-task-manager-move-name {
+        display: none;
+    }
+
+    .ronald-task-manager-move-letter {
+        display: inline;
+    }
+}
+
+/*
+ * On a phone the manager fills the screen. Rows, chips and buttons are touch
+ * sized; the chip and button rows scroll sideways rather than wrap, so the
+ * header stays short and the list keeps its room.
+ */
+/*
+ * Clear of the status bar, the home indicator and, sideways, the notch: a
+ * transparent border the size of each safe area moves everything inside
+ * below it, the close button too, which is placed absolutely and so would
+ * ignore padding. The modal's background still shows through.
+ */
+body.is-phone .ronald-task-manager {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    border-style: solid;
+    border-color: transparent;
+    border-width: var(--safe-area-inset-top) var(--safe-area-inset-right) 0 var(--safe-area-inset-left);
+}
+
+/* The bar reaches the bottom edge; it keeps clear of the home indicator itself. */
+body.is-phone .ronald-task-manager .modal-content {
+    padding-bottom: 0;
+}
+
+body.is-phone .ronald-task-manager .ronald-task-filters,
+body.is-phone .ronald-task-manager-bar-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+body.is-phone .ronald-task-manager .ronald-task-filters::-webkit-scrollbar,
+body.is-phone .ronald-task-manager-bar-row::-webkit-scrollbar {
+    display: none;
+}
+
+/* Chips a little lower than other touch targets: they sit in a row of their own. */
+body.is-phone .ronald-task-manager .ronald-task-filter {
+    flex-shrink: 0;
+    min-height: var(--size-4-9);
+}
+
+/* All chips in one row, scrolling sideways as one. */
+body.is-phone .ronald-task-manager-header {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: var(--border-width) solid var(--background-modifier-border);
+}
+
+body.is-phone .ronald-task-manager-header::-webkit-scrollbar {
+    display: none;
+}
+
+body.is-phone .ronald-task-manager-header .ronald-task-filters,
+body.is-phone .ronald-task-manager-note-row {
+    flex-shrink: 0;
+    overflow-x: visible;
+    border-bottom: none;
+}
+
+body.is-phone .ronald-task-manager-header .ronald-task-filters {
+    padding-block: var(--size-4-1);
+}
+
+body.is-phone .ronald-task-manager-header > .ronald-task-filters {
+    padding-inline-end: 0;
+}
+
+/*
+ * Rows stay touch sized, with their tags on a line of their own below the
+ * text; the tags carry no border here, to keep the row quiet.
+ */
+body.is-phone .ronald-task-manager-row {
+    align-items: flex-start;
+    min-height: var(--ronald-tm-touch);
+    padding-block: var(--size-2-3);
+    padding-inline-start: calc(var(--size-4-3) + var(--size-4-5) * (min(var(--depth, 1), 4) - 1));
+    row-gap: var(--size-2-1);
+}
+
+/* The focus is a keyboard cursor; a tap needs none. */
+body.is-phone .ronald-task-manager-row.is-focused {
+    outline: none;
+}
+
+
+body.is-phone .ronald-task-manager-tag {
+    border-color: transparent;
+}
+
+body.is-phone .ronald-task-manager-tag-inherited {
+    border-color: transparent;
+    background: transparent;
+    padding-inline: 0;
+}
+
+body.is-phone .ronald-task-manager-tag.is-added {
+    border-color: var(--interactive-accent);
+}
+
+body.is-phone .ronald-task-manager-bar {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    padding-bottom: var(--safe-area-inset-bottom);
+}
+
+/* In a column the row sizes of the wide bar would set heights. */
+body.is-phone .ronald-task-manager-bar-row {
+    flex: none;
+}
+
+/* Apply stays in reach at the end of the first row: the tally gives way. */
+body.is-phone .ronald-task-manager-bar-row:first-child {
+    overflow-x: visible;
+}
+
+body.is-phone .ronald-task-manager-tally {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+body.is-phone .ronald-task-manager-bar-end {
+    flex-shrink: 0;
+}
+
+/* Where the task came from, its tags and estimate go on a line of their own. */
+body.is-phone .ronald-task-manager-meta {
+    flex-basis: 100%;
+    justify-content: flex-start;
+}
+
+/* Without a selection the tag and move rows are of no use; the list gets their room. */
+body.is-phone .ronald-task-manager-bar.is-unselected .ronald-task-manager-tag-row,
+body.is-phone .ronald-task-manager-bar.is-unselected .ronald-task-manager-move-row {
+    display: none;
+}
+
+body.is-phone .ronald-task-manager-bar button {
+    flex-shrink: 0;
+    min-height: var(--ronald-tm-touch);
+}

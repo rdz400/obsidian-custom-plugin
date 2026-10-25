@@ -51,6 +51,31 @@ test('listLines keeps siblings apart', () => {
     assert.deepEqual(lines[1]?.links, []);
 });
 
+test('listLines gives each item the line its parent starts on', () => {
+    const lines = linesOf(['- [ ] Een', '\t- Bullet', '\t\t- [ ] Sub', '- [ ] Twee'].join('\n'));
+    assert.deepEqual(
+        lines.map(({ line, parent }) => ({ line, parent })),
+        [
+            { line: 0, parent: undefined },
+            { line: 1, parent: 0 },
+            { line: 2, parent: 1 },
+            { line: 3, parent: undefined },
+        ],
+    );
+});
+
+test('listLines ends an item on its last line of text, not after its subitems', () => {
+    const lines = linesOf(['- [ ] Een', '  en verder', '\t- [ ] Sub', '- [ ] Twee'].join('\n'));
+    assert.deepEqual(
+        lines.map(({ line, end }) => ({ line, end })),
+        [
+            { line: 0, end: 1 },
+            { line: 2, end: 2 },
+            { line: 3, end: 3 },
+        ],
+    );
+});
+
 test('listLines gives a link target, not its display text', () => {
     const lines = linesOf('- [ ] Bellen [[260815-website|de website]]');
     assert.deepEqual(lines[0]?.links, ['260815-website']);
