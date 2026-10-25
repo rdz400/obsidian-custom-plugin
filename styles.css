@@ -939,6 +939,15 @@ body {
     border-top: var(--border-width) dotted var(--text-faint);
 }
 
+/*
+ * Every other row a faint shade darker, for scanning across a wide row.
+ * Each group starts afresh: its heading is the first child. Hover and
+ * selection come after, so they still show on a shaded row.
+ */
+.ronald-task-manager-row:nth-child(odd) {
+    background: var(--background-primary-alt);
+}
+
 .ronald-task-manager-row:hover {
     background: var(--background-modifier-hover);
 }
