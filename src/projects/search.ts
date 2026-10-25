@@ -83,16 +83,14 @@ export interface ProjectItem {
 }
 
 /**
- * How many open tasks each linked note has, keyed by lowercased link target.
+ * How many open tasks link to each note, keyed by the note's path.
  *
  * Only task notes are scanned, matching where tasks are kept. A task counts
  * for the links on its own line and on the list items it hangs under (see
  * `listLines`), so a subtask under "- [ ] Bel [[Tuin]]" counts towards Tuin.
- * A task linking to several projects counts once for each of them.
- *
- * The count is looked up per project by note name, so a link written as a
- * path or with a display text only lands on the project when it reads as
- * the note's name.
+ * Each link is resolved the way Obsidian resolves it, so a link written as a
+ * path or with a display text counts too. A task linking to several projects
+ * counts once for each of them, and once for a project it links to twice.
  */
 async function collectOpenTaskCounts(
     app: App,
@@ -100,14 +98,16 @@ async function collectOpenTaskCounts(
 ): Promise<Map<string, number>> {
     const counts = new Map<string, number>();
 
-    for (const { lines } of await readTaskNoteLines(app, taskFolder)) {
+    for (const { file, lines } of await readTaskNoteLines(app, taskFolder)) {
         for (const { marker, links } of lines) {
             if (marker === undefined || isDoneMarker(marker)) continue;
 
+            const targets = new Set<string>();
             for (const link of links) {
-                const key = link.toLowerCase();
-                counts.set(key, (counts.get(key) ?? 0) + 1);
+                const target = app.metadataCache.getFirstLinkpathDest(link, file.path);
+                if (target) targets.add(target.path);
             }
+            for (const path of targets) counts.set(path, (counts.get(path) ?? 0) + 1);
         }
     }
 
@@ -132,7 +132,7 @@ function toProjectItem(
     return {
         file,
         status: typeof status === 'string' ? status : '',
-        openTasks: taskCounts.get(file.basename.toLowerCase()) ?? 0,
+        openTasks: taskCounts.get(file.path) ?? 0,
     };
 }
 

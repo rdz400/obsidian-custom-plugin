@@ -7,9 +7,12 @@ export const LINK_RE = /\[\[([^\]|#^]+?)(?:[#^][^\]|]*)?(?:\|([^\]]*))?\]\]/g;
 /** An inline tag: the name, without `#`, in group 1. */
 export const TAG_RE = /#([\w/-]+)/g;
 
-/** The wikilink targets on one line, using the display text where given. */
+/**
+ * The wikilink targets on one line: the note each link goes to, not its
+ * display text, so `[[260901-tuin|de tuin]]` gives "260901-tuin".
+ */
 export function linksOnLine(raw: string): string[] {
-    return Array.from(raw.matchAll(LINK_RE)).map((m) => (m[2] ?? m[1] ?? '').trim());
+    return Array.from(raw.matchAll(LINK_RE)).map((m) => (m[1] ?? '').trim());
 }
 
 /** The inline "#tag"s written on one line, lowercased and without `#`. */

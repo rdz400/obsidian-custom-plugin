@@ -27,7 +27,7 @@ export interface ListLine {
     depth: number;
     /** Own tags first, then those inherited from ancestors. */
     tags: string[];
-    /** Own links first, then those inherited from ancestors. */
+    /** Own link targets first, then those inherited from ancestors. */
     links: string[];
 }
 

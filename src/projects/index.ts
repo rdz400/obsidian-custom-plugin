@@ -12,7 +12,8 @@
  * - "Search projects" (also a ribbon icon) lists the open projects, actief
  *   first, each with its status and how many open tasks link to it. A task
  *   counts for a project when it, or a list item it hangs under, links to the
- *   project. The chips filter on status and on whether a project has open
+ *   project, also with a display text ([[project|tekst]]) or as a path. The
+ *   chips filter on status and on whether a project has open
  *   tasks. Enter opens the project, Mod+Enter in a new tab, and Alt+Enter
  *   copies a link to it and inserts it at the cursor.
  * - obsidian://ronald-projects?query=tuin&status=actief,wachten&tasks=met
