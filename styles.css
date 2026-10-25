@@ -895,13 +895,17 @@ body {
     text-align: center;
 }
 
-/* Group headings read as quiet labels, like an H3. */
+/*
+ * Group headings read as quiet labels, like an H3, on a band a step darker
+ * than the row stripes, so each note stands out when scanning.
+ */
 .ronald-task-manager-group + .ronald-task-manager-group {
     margin-top: var(--size-4-3);
 }
 
 .ronald-task-manager-group-heading {
     padding: var(--size-4-1) var(--size-4-4);
+    background: var(--background-secondary);
     font-size: var(--font-ui-smaller);
     font-weight: var(--font-medium);
     text-transform: uppercase;

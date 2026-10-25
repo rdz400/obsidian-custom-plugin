@@ -525,7 +525,8 @@ Obsidian variables only, no shadows, gradients or glows, weights no higher than
   `--background-primary/secondary`, `--background-modifier-border/hover`.
   Touch height `calc(var(--size-4-9) + var(--size-4-2))` (44px).
 - Group heading: small, uppercase, widely tracked, `--text-muted`, like an H3
-  label; the count in `--text-faint`.
+  label; the count in `--text-faint`; on a `--background-secondary` band,
+  a step darker than the row stripes **(decided after trying it)**.
 - Rows: no fill at rest, `--background-modifier-hover` on hover; close
   together, kept apart by a dotted `--text-faint` line (the divider colour),
   every other row in each group shaded halfway between
