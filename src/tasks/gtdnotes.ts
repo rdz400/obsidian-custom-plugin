@@ -10,18 +10,20 @@ import { removeMoved } from './undomove';
 
 /**
  * The GTD notes lines can be sent to, each with its own command. `key` holds
- * the note's path in settings, `tagKey` the tag of the tasks that belong there.
+ * the note's path in settings, `tagKey` the tag of the tasks that belong there,
+ * `icon` the Lucide icon of its command.
  */
 export const GTD_NOTES = [
-    { id: 'today', name: 'today', key: 'todayNote', tagKey: 'todayTag' },
-    { id: 'someday', name: 'someday', key: 'somedayNote', tagKey: 'somedayTag' },
-    { id: 'overview', name: 'overview', key: 'overviewNote', tagKey: 'overviewTag' },
-    { id: 'inbox', name: 'inbox', key: 'inboxNote', tagKey: 'inboxTag' },
+    { id: 'today', name: 'today', key: 'todayNote', tagKey: 'todayTag', icon: 'sun' },
+    { id: 'someday', name: 'someday', key: 'somedayNote', tagKey: 'somedayTag', icon: 'hourglass' },
+    { id: 'overview', name: 'overview', key: 'overviewNote', tagKey: 'overviewTag', icon: 'list-tree' },
+    { id: 'inbox', name: 'inbox', key: 'inboxNote', tagKey: 'inboxTag', icon: 'inbox' },
 ] as const satisfies readonly {
     id: string;
     name: string;
     key: keyof TaskSettings;
     tagKey: keyof TaskSettings;
+    icon: string;
 }[];
 
 /** One of the GTD notes: today, someday, overview or inbox. */
@@ -44,7 +46,7 @@ export function registerGtdNoteCommands(plugin: RonaldPlugin): void {
         plugin.addCommand({
             id: `move-lines-to-${note.id}`,
             name: `Move line(s) to ${note.name}`,
-            icon: 'file-output',
+            icon: note.icon,
             editorCheckCallback: (checking, editor, ctx) => {
                 const target = plugin.app.vault.getFileByPath(plugin.settings[note.key]);
                 if (!ctx.file || !target || target === ctx.file) return false;
