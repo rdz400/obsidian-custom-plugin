@@ -15,9 +15,11 @@
  *   below the frontmatter, with one blank line between.
  * - "Move line(s) to end of file" moves them to the end.
  * - "Move line(s) to another note" asks for a note and moves them to its end.
+ * - "Delete line(s)" deletes the line the cursor is on, or every line the
+ *   selection touches.
  *
  * A selection that ends at the very start of a line doesn't include that
- * line. Moves within a note are a single undo step, and the cursor stays
+ * line. Moves and deletes within a note are a single undo step, and the cursor stays
  * where it was.
  *
  * The line helpers these commands use are in shared/editor/lines.ts, because
@@ -32,6 +34,7 @@ import type { Editor } from 'obsidian';
 
 import type RonaldPlugin from '../main';
 import {
+    deleteLines,
     extendSelectionByLine,
     moveLinesToEnd,
     moveLinesToNote,
@@ -81,5 +84,12 @@ export function registerEditingCommands(plugin: RonaldPlugin): void {
         name: 'Move line(s) to another note',
         icon: 'file-output',
         editorCallback: (editor: Editor) => moveLinesToNote(plugin.app, editor),
+    });
+
+    plugin.addCommand({
+        id: 'delete-lines',
+        name: 'Delete line(s)',
+        icon: 'trash-2',
+        editorCallback: (editor: Editor) => deleteLines(editor),
     });
 }

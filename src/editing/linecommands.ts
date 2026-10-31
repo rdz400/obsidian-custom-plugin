@@ -208,6 +208,21 @@ export function moveLinesToEnd(editor: Editor): void {
     restoreCursor(editor, origin);
 }
 
+/**
+ * Delete the line the cursor is on, or every line the selection touches.
+ *
+ * The cursor stays on the same line number, which now holds the line that
+ * followed the deleted ones (or the new last line, when they ended the note).
+ */
+export function deleteLines(editor: Editor): void {
+    const { from, to } = selectedLineRange(editor);
+    const origin = editor.getCursor('from');
+
+    removeLines(editor, from, to);
+
+    restoreCursor(editor, { line: from, ch: origin.ch });
+}
+
 /** Move the selected lines to a chosen note via a fuzzy-search modal. */
 export function moveLinesToNote(app: App, editor: Editor): void {
     const { from, to } = selectedLineRange(editor);
