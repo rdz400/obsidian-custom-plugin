@@ -56,7 +56,7 @@ obsidian://ronald-task-manager?tags=prio&notes=today,inbox&toplevel=true
 ### `ronald-projects`
 
 - `query`: text to put in the search field.
-- `status`: comma-separated status chips to switch on: `actief`, `backlog`, `misschien`, `wachten`.
+- `status`: comma-separated status chips to switch on, one per status in **Settings → Plugin van Ronald → Project statuses**: `actief`, `backlog`, `misschien`, `wachten`, `klaar`, `geannuleerd` by default.
 - `tasks`: `met` for projects with open tasks, `zonder` for projects without (`met-taken` and `zonder-taken` work too).
 
 ```

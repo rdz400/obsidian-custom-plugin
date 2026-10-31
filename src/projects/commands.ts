@@ -2,7 +2,7 @@ import { App, Editor, MarkdownView, Notice, TFile, WorkspaceLeaf } from 'obsidia
 
 import { formatDate } from '../shared/date';
 import { NoteSuggestModal, StringSuggestModal } from '../shared/ui/modals';
-import { CLOSED_PROJECT_STATUSES, isOpenStatus, PROJECT_STATUSES } from './statuses';
+import { findStatus, isOpenStatus, type ProjectStatus } from './statuses';
 
 /** The base listing the projects, opened by "Open projecten". */
 const PROJECTS_BASE = '0-werkruimte/bases/projecten.base';
@@ -65,11 +65,15 @@ export async function moveProjectNotesToFolder(app: App): Promise<void> {
 }
 
 /** Insert an internal link to a chosen active project at the cursor via a fuzzy-search modal. */
-export function insertProjectLink(app: App, editor: Editor): void {
+export function insertProjectLink(
+    app: App,
+    editor: Editor,
+    statuses: readonly ProjectStatus[],
+): void {
     const projects = app.vault.getMarkdownFiles().filter((file) => {
         const fm = app.metadataCache.getFileCache(file)?.frontmatter;
         if (fm?.type !== 'project') return false;
-        return isOpenStatus(fm.status);
+        return isOpenStatus(statuses, fm.status);
     });
 
     new NoteSuggestModal(
@@ -86,7 +90,7 @@ export function insertProjectLink(app: App, editor: Editor): void {
  * Pick an active project via a fuzzy-search modal and append a link to it to the
  * active note's `project` frontmatter list.
  */
-export function addProjectToFrontmatter(app: App): void {
+export function addProjectToFrontmatter(app: App, statuses: readonly ProjectStatus[]): void {
     const view = app.workspace.getActiveViewOfType(MarkdownView);
     if (!view?.file) {
         new Notice('No active note');
@@ -97,7 +101,7 @@ export function addProjectToFrontmatter(app: App): void {
     const projects = app.vault.getMarkdownFiles().filter((f) => {
         const fm = app.metadataCache.getFileCache(f)?.frontmatter;
         if (fm?.type !== 'project') return false;
-        return isOpenStatus(fm.status);
+        return isOpenStatus(statuses, fm.status);
     });
 
     new NoteSuggestModal(
@@ -121,10 +125,10 @@ export function addProjectToFrontmatter(app: App): void {
 }
 
 /**
- * Pick a project status via a modal and set it as the active note's `status`
- * frontmatter field.
+ * Pick one of the settings' project statuses via a modal and set it as the
+ * active note's `status` frontmatter field.
  */
-export function setStatusInFrontmatter(app: App): void {
+export function setStatusInFrontmatter(app: App, statuses: readonly ProjectStatus[]): void {
     const view = app.workspace.getActiveViewOfType(MarkdownView);
     if (!view?.file) {
         new Notice('No active note');
@@ -132,11 +136,13 @@ export function setStatusInFrontmatter(app: App): void {
     }
     const file = view.file;
 
-    new StringSuggestModal(app, PROJECT_STATUSES, (status: string) => {
+    const values = statuses.map((s) => s.value).filter((value) => value.length > 0);
+
+    new StringSuggestModal(app, values, (status: string) => {
         app.fileManager.processFrontMatter(file, (fm) => {
             fm.status = status;
             // Closed projects get today as their end date; reopening clears it.
-            fm.eind = CLOSED_PROJECT_STATUSES.includes(status)
+            fm.eind = findStatus(statuses, status)?.closed
                 ? formatDate(new Date(), 'YYYY-MM-DD')
                 : null;
         });

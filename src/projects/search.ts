@@ -17,35 +17,22 @@ import {
 import { isDoneMarker } from '../shared/taskline';
 import { readTaskNoteLines } from '../shared/tasknotes';
 import { templateMatcher } from '../shared/vault';
-import { isOpenStatus } from './statuses';
-
-/** Order in which open projects are listed in the search modal. */
-const PROJECT_STATUS_ORDER = ['actief', 'backlog', 'wachten', 'misschien'];
-
-/** Lucide icon per project status; used for the status pill. */
-const STATUS_ICONS: Record<string, string> = {
-    actief: 'play',
-    backlog: 'list',
-    wachten: 'clock',
-    misschien: 'help-circle',
-    klaar: 'check',
-    geannuleerd: 'x',
-};
+import { findStatus, isShownByDefault, statusRank, type ProjectStatus } from './statuses';
 
 /**
- * Status chips offered as filters under the search field, clickable and
- * reachable as Mod+1…Mod+9 in this order. Each chip shows how many projects
- * it matches, so the shortcut is a tooltip rather than printed on the chip.
+ * Status chips offered as filters under the search field, one per status in
+ * the settings, clickable and reachable as Mod+1…Mod+9 in that order. Each
+ * chip shows how many projects it matches, so the shortcut is a tooltip
+ * rather than printed on the chip.
  *
  * `type` groups every status the same way for now; the bar only needs it to
  * key `.ronald-task-filter-type-<type>` in `styles.css`.
  */
-const STATUS_FILTERS: FilterChip[] = [
-    { value: 'actief', type: 'status', label: 'actief' },
-    { value: 'backlog', type: 'status', label: 'backlog' },
-    { value: 'misschien', type: 'status', label: 'misschien' },
-    { value: 'wachten', type: 'status', label: 'wachten' },
-];
+function statusFilters(statuses: readonly ProjectStatus[]): FilterChip[] {
+    return statuses
+        .filter((status) => status.value.length > 0)
+        .map((status) => ({ value: status.value, type: 'status', label: status.value }));
+}
 
 /**
  * Task chips offered as a second filter row, on the open task count that
@@ -114,12 +101,6 @@ async function collectOpenTaskCounts(
     return counts;
 }
 
-/** Sort rank for a status; unknown or missing statuses sort last. */
-function projectStatusRank(status: string): number {
-    const index = PROJECT_STATUS_ORDER.indexOf(status);
-    return index === -1 ? PROJECT_STATUS_ORDER.length : index;
-}
-
 /** Collect the metadata shown for a project in the search modal. */
 function toProjectItem(
     app: App,
@@ -136,10 +117,14 @@ function toProjectItem(
     };
 }
 
-/** Every project note that is still running, in display order. */
-export async function collectOpenProjects(
+/**
+ * Every project note, closed ones too, in display order: by the place of its
+ * status in the settings, then by name.
+ */
+async function collectProjects(
     app: App,
     taskFolder: string,
+    statuses: readonly ProjectStatus[],
 ): Promise<ProjectItem[]> {
     const taskCounts = await collectOpenTaskCounts(app, taskFolder);
 
@@ -149,14 +134,12 @@ export async function collectOpenProjects(
         .getMarkdownFiles()
         .filter((file) => {
             if (isTemplate(file)) return false;
-            const fm = app.metadataCache.getFileCache(file)?.frontmatter;
-            if (fm?.type !== 'project') return false;
-            return isOpenStatus(fm.status);
+            return app.metadataCache.getFileCache(file)?.frontmatter?.type === 'project';
         })
         .map((file) => toProjectItem(app, file, taskCounts))
         .sort(
             (a, b) =>
-                projectStatusRank(a.status) - projectStatusRank(b.status) ||
+                statusRank(statuses, a.status) - statusRank(statuses, b.status) ||
                 a.file.basename.localeCompare(b.file.basename),
         );
 }
@@ -169,6 +152,8 @@ export async function collectOpenProjects(
  */
 export class ProjectSearchModal extends SuggestModal<ProjectItem> {
     private items: ProjectItem[];
+    private readonly statuses: readonly ProjectStatus[];
+    private readonly statusChips: FilterChip[];
     /** Called with the chosen project and the press that chose it. */
     private onChoose: (item: ProjectItem, event: MouseEvent | KeyboardEvent) => void;
     private readonly statusFilters: FilterBar;
@@ -178,11 +163,14 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
     constructor(
         app: App,
         items: ProjectItem[],
+        statuses: readonly ProjectStatus[],
         onChoose: (item: ProjectItem, event: MouseEvent | KeyboardEvent) => void,
         preset: ProjectSearchPreset = {},
     ) {
         super(app);
         this.items = items;
+        this.statuses = statuses;
+        this.statusChips = statusFilters(statuses);
         this.onChoose = onChoose;
         this.setPlaceholder('Search projects…');
         this.modalEl.addClass('ronald-project-search');
@@ -190,7 +178,7 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
         registerAltEnter(this);
 
         this.statusFilters = new FilterBar({
-            chips: STATUS_FILTERS,
+            chips: this.statusChips,
             onChange: () => this.rerunSearch(),
         });
         this.taskFilters = new FilterBar({
@@ -281,15 +269,16 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
     }
 
     /**
-     * True when the project's status is one of `wanted` (or `wanted` is
-     * empty, in which case every status matches).
+     * True when the project's status is one of `wanted`. While `wanted` is
+     * empty, every status matches but the ones hidden in the settings.
      *
      * A project has exactly one status, so unlike task tags this is an OR
      * across active chips rather than an AND: turning on "actief" and
      * "wachten" shows projects in either status, not neither.
      */
     private matchesStatus(item: ProjectItem, wanted: ReadonlySet<string>): boolean {
-        return wanted.size === 0 || wanted.has(item.status);
+        if (wanted.size === 0) return isShownByDefault(this.statuses, item.status);
+        return wanted.has(item.status);
     }
 
     /**
@@ -334,7 +323,7 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
         const counts = new Map<string, number>();
         const wantedTasks = this.taskFilters.activeValues;
 
-        for (const { value: status } of STATUS_FILTERS) {
+        for (const { value: status } of this.statusChips) {
             const total = this.items.filter(
                 (item) =>
                     item.status === status &&
@@ -396,7 +385,7 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
             const status = title.createSpan({
                 cls: `ronald-project-status ronald-project-status-${item.status}`,
             });
-            const icon = STATUS_ICONS[item.status];
+            const icon = findStatus(this.statuses, item.status)?.icon;
             if (icon) setIcon(status.createSpan(), icon);
             status.createSpan({ text: item.status });
         }
@@ -408,8 +397,8 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
 }
 
 /**
- * Search open projects by note name in a modal that shows their status and
- * open task count. Choosing a project opens its note — in the active tab, or
+ * Search projects by note name in a modal that shows their status and open
+ * task count; `statuses` are the settings' statuses. Choosing a project opens its note — in the active tab, or
  * in a new one with Mod+Enter — while Alt+Enter (Option+Enter on macOS)
  * copies a wikilink to it to the clipboard and, when a note is open, also
  * inserts that link at the cursor.
@@ -417,16 +406,17 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
 export async function searchProjects(
     app: App,
     taskFolder: string,
+    statuses: readonly ProjectStatus[],
     preset: ProjectSearchPreset = {},
 ): Promise<void> {
-    const projects = await collectOpenProjects(app, taskFolder);
+    const projects = await collectProjects(app, taskFolder, statuses);
 
     if (projects.length === 0) {
-        new Notice('No open projects found');
+        new Notice('No projects found');
         return;
     }
 
-    new ProjectSearchModal(app, projects, (item, event) => {
+    new ProjectSearchModal(app, projects, statuses, (item, event) => {
         if (wantsAltAction(event)) {
             const view = app.workspace.getActiveViewOfType(MarkdownView);
             const sourcePath = view?.file?.path ?? '';

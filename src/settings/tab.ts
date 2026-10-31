@@ -3,6 +3,7 @@ import { App, PluginSettingTab, type SettingDefinitionItem } from 'obsidian';
 import { linkSettingSections } from '../links/settings';
 import type RonaldPlugin from '../main';
 import { navigationSettingSections } from '../navigation/settings';
+import { projectSettingSections } from '../projects/settings';
 import { normaliseTaskSetting, taskSettingSections } from '../tasks/settings';
 import type { SettingSectionContext } from './section';
 
@@ -19,6 +20,7 @@ export class RonaldSettingTab extends PluginSettingTab {
         };
         return [
             ...taskSettingSections(context),
+            ...projectSettingSections(context),
             ...linkSettingSections(context),
             ...navigationSettingSections(context),
         ];

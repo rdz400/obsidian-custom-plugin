@@ -520,7 +520,8 @@
 }
 
 /* The tag reads as the entry; its type is secondary, so it gets less room. */
-.ronald-setting-tag-row .setting-item-control input[placeholder='Type'] {
+.ronald-setting-tag-row .setting-item-control input[placeholder='Type'],
+.ronald-setting-tag-row .setting-item-control input[placeholder='Icon'] {
     flex: 0 1 8em;
 }
 
