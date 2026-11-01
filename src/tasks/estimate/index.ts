@@ -1,8 +1,9 @@
 import type { TFile } from 'obsidian';
 
 import type RonaldPlugin from '../../main';
+import { lineMarker } from '../../shared/editor/linemarks';
 import { isTaskNote } from '../../shared/tasknotes';
-import { estimateHighlighter } from './editorextension';
+import { ESTIMATE_CLASS, lineEstimate } from './estimate';
 import { estimatePostProcessor } from './postprocessor';
 import { registerEstimateTotal } from './statusbar';
 
@@ -16,7 +17,12 @@ import { registerEstimateTotal } from './statusbar';
 export function registerEstimates(plugin: RonaldPlugin): void {
     const applies = (file: TFile) => isTaskNote(file, plugin.settings.taskFolder);
 
-    plugin.registerEditorExtension(estimateHighlighter(applies));
+    plugin.registerEditorExtension(
+        lineMarker(applies, (text) => {
+            const estimate = lineEstimate(text);
+            return estimate && { from: estimate.from, to: estimate.to, cls: ESTIMATE_CLASS };
+        }),
+    );
     plugin.registerMarkdownPostProcessor(estimatePostProcessor(plugin.app, applies));
     registerEstimateTotal(plugin, applies);
 }
