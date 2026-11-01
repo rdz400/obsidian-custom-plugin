@@ -15,6 +15,11 @@
  *   obsidian://ronald-timerecord?message=Lunch adds that record without
  *   asking, which suits a shortcut for one fixed event.
  * - obsidian://ronald-tijdsregistratie opens the note.
+ * - In every note with `type: tijdsregistratie` in its frontmatter, the time
+ *   a record opens with is coloured by its hour, like a heatmap of the day:
+ *   in live preview, source mode and reading mode. Only that first time is;
+ *   an explicit end later on the line keeps the plain inline code look. The
+ *   gradient runs between two colours set in `styles.css`.
  *
  * Where the code is
  * -----------------
@@ -22,15 +27,19 @@
  * - timerecordmodal.ts   the dialog that asks for the message
  * - timerecordnote.ts    finding and opening the note
  * - urihandler.ts        the two URIs
+ * - heatmap/             colouring the times: which notes, and the editor
+ *                        (index.ts), finding them (heatmap.ts), reading
+ *                        mode (postprocessor.ts)
  */
 
 import type { Plugin } from 'obsidian';
 
 import { addTimeRecord } from './addtimerecord';
+import { registerTimeHeatmap } from './heatmap';
 import { openTimeRecordNote } from './timerecordnote';
 import { registerTijdsregistratieUriHandler, registerTimeRecordUriHandler } from './urihandler';
 
-/** Register the time record commands and URIs. */
+/** Register the time record commands, URIs and the colouring of times. */
 export function registerTimeRecords(plugin: Plugin): void {
     plugin.addCommand({
         id: 'open-tijdsregistratie-note',
@@ -50,4 +59,6 @@ export function registerTimeRecords(plugin: Plugin): void {
 
     registerTijdsregistratieUriHandler(plugin);
     registerTimeRecordUriHandler(plugin);
+
+    registerTimeHeatmap(plugin);
 }

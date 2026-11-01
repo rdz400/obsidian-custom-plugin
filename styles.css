@@ -826,6 +826,131 @@
 }
 
 /*
+ * The time a record opens with, in notes of type "tijdsregistratie", coloured
+ * by its hour: a heatmap of the day, a gradient from the start colour at 7:00
+ * to the end colour at 19:00, a step every hour. Earlier and later hours keep
+ * the colour of the end they are past.
+ *
+ * In reading mode the classes are on the `code` element. In the editor they
+ * are on a span inside each of the theme's inline code spans, which draw the
+ * padding and corners; `:has()` colours those instead, so the time looks the
+ * same in both. Both are coloured through the inline code variables Obsidian
+ * draws them with, so the theme's own rules apply unchanged.
+ *
+ * A snippet can change the two colours, or the strength of the background
+ * with `--ronald-time-heat-tint`.
+ */
+body {
+    --ronald-time-heat-start: var(--color-blue);
+    --ronald-time-heat-end: var(--color-orange);
+    --ronald-time-heat-tint: 20%;
+}
+
+code.ronald-time-heat,
+.cm-inline-code:has(> .ronald-time-heat) {
+    --ronald-time-heat-color: color-mix(
+        in oklch,
+        var(--ronald-time-heat-start),
+        var(--ronald-time-heat-end) var(--ronald-time-heat-step)
+    );
+    --code-normal: var(--ronald-time-heat-color);
+    --code-background: color-mix(
+        in srgb,
+        var(--ronald-time-heat-color) var(--ronald-time-heat-tint),
+        transparent
+    );
+    font-variant-numeric: tabular-nums;
+}
+
+/* How far along the gradient each hour is. */
+.ronald-time-heat-00,
+.cm-inline-code:has(> .ronald-time-heat-00),
+.ronald-time-heat-01,
+.cm-inline-code:has(> .ronald-time-heat-01),
+.ronald-time-heat-02,
+.cm-inline-code:has(> .ronald-time-heat-02),
+.ronald-time-heat-03,
+.cm-inline-code:has(> .ronald-time-heat-03),
+.ronald-time-heat-04,
+.cm-inline-code:has(> .ronald-time-heat-04),
+.ronald-time-heat-05,
+.cm-inline-code:has(> .ronald-time-heat-05),
+.ronald-time-heat-06,
+.cm-inline-code:has(> .ronald-time-heat-06),
+.ronald-time-heat-07,
+.cm-inline-code:has(> .ronald-time-heat-07) {
+    --ronald-time-heat-step: 0%;
+}
+
+.ronald-time-heat-08,
+.cm-inline-code:has(> .ronald-time-heat-08) {
+    --ronald-time-heat-step: 8%;
+}
+
+.ronald-time-heat-09,
+.cm-inline-code:has(> .ronald-time-heat-09) {
+    --ronald-time-heat-step: 17%;
+}
+
+.ronald-time-heat-10,
+.cm-inline-code:has(> .ronald-time-heat-10) {
+    --ronald-time-heat-step: 25%;
+}
+
+.ronald-time-heat-11,
+.cm-inline-code:has(> .ronald-time-heat-11) {
+    --ronald-time-heat-step: 33%;
+}
+
+.ronald-time-heat-12,
+.cm-inline-code:has(> .ronald-time-heat-12) {
+    --ronald-time-heat-step: 42%;
+}
+
+.ronald-time-heat-13,
+.cm-inline-code:has(> .ronald-time-heat-13) {
+    --ronald-time-heat-step: 50%;
+}
+
+.ronald-time-heat-14,
+.cm-inline-code:has(> .ronald-time-heat-14) {
+    --ronald-time-heat-step: 58%;
+}
+
+.ronald-time-heat-15,
+.cm-inline-code:has(> .ronald-time-heat-15) {
+    --ronald-time-heat-step: 67%;
+}
+
+.ronald-time-heat-16,
+.cm-inline-code:has(> .ronald-time-heat-16) {
+    --ronald-time-heat-step: 75%;
+}
+
+.ronald-time-heat-17,
+.cm-inline-code:has(> .ronald-time-heat-17) {
+    --ronald-time-heat-step: 83%;
+}
+
+.ronald-time-heat-18,
+.cm-inline-code:has(> .ronald-time-heat-18) {
+    --ronald-time-heat-step: 92%;
+}
+
+.ronald-time-heat-19,
+.cm-inline-code:has(> .ronald-time-heat-19),
+.ronald-time-heat-20,
+.cm-inline-code:has(> .ronald-time-heat-20),
+.ronald-time-heat-21,
+.cm-inline-code:has(> .ronald-time-heat-21),
+.ronald-time-heat-22,
+.cm-inline-code:has(> .ronald-time-heat-22),
+.ronald-time-heat-23,
+.cm-inline-code:has(> .ronald-time-heat-23) {
+    --ronald-time-heat-step: 100%;
+}
+
+/*
  * Time estimates on tasks ("\20" for twenty minutes), in task notes, in the
  * editor and in reading mode. The colour is a variable so a snippet can
  * change it without fighting this selector.
