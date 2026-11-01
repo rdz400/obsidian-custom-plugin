@@ -16,10 +16,10 @@
  *   asking, which suits a shortcut for one fixed event.
  * - obsidian://ronald-tijdsregistratie opens the note.
  * - In every note with `type: tijdsregistratie` in its frontmatter, the time
- *   a record opens with is coloured by its hour, like a heatmap of the day:
+ *   a record opens with is shaded by its hour, like a heatmap of the day:
  *   in live preview, source mode and reading mode. Only that first time is;
  *   an explicit end later on the line keeps the plain inline code look. The
- *   gradient runs between two colours set in `styles.css`.
+ *   colour, and how strong its tint gets, are set in `styles.css`.
  *
  * Where the code is
  * -----------------

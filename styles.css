@@ -826,43 +826,50 @@
 }
 
 /*
- * The time a record opens with, in notes of type "tijdsregistratie", coloured
- * by its hour: a heatmap of the day, a gradient from the start colour at 7:00
- * to the end colour at 19:00, a step every hour. Earlier and later hours keep
- * the colour of the end they are past.
+ * The time a record opens with, in notes of type "tijdsregistratie", shaded
+ * by its hour: a heatmap of the day in one colour. Its background is the
+ * theme's own inline code background at 7:00 and deepens every hour towards
+ * the colour, to a strong tint at 19:00. Earlier and later hours keep the
+ * shade of the end they are past. The text keeps the inline code colour.
  *
  * In reading mode the classes are on the `code` element. In the editor they
  * are on a span inside each of the theme's inline code spans, which draw the
- * padding and corners; `:has()` colours those instead, so the time looks the
- * same in both. Both are coloured through the inline code variables Obsidian
+ * padding and corners; `:has()` shades those instead, so the time looks the
+ * same in both. Both are shaded through the inline code variable Obsidian
  * draws them with, so the theme's own rules apply unchanged.
  *
- * A snippet can change the two colours, or the strength of the background
- * with `--ronald-time-heat-tint`.
+ * A thin border, a step further towards the colour than the background,
+ * keeps each time apart from the page at any shade.
+ *
+ * A snippet can change the colour, how strong its tint gets at the end of
+ * the day, or how far the border is ahead of the background.
  */
 body {
-    --ronald-time-heat-start: var(--color-blue);
-    --ronald-time-heat-end: var(--color-orange);
-    --ronald-time-heat-tint: 20%;
+    --ronald-time-heat-color: var(--color-accent);
+    --ronald-time-heat-strong: 45%;
+    --ronald-time-heat-border: 35%;
+    /* Taken here, before the times below set their own. */
+    --ronald-time-heat-base: var(--code-background);
 }
 
 code.ronald-time-heat,
 .cm-inline-code:has(> .ronald-time-heat) {
-    --ronald-time-heat-color: color-mix(
-        in oklch,
-        var(--ronald-time-heat-start),
-        var(--ronald-time-heat-end) var(--ronald-time-heat-step)
-    );
-    --code-normal: var(--ronald-time-heat-color);
     --code-background: color-mix(
         in srgb,
-        var(--ronald-time-heat-color) var(--ronald-time-heat-tint),
-        transparent
+        var(--ronald-time-heat-base),
+        color-mix(in srgb, var(--ronald-time-heat-color) var(--ronald-time-heat-strong), var(--ronald-time-heat-base))
+            var(--ronald-time-heat-step)
+    );
+    --code-border-width: var(--border-width);
+    --code-border-color: color-mix(
+        in srgb,
+        var(--ronald-time-heat-color) var(--ronald-time-heat-border),
+        var(--code-background)
     );
     font-variant-numeric: tabular-nums;
 }
 
-/* How far along the gradient each hour is. */
+/* How far towards the strong tint each hour is. */
 .ronald-time-heat-00,
 .cm-inline-code:has(> .ronald-time-heat-00),
 .ronald-time-heat-01,
