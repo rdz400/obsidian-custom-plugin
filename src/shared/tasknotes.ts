@@ -28,8 +28,6 @@ export function collectTaskNotes(app: App, taskFolder: string): TFile[] {
 /** A task note with its list items, see `listLines`. */
 export interface TaskNoteLines {
     file: TFile;
-    /** The note's text the lines were read from. */
-    text: string;
     lines: ListLine[];
 }
 
@@ -43,8 +41,8 @@ export async function readTaskNoteLines(app: App, taskFolder: string): Promise<T
         const items = app.metadataCache.getFileCache(file)?.listItems ?? [];
         if (items.length === 0) continue;
 
-        const text = await app.vault.cachedRead(file);
-        notes.push({ file, text, lines: listLines(items, text.split('\n')) });
+        const lines = (await app.vault.cachedRead(file)).split('\n');
+        notes.push({ file, lines: listLines(items, lines) });
     }
     return notes;
 }

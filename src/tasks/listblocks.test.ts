@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { cacheOf } from '../shared/testcache';
-import { cacheSpans, listItemLines, outdent, withoutLines } from './listblocks';
+import { listItemLines, outdent, withoutLines } from './listblocks';
 
 const note = [
     '# Taken', //            0
@@ -16,36 +16,29 @@ const note = [
     'Tekst', //              8
 ].join('\n');
 
-const spans = cacheSpans(cacheOf(note).listItems);
-
-test('cacheSpans gives a top-level item no parent', () => {
-    assert.deepEqual(spans.slice(0, 2), [
-        { start: 1, end: 1, parent: undefined },
-        { start: 3, end: 4, parent: 1 },
-    ]);
-});
+const items = cacheOf(note).listItems;
 
 test('listItemLines takes an item with its subtree, blank lines left out', () => {
-    const { lines, roots } = listItemLines(spans, 1, 1);
+    const { lines, roots } = listItemLines(items, 1, 1);
     assert.deepEqual([...lines], [1, 3, 4, 5]);
     assert.deepEqual([...roots], [1]);
 });
 
 test('listItemLines takes a subtask without its parent', () => {
-    const { lines, roots } = listItemLines(spans, 4, 4);
+    const { lines, roots } = listItemLines(items, 4, 4);
     assert.deepEqual([...lines], [3, 4, 5]);
     assert.deepEqual([...roots], [3]);
 });
 
 test('listItemLines makes a root of every item touched whose parent is not', () => {
-    const { lines, roots } = listItemLines(spans, 5, 7);
+    const { lines, roots } = listItemLines(items, 5, 7);
     assert.deepEqual([...lines], [5, 6, 7]);
     assert.deepEqual([...roots], [5, 6]);
 });
 
 test('listItemLines takes nothing outside list items', () => {
-    assert.equal(listItemLines(spans, 0, 0).lines.size, 0);
-    assert.equal(listItemLines(spans, 8, 8).lines.size, 0);
+    assert.equal(listItemLines(items, 0, 0).lines.size, 0);
+    assert.equal(listItemLines(items, 8, 8).lines.size, 0);
 });
 
 test('outdent brings each root to the left, its subtree along', () => {

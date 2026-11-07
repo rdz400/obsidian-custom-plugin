@@ -4,7 +4,7 @@ import { restoreCursor, selectedLineRange } from '../shared/editor/lines';
 import { freshCache } from '../shared/editor/freshcache';
 import { appendToNote } from '../shared/vault';
 import type RonaldPlugin from '../main';
-import { cacheSpans, listItemLines, outdent, withoutLines } from './listblocks';
+import { listItemLines, outdent, withoutLines } from './listblocks';
 import type { TaskSettings } from './settings';
 import { removeMoved } from './undomove';
 
@@ -83,7 +83,7 @@ async function moveLinesWithSubtasks(
         return;
     }
 
-    const { lines: moved, roots } = listItemLines(cacheSpans(cache.listItems ?? []), from, to);
+    const { lines: moved, roots } = listItemLines(cache.listItems ?? [], from, to);
     if (moved.size === 0) {
         new Notice('No bullets or tasks selected');
         return;

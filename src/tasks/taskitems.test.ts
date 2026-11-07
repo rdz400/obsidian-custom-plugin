@@ -14,25 +14,10 @@ function tasksOf(text: string) {
 test('noteTaskItems collects tasks only, plain bullets passing their tags on', () => {
     const tasks = tasksOf(['- Bullet #thuis', '\t- [ ] Taak #prio', '- [x] Klaar'].join('\n'));
     assert.deepEqual(
-        tasks.map(({ line, text, done, depth, ownTags, tags }) => ({ line, text, done, depth, ownTags, tags })),
+        tasks.map(({ line, text, done, depth, tags }) => ({ line, text, done, depth, tags })),
         [
-            { line: 1, text: 'Taak', done: false, depth: 2, ownTags: ['prio'], tags: ['prio', 'thuis'] },
-            { line: 2, text: 'Klaar', done: true, depth: 1, ownTags: [], tags: [] },
-        ],
-    );
-});
-
-test('noteTaskItems gives the nearest task above as parent, past plain bullets', () => {
-    const tasks = tasksOf(
-        ['- [ ] Een', '\t- Bullet', '\t\t- [ ] Sub', '\t- [ ] Sub twee', '- Bullet', '\t- [ ] Los'].join('\n'),
-    );
-    assert.deepEqual(
-        tasks.map(({ line, parent }) => ({ line, parent })),
-        [
-            { line: 0, parent: undefined },
-            { line: 2, parent: 0 },
-            { line: 3, parent: 0 },
-            { line: 5, parent: undefined },
+            { line: 1, text: 'Taak', done: false, depth: 2, tags: ['prio', 'thuis'] },
+            { line: 2, text: 'Klaar', done: true, depth: 1, tags: [] },
         ],
     );
 });

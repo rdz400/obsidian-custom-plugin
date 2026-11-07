@@ -1,13 +1,13 @@
 import type { TFile } from 'obsidian';
 
-import { LINK_RE, TAG_RE, tagsOnLine } from '../shared/markdown';
+import { LINK_RE, TAG_RE } from '../shared/markdown';
 import { isDoneMarker, type ListLine } from '../shared/taskline';
 import type { GtdNote } from './gtdnotes';
 import type { TaskNoteBadge } from './tasknotes';
 
 /**
- * The tasks of the task notes as the task search and the task manager show
- * them, and the edits made to a task's line.
+ * The tasks of the task notes as the task search shows them, and the edits
+ * made to a task's line.
  *
  * Nothing here needs Obsidian, so the tests can build tasks from a note's
  * text; reading them from the vault is `collectTaskNoteTasks` in tasknotes.ts.
@@ -30,10 +30,6 @@ export interface TaskItem {
     done: boolean;
     /** How deeply the task is nested: 1 for a top-level item, 2 under it, etc. */
     depth: number;
-    /** The line the nearest task above it starts on, plain bullets skipped; undefined for none. */
-    parent: number | undefined;
-    /** The tags written on the task's own line. */
-    ownTags: string[];
     /** Own tags first, then those inherited from ancestors. */
     tags: string[];
     /** Own link targets first, then those inherited from ancestors. */
@@ -125,11 +121,9 @@ export function noteTaskItems(
     gtd: GtdNote['id'] | undefined,
     lines: readonly ListLine[],
 ): TaskItem[] {
-    const byLine = new Map(lines.map((listLine) => [listLine.line, listLine]));
     const tasks: TaskItem[] = [];
 
-    for (const listLine of lines) {
-        const { line, raw, marker, depth, tags, links } = listLine;
+    for (const { line, raw, marker, depth, tags, links } of lines) {
         if (marker === undefined) continue;
         tasks.push({
             file,
@@ -140,21 +134,10 @@ export function noteTaskItems(
             text: taskText(raw),
             done: isDoneMarker(marker),
             depth,
-            parent: parentTask(listLine, byLine),
-            ownTags: tagsOnLine(raw),
             tags,
             links,
         });
     }
 
     return tasks;
-}
-
-/** The line the nearest task above `item` starts on, past any plain bullets in between. */
-function parentTask(item: ListLine, byLine: ReadonlyMap<number, ListLine>): number | undefined {
-    let parent = item.parent === undefined ? undefined : byLine.get(item.parent);
-    while (parent && parent.marker === undefined) {
-        parent = parent.parent === undefined ? undefined : byLine.get(parent.parent);
-    }
-    return parent?.line;
 }

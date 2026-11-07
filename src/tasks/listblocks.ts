@@ -6,27 +6,6 @@ import type { ListItemCache } from 'obsidian';
  */
 
 /**
- * Where a list item is in its note: the lines it starts and ends on (its own
- * text, without its subitems) and the line its parent starts on, undefined at
- * top level. The metadata cache's list items give these through `cacheSpans`,
- * a `ListLine` as `line`, `end` and `parent`.
- */
-export interface ListSpan {
-    start: number;
-    end: number;
-    parent: number | undefined;
-}
-
-/** The spans of the metadata cache's list items, in the same order. */
-export function cacheSpans(items: readonly ListItemCache[]): ListSpan[] {
-    return items.map(({ position, parent }) => ({
-        start: position.start.line,
-        end: position.end.line,
-        parent: parent < 0 ? undefined : parent,
-    }));
-}
-
-/**
  * The lines to move: those of every list item touching [from, to], and of
  * every item below one of those. Other lines — paragraphs, headings, blank
  * lines, even blank lines between a task and its subtasks — are left out.
@@ -35,20 +14,20 @@ export function cacheSpans(items: readonly ListItemCache[]): ListSpan[] {
  * so one pass tells for every item whether an ancestor was taken.
  */
 export function listItemLines(
-    items: readonly ListSpan[],
+    items: ListItemCache[],
     from: number,
     to: number,
 ): { lines: Set<number>; roots: Set<number> } {
     const starts = new Set<number>();
     const roots = new Set<number>();
     const lines = new Set<number>();
-    for (const { start, end, parent } of items) {
-        const touched = start <= to && end >= from;
-        const parentTaken = parent !== undefined && starts.has(parent);
-        if (!touched && !parentTaken) continue;
-        starts.add(start);
-        if (!parentTaken) roots.add(start);
-        for (let i = start; i <= end; i++) lines.add(i);
+    for (const item of items) {
+        const { start, end } = item.position;
+        const touched = start.line <= to && end.line >= from;
+        if (!touched && !starts.has(item.parent)) continue;
+        starts.add(start.line);
+        if (!starts.has(item.parent)) roots.add(start.line);
+        for (let i = start.line; i <= end.line; i++) lines.add(i);
     }
     return { lines, roots };
 }
@@ -69,12 +48,6 @@ export function outdent(taken: string[], roots: Set<number>): string[] {
         // Indented differently (tabs against spaces): drop what whitespace there is.
         return line.slice(Math.min(indentOf(line).length, prefix.length));
     });
-}
-
-/** `content` with `text` added at the end on lines of its own, as `appendToNote` adds it. */
-export function withAppended(content: string, text: string): string {
-    const separator = content.length > 0 && !content.endsWith('\n') ? '\n' : '';
-    return content + separator + text + '\n';
 }
 
 /**
