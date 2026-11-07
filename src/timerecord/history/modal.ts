@@ -16,6 +16,14 @@ import { matchesWeekdays, WEEKDAY_CHIPS } from './weekdayfilter';
  */
 const MAX_RESULTS = 300;
 
+/** What the search opens with, for a link that asks for a particular view. */
+export interface TimeHistoryPreset {
+    /** Text to put in the search field. */
+    query?: string;
+    /** Values of the weekday chips to switch on. */
+    weekdays?: readonly string[];
+}
+
 /**
  * Search the time record history. Typing narrows the list, and so do the weekday
  * chips or Mod+1 (Monday) to Mod+7 (Sunday). Enter opens the note at the record,
@@ -24,10 +32,11 @@ const MAX_RESULTS = 300;
 export class TimeHistoryModal extends SuggestModal<NoteEntry> {
     private readonly search: (query: string) => NoteEntry[];
     private readonly weekdays: FilterBar;
+    private readonly initialQuery: string;
     /** The records in the current list that get their day's heading above them. */
     private dayOpeners: ReadonlySet<NoteEntry> = new Set();
 
-    constructor(app: App, entries: readonly NoteEntry[]) {
+    constructor(app: App, entries: readonly NoteEntry[], preset: TimeHistoryPreset = {}) {
         super(app);
         this.search = recordSearch(entries);
         this.limit = MAX_RESULTS;
@@ -41,6 +50,25 @@ export class TimeHistoryModal extends SuggestModal<NoteEntry> {
             onChange: () => this.rerunSearch(),
         });
         this.mountWeekdays();
+
+        // Toggled before the modal is on screen, so the first list is already narrowed.
+        for (const weekday of preset.weekdays ?? []) {
+            this.weekdays.toggle(weekday);
+        }
+        this.initialQuery = preset.query ?? '';
+    }
+
+    /**
+     * Seed the search field once the modal is up. It has to wait for `super.onOpen`:
+     * Obsidian renders the list for an empty field then, and the query's own list
+     * has to replace that one.
+     */
+    onOpen(): void {
+        void super.onOpen();
+        if (this.initialQuery.length === 0) return;
+
+        this.inputEl.value = this.initialQuery;
+        this.rerunSearch();
     }
 
     /**

@@ -9,8 +9,8 @@ export type CalendarDay = number;
 const MS_PER_DAY = 86_400_000;
 
 /** Indexed by `getUTCDay`, so Sunday first. */
-const WEEKDAYS_NL = ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'];
-const WEEKDAYS_EN = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+export const WEEKDAYS_NL = ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'];
+export const WEEKDAYS_EN = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 const MONTHS_NL = [
     'januari', 'februari', 'maart', 'april', 'mei', 'juni',

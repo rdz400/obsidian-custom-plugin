@@ -31,7 +31,22 @@ test('undated days in a wider gap only say what they lie between', () => {
         kind: 'between',
         after: nov(4),
         before: nov(7),
+        nth: 1,
+        of: 1,
     });
+});
+
+test('undated days in a row are numbered in the order of the note', () => {
+    assert.deepEqual(placementsOf([undated, undated, dated(4)]).slice(0, 2), [
+        { kind: 'between', after: null, before: nov(4), nth: 1, of: 2 },
+        { kind: 'between', after: null, before: nov(4), nth: 2, of: 2 },
+    ]);
+});
+
+test('each run of undated days is numbered on its own', () => {
+    const placements = placementsOf([undated, dated(4), undated, undated, dated(10)]);
+    assert.deepEqual(placements[0], { kind: 'between', after: null, before: nov(4), nth: 1, of: 1 });
+    assert.deepEqual(placements[3], { kind: 'between', after: nov(4), before: nov(10), nth: 2, of: 2 });
 });
 
 test('too many undated days for the gap are not given dates', () => {
@@ -39,12 +54,24 @@ test('too many undated days for the gap are not given dates', () => {
 });
 
 test('undated days before the first or after the last date have one bound', () => {
-    assert.deepEqual(placementsOf([undated, dated(4)])[0], { kind: 'between', after: null, before: nov(4) });
-    assert.deepEqual(placementsOf([dated(4), undated])[1], { kind: 'between', after: nov(4), before: null });
+    assert.deepEqual(placementsOf([undated, dated(4)])[0], {
+        kind: 'between',
+        after: null,
+        before: nov(4),
+        nth: 1,
+        of: 1,
+    });
+    assert.deepEqual(placementsOf([dated(4), undated])[1], {
+        kind: 'between',
+        after: nov(4),
+        before: null,
+        nth: 1,
+        of: 1,
+    });
 });
 
 test('a note without dates, or with dates out of order, says nothing', () => {
-    const unknown = { kind: 'between', after: null, before: null };
+    const unknown = { kind: 'between', after: null, before: null, nth: 1, of: 1 };
     assert.deepEqual(placementsOf([undated]), [unknown]);
     assert.deepEqual(placementsOf([dated(6), undated, dated(4)])[1], unknown);
 });
@@ -64,8 +91,19 @@ test('placementLabel says as much as is known', () => {
     assert.equal(label([undated], 0), 'datum onbekend');
 });
 
+test('placementLabel tells undated days in a row apart', () => {
+    const labels = (days: WrittenDay[]) => placementsOf(days).map((placement) => placementLabel(placement));
+    assert.deepEqual(labels([undated, undated, dated(4)]).slice(0, 2), [
+        'vóór 4 november 2026 (dag 1 van 2)',
+        'vóór 4 november 2026 (dag 2 van 2)',
+    ]);
+    assert.equal(labels([dated(4), undated, undated, dated(10)])[2], 'tussen 4 november 2026 en 10 november 2026 (dag 2 van 2)');
+    assert.equal(labels([dated(4), undated, undated])[1], 'na 4 november 2026 (dag 1 van 2)');
+    assert.deepEqual(labels([undated, undated]), ['datum onbekend (dag 1 van 2)', 'datum onbekend (dag 2 van 2)']);
+});
+
 test('placementWords is empty without a date, so no weekday is claimed', () => {
     assert.ok(placementWords({ kind: 'written', day: nov(4) }).includes('woensdag'));
     assert.ok(placementWords({ kind: 'inferred', day: nov(5) }).includes('donderdag'));
-    assert.deepEqual(placementWords({ kind: 'between', after: nov(4), before: null }), []);
+    assert.deepEqual(placementWords({ kind: 'between', after: nov(4), before: null, nth: 1, of: 1 }), []);
 });

@@ -1,16 +1,16 @@
 import { App, Notice, type Plugin } from 'obsidian';
 
 import { collectHistory } from './collect';
-import { TimeHistoryModal } from './modal';
+import { TimeHistoryModal, type TimeHistoryPreset } from './modal';
 
-/** Read the history and open the search on it. */
-async function searchTimeRecords(app: App): Promise<void> {
+/** Read the history and open the search on it, as `preset` asks if given. */
+export async function searchTimeRecords(app: App, preset?: TimeHistoryPreset): Promise<void> {
     const entries = await collectHistory(app);
     if (entries.length === 0) {
         new Notice('No time records found');
         return;
     }
-    new TimeHistoryModal(app, entries).open();
+    new TimeHistoryModal(app, entries, preset).open();
 }
 
 /** Register the search through the time record history. */

@@ -21,13 +21,14 @@ Requires the `VAULT_OBSIDIAN` environment variable to point to your vault direct
 
 ## URIs
 
-The plugin handles four `obsidian://` actions, for links in notes and for shortcuts outside Obsidian. It never builds these URIs itself; they are written by hand wherever they are used. Every parameter is optional, and the bare URI does what the matching command does.
+The plugin handles five `obsidian://` actions, for links in notes and for shortcuts outside Obsidian. It never builds these URIs itself; they are written by hand wherever they are used. Every parameter is optional, and the bare URI does what the matching command does.
 
 | URI | Does | Parameters |
 | --- | --- | --- |
 | `obsidian://ronald-tasks` | Opens **Search tasks** | `query`, `tags`, `notes`, `done` |
 | `obsidian://ronald-projects` | Opens **Search projects** | `query`, `status`, `tasks` |
 | `obsidian://ronald-timerecord` | Opens **Add time record** | `message` |
+| `obsidian://ronald-timerecord-search` | Opens **Search time records** | `query`, `days` |
 | `obsidian://ronald-tijdsregistratie` | Opens the "tijdsregistratie" note at its last line | none |
 
 ### `ronald-tasks`
@@ -59,9 +60,18 @@ obsidian://ronald-projects?query=tuin&status=actief,wachten&tasks=met
 obsidian://ronald-timerecord?message=Lunch
 ```
 
+### `ronald-timerecord-search`
+
+- `query`: text to put in the search field.
+- `days`: comma-separated weekday chips to switch on. A day is a chip's label (`ma`, `di`, `wo`, `do`, `vr`, `za`, `zo`) or its full name in Dutch or English (`maandag`, `monday`).
+
+```
+obsidian://ronald-timerecord-search?query=overleg&days=ma,donderdag
+```
+
 ### How values are read
 
-In `tags`, `notes` and `status`, a leading `#` is dropped and capitals are folded to lower case, so `tags=#Prio` works. A value without a matching chip is ignored rather than reported. URL-encode spaces and special characters in `query` and `message` (`Overleg%20met%20Jan`).
+In `tags`, `notes`, `status` and `days`, a leading `#` is dropped and capitals are folded to lower case, so `tags=#Prio` works. A value without a matching chip is ignored rather than reported. URL-encode spaces and special characters in `query` and `message` (`Overleg%20met%20Jan`).
 
 ### Where the code is
 
@@ -72,8 +82,9 @@ Each action is handled in its feature's `urihandler.ts`, registered from that fe
 | `ronald-tasks` | `src/tasks/urihandler.ts` | `searchTasks` in `src/tasks/search.ts` |
 | `ronald-projects` | `src/projects/urihandler.ts` | `searchProjects` in `src/projects/search.ts` |
 | `ronald-timerecord` | `src/timerecord/urihandler.ts` | `addTimeRecord` in `src/timerecord/addtimerecord.ts` |
+| `ronald-timerecord-search` | `src/timerecord/urihandler.ts` | `searchTimeRecords` in `src/timerecord/history/index.ts` |
 | `ronald-tijdsregistratie` | `src/timerecord/urihandler.ts` | `openTimeRecordNote` in `src/timerecord/timerecordnote.ts` |
 
-`src/shared/uri.ts` has `parseValues`, which splits the comma-separated chip parameters for both searches.
+`src/shared/uri.ts` has `parseValues`, which splits the comma-separated chip parameters for the searches.
 
 The action names and their parameters are stable identifiers (see `AGENTS.md`): links in notes and shortcuts depend on them, so renaming one breaks those links. A new parameter goes in the handler's `…UriParams` interface, the feature overview in its `index.ts`, and this section.

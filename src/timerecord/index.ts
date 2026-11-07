@@ -27,6 +27,10 @@
  *   A row shows how long the record took, if it has an explicit end, and the
  *   time to the next record of that day. Enter opens the note at the record,
  *   Mod+Enter in a new tab.
+ * - obsidian://ronald-timerecord-search opens that search;
+ *   obsidian://ronald-timerecord-search?query=overleg&days=ma,donderdag opens it
+ *   with that text and those weekday chips. A day is a chip's label or a full
+ *   name, Dutch or English.
  *
  * Days in the history
  * -------------------
@@ -36,7 +40,8 @@
  * for that. A day without a date in its heading gets one only when no other is possible:
  * a single such day between the 4th and the 6th was the 5th, shown as
  * "~ donderdag 5 november 2026". Any other is headed with what it lies between,
- * and has no weekday to search on.
+ * and has no weekday to search on. Several of those in a row are numbered in the
+ * note's order: "vóór 24 oktober 2026 (dag 2 van 2)".
  *
  * Where the code is
  * -----------------
@@ -44,7 +49,7 @@
  * - recordline.ts        what a record line is, and reading one
  * - timerecordmodal.ts   the dialog that asks for the message
  * - timerecordnote.ts    finding and opening the note, telling a time record note
- * - urihandler.ts        the two URIs
+ * - urihandler.ts        the three URIs
  * - heatmap/             colouring the times: which notes, and the editor
  *                        (index.ts), the classes (heatmap.ts), reading
  *                        mode (postprocessor.ts)
@@ -63,7 +68,11 @@ import { addTimeRecord } from './addtimerecord';
 import { registerTimeHeatmap } from './heatmap';
 import { registerTimeHistory } from './history';
 import { openTimeRecordNote } from './timerecordnote';
-import { registerTijdsregistratieUriHandler, registerTimeRecordUriHandler } from './urihandler';
+import {
+    registerTijdsregistratieUriHandler,
+    registerTimeRecordSearchUriHandler,
+    registerTimeRecordUriHandler,
+} from './urihandler';
 
 /** Register the time record commands, URIs, the colouring of times and the history. */
 export function registerTimeRecords(plugin: Plugin): void {
@@ -85,6 +94,7 @@ export function registerTimeRecords(plugin: Plugin): void {
 
     registerTijdsregistratieUriHandler(plugin);
     registerTimeRecordUriHandler(plugin);
+    registerTimeRecordSearchUriHandler(plugin);
 
     registerTimeHeatmap(plugin);
     registerTimeHistory(plugin);

@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import { historyEntries } from './entries';
 import { parseDays } from './parsedays';
 import { placeDays } from './placedays';
-import { matchesWeekdays, WEEKDAY_CHIPS } from './weekdayfilter';
+import { matchesWeekdays, parseWeekdays, WEEKDAY_CHIPS } from './weekdayfilter';
 
 // 2 November 2026 is a Monday, the 4th a Wednesday, so the day between them is
 // an inferred Tuesday. The day before the first date has no weekday.
@@ -50,4 +50,33 @@ test('an inferred date has a weekday', () => {
 
 test('a day without a known date never matches a weekday', () => {
     assert.ok(!found('1', '2', '3', '4', '5', '6', '7').includes('Onbekend'));
+});
+
+test('a link names a day by its chip, or in full in Dutch or English', () => {
+    assert.deepEqual(parseWeekdays('ma,donderdag,friday'), ['1', '4', '5']);
+});
+
+test('every day has the right chip, Sunday last', () => {
+    assert.deepEqual(parseWeekdays('ma,di,wo,do,vr,za,zo'), ['1', '2', '3', '4', '5', '6', '7']);
+    assert.deepEqual(
+        parseWeekdays('maandag,dinsdag,woensdag,donderdag,vrijdag,zaterdag,zondag'),
+        ['1', '2', '3', '4', '5', '6', '7'],
+    );
+    assert.deepEqual(
+        parseWeekdays('monday,tuesday,wednesday,thursday,friday,saturday,sunday'),
+        ['1', '2', '3', '4', '5', '6', '7'],
+    );
+});
+
+test('a day named twice stays one chip, so toggling it leaves it on', () => {
+    assert.deepEqual(parseWeekdays('ma,maandag,monday'), ['1']);
+});
+
+test('capitals and spaces in a link are fine', () => {
+    assert.deepEqual(parseWeekdays(' Maandag , DI '), ['1', '2']);
+});
+
+test('an unknown day is dropped, and no parameter means no chips', () => {
+    assert.deepEqual(parseWeekdays('ma,morgen,1'), ['1']);
+    assert.deepEqual(parseWeekdays(undefined), []);
 });

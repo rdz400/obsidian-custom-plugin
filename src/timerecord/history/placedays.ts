@@ -6,11 +6,18 @@ import type { TimeRecord, WrittenDay } from './parsedays';
  * - `written`: its heading says so;
  * - `inferred`: it has no date, but only one is possible (see `placeDays`);
  * - `between`: it lies somewhere between two dated days, either of which may be
- *   missing.
+ *   missing. It is day `nth` of the `of` undated days in a row there, in the
+ *   note's order, which tells days apart that lie between the same two dates.
  */
 export type DayPlacement =
     | { kind: 'written' | 'inferred'; day: CalendarDay }
-    | { kind: 'between'; after: CalendarDay | null; before: CalendarDay | null };
+    | {
+          kind: 'between';
+          after: CalendarDay | null;
+          before: CalendarDay | null;
+          nth: number;
+          of: number;
+      };
 
 /** A day of a note, with what is known about its date. */
 export interface PlacedDay {
@@ -39,11 +46,14 @@ function placeRun(
         }));
     }
 
-    const placement: DayPlacement =
-        bothKnown && before <= after
-            ? { kind: 'between', after: null, before: null }
-            : { kind: 'between', after, before };
-    return Array.from({ length: count }, () => placement);
+    const backwards = bothKnown && before <= after;
+    return Array.from({ length: count }, (_, index) => ({
+        kind: 'between',
+        after: backwards ? null : after,
+        before: backwards ? null : before,
+        nth: index + 1,
+        of: count,
+    }));
 }
 
 /**
@@ -91,20 +101,29 @@ export function latestDay(days: readonly PlacedDay[]): CalendarDay | null {
     return latest;
 }
 
-/** How a day is headed in a list: its date, or as much as is known of it. */
-export function placementLabel(placement: DayPlacement): string {
-    if (placement.kind !== 'between') {
-        const date = formatDay(placement.day);
-        return placement.kind === 'inferred' ? `~ ${date}` : date;
-    }
-
-    const { after, before } = placement;
+/** What is known of a date from the dated days around it. */
+function boundsLabel(after: CalendarDay | null, before: CalendarDay | null): string {
     if (after !== null && before !== null) {
         return `tussen ${formatShortDay(after)} en ${formatShortDay(before)}`;
     }
     if (before !== null) return `vóór ${formatShortDay(before)}`;
     if (after !== null) return `na ${formatShortDay(after)}`;
     return 'datum onbekend';
+}
+
+/**
+ * How a day is headed in a list: its date, or as much as is known of it. Undated
+ * days in a row are numbered, as they would otherwise all read the same.
+ */
+export function placementLabel(placement: DayPlacement): string {
+    if (placement.kind !== 'between') {
+        const date = formatDay(placement.day);
+        return placement.kind === 'inferred' ? `~ ${date}` : date;
+    }
+
+    const { after, before, nth, of } = placement;
+    const bounds = boundsLabel(after, before);
+    return of > 1 ? `${bounds} (dag ${nth} van ${of})` : bounds;
 }
 
 /** What a search can call the day. Without a known date there is nothing to go on. */
