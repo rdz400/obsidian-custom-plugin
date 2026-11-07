@@ -1,9 +1,21 @@
 import { App, Notice, TFile } from 'obsidian';
 
+import { noteType } from '../shared/ui/notetype';
 import { openFileFromSearch } from '../shared/ui/openfile';
 
 /** The note every time record is written to. */
 export const TIME_RECORD_NOTE = 'tijdsregistratie';
+
+/** The frontmatter `type` of a note that keeps time records. */
+const TIME_RECORD_TYPE = 'tijdsregistratie';
+
+/**
+ * Whether `file` keeps time records, by its frontmatter `type`. Any note can,
+ * not only the one records are added to, so an archived month counts too.
+ */
+export function isTimeRecordNote(app: App, file: TFile): boolean {
+    return noteType(app, file) === TIME_RECORD_TYPE;
+}
 
 /**
  * The time record note, or null — with a notice saying so — when the vault has

@@ -1,20 +1,10 @@
-import type { App, Plugin, TFile } from 'obsidian';
+import type { Plugin, TFile } from 'obsidian';
 
 import { lineMarker } from '../../shared/editor/linemarks';
-import { noteType } from '../../shared/ui/notetype';
-import { heatClasses, lineRecordTime } from './heatmap';
+import { lineRecordTime } from '../recordline';
+import { isTimeRecordNote } from '../timerecordnote';
+import { heatClasses } from './heatmap';
 import { heatmapPostProcessor } from './postprocessor';
-
-/** The frontmatter `type` of a note whose times are coloured. */
-const TIME_RECORD_TYPE = 'tijdsregistratie';
-
-/**
- * Whether `file` keeps time records, by its frontmatter `type`. Any note can,
- * not only the one records are added to, so an archived month is coloured too.
- */
-function isTimeRecordNote(app: App, file: TFile): boolean {
-    return noteType(app, file) === TIME_RECORD_TYPE;
-}
 
 /**
  * Colour the time each record opens with by the hour it falls in, in notes of

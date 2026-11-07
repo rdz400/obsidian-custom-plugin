@@ -1,6 +1,7 @@
 import type { App, MarkdownPostProcessor, TFile } from 'obsidian';
 
-import { heatClasses, timeHour } from './heatmap';
+import { timeHour } from '../recordline';
+import { heatClasses } from './heatmap';
 
 /**
  * The first child of `el` that holds any text, or null when that is bare

@@ -825,6 +825,109 @@
     flex-shrink: 0;
 }
 
+/* Time record history ("Search time records" command). */
+
+/*
+ * No padding above the list, or rows show in the gap above a sticking heading.
+ * The condensed cut of the interface font fits more of a record on one line; a
+ * font without one just stays at its normal width.
+ */
+.ronald-time-history .prompt-results {
+    padding-top: 0;
+    font-stretch: 75%;
+}
+
+/*
+ * The date heading stays in view while its records scroll under it. Rows keep
+ * their distance from the top edge, so keyboard selection can't land behind it.
+ */
+.ronald-time-history-day {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 6px var(--size-4-3) 4px;
+    background: var(--modal-background);
+    font-size: var(--font-smallest);
+    font-weight: var(--font-medium);
+    color: var(--text-muted);
+}
+
+/* On a phone the prompt has a background of its own, not the modal's. */
+.is-mobile .ronald-time-history-day {
+    background: var(--prompt-background);
+}
+
+.ronald-time-history .suggestion-item.ronald-time-history-record {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0;
+    padding: 2px var(--size-4-3);
+    /* Square, or the corners of a selected row bend the line between rows. */
+    border-radius: 0;
+    font-size: var(--font-small);
+    line-height: 1.2;
+    scroll-margin-top: 2.5em;
+}
+
+/* Only within a day: between days the heading already separates them. */
+.ronald-time-history .suggestion-item.ronald-time-history-record + .ronald-time-history-record {
+    border-top: var(--border-width) dotted var(--background-modifier-border);
+}
+
+/* Outside a note there is no inline code styling to build on. */
+.ronald-time-history-record code.ronald-time-heat {
+    flex-shrink: 0;
+    /* Room for hh:mm:ss, so a time without seconds keeps the text aligned. */
+    box-sizing: content-box;
+    min-width: 7ch;
+    padding: 0 4px;
+    border: var(--code-border-width) solid var(--code-border-color);
+    border-radius: var(--code-radius);
+    background: var(--code-background);
+    /* Not monospace, which is wide; the heat class keeps the digits aligned. */
+    font-family: var(--font-interface);
+    font-size: var(--font-smallest);
+    color: var(--code-normal);
+}
+
+.ronald-time-history-text {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.ronald-time-history-durations {
+    display: flex;
+    flex-shrink: 0;
+    gap: 8px;
+    font-size: var(--font-smallest);
+    font-variant-numeric: tabular-nums;
+}
+
+.ronald-time-history-took,
+.ronald-time-history-gap {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    white-space: nowrap;
+}
+
+/* What the note states outright is stronger than what follows from the times. */
+.ronald-time-history-took {
+    color: var(--text-accent);
+    font-weight: var(--font-medium);
+}
+
+.ronald-time-history-gap {
+    color: var(--text-faint);
+}
+
+.ronald-time-history-durations .svg-icon {
+    width: 11px;
+    height: 11px;
+}
+
 /*
  * The time a record opens with, in notes of type "tijdsregistratie", shaded
  * by its hour: a heatmap of the day in one colour. Its background is the
