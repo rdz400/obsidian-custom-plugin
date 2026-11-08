@@ -32,10 +32,12 @@ test('taskText strips the marker, checkbox and tags', () => {
     assert.equal(taskText('\t- [ ] Bel  [[Jan]] #prio over #thuis de tuin'), 'Bel [[Jan]] over de tuin');
 });
 
-test('textParts keeps links in place, by their display text', () => {
-    assert.deepEqual(textParts('Bel [[260901-jan|Jan]] nu'), [
+test('textParts keeps links in place, by their display text and without brackets', () => {
+    assert.deepEqual(textParts('Bel [[260901-jan|Jan]] over [[tuin]] nu'), [
         { text: 'Bel ', link: false },
-        { text: '[[Jan]]', link: true },
+        { text: 'Jan', link: true },
+        { text: ' over ', link: false },
+        { text: 'tuin', link: true },
         { text: ' nu', link: false },
     ]);
 });

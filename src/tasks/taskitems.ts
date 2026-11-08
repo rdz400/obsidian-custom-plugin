@@ -47,8 +47,8 @@ export function setTaskMarker(line: string, marker: string): string {
  *
  * Wikilinks are kept in place: stripping them mangles sentences built around
  * them ("- [ ] Bel [[Jan]] over de tuin") and empties a task that is nothing
- * but a link. They are styled where they stand, with their brackets, so they
- * stay recognisable as links, see `textParts`.
+ * but a link. They are styled where they stand, so they stay recognisable as
+ * links, see `textParts`.
  */
 export function taskText(raw: string): string {
     return raw
@@ -68,8 +68,9 @@ export interface TextPart {
  * Split task text into plain runs and wikilinks, so the links can be given
  * their own styling while keeping their position in the sentence.
  *
- * A link is shown by its display text where the source gives one, wrapped back
- * in "[[…]]" so it reads as a link without being clickable.
+ * A link is shown the way live preview shows it: by its display text where the
+ * source gives one, without the "[[…]]" around it. The `link` flag is what
+ * keeps it recognisable as a link, through its styling.
  */
 export function textParts(text: string): TextPart[] {
     const parts: TextPart[] = [];
@@ -81,7 +82,7 @@ export function textParts(text: string): TextPart[] {
         if (plain.length > 0) parts.push({ text: plain, link: false });
 
         const label = (match[2] ?? match[1] ?? '').trim();
-        parts.push({ text: `[[${label}]]`, link: true });
+        parts.push({ text: label, link: true });
         at = start + match[0].length;
     }
 
