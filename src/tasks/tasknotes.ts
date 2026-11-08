@@ -6,33 +6,6 @@ import type RonaldPlugin from '../main';
 import type { TaskSettings } from './settings';
 import { noteTaskItems, type TaskItem } from './taskitems';
 
-/** How a task note is marked next to its tasks in the task search. */
-export interface TaskNoteBadge {
-    /** One letter: the GTD role's capital, or the note name's first letter in lowercase. */
-    letter: string;
-    /** The full name, for the tooltip. */
-    label: string;
-}
-
-/**
- * The badge for `file`. A GTD note is marked by its role rather than its file
- * name, so today, someday, overview and inbox always read as T, S, O and I
- * whatever the notes are called. Any other task note gets its own first
- * letter in lowercase, which keeps it from passing for one of those four.
- */
-export function taskNoteBadge(file: TFile, settings: TaskSettings): TaskNoteBadge {
-    const gtd = gtdNoteOf(file, settings);
-    if (gtd) {
-        return {
-            letter: gtd.name.charAt(0).toUpperCase(),
-            label: gtd.name === file.basename ? gtd.name : `${gtd.name} (${file.basename})`,
-        };
-    }
-    // Spread so a name starting with an emoji or other surrogate pair keeps it whole.
-    const first = [...file.basename][0] ?? '?';
-    return { letter: first.toLowerCase(), label: file.basename };
-}
-
 /**
  * Every task in every task note, the notes directly in the task folder, for
  * the task search; see `noteTaskItems`.
@@ -43,7 +16,7 @@ export async function collectTaskNoteTasks(
 ): Promise<TaskItem[]> {
     const notes = await readTaskNoteLines(app, settings.taskFolder);
     return notes.flatMap(({ file, lines }) =>
-        noteTaskItems(file, taskNoteBadge(file, settings), gtdNoteOf(file, settings)?.id, lines),
+        noteTaskItems(file, gtdNoteOf(file, settings)?.id, lines),
     );
 }
 

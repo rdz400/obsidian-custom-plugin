@@ -363,105 +363,98 @@
 }
 
 /*
- * Obsidian sizes its checkbox and the tick it draws from --checkbox-size.
- *
- * The right margin is set with !important because Obsidian's own checkbox rule
- * re-applies one at higher specificity; without it the box carries 6px of dead
- * space on top of the row's flex gap.
+ * A long press toggles the task, so the phone must not answer it with its own
+ * text selection or link callout.
  */
-.ronald-task-checkbox {
-    --checkbox-size: 14px;
-    margin: 2px 0 0 0 !important;
-    width: var(--checkbox-size);
-    height: var(--checkbox-size);
-    flex-shrink: 0;
+.ronald-task-search .suggestion-item.ronald-task-match {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 /*
- * The note badge and the depth badge, side by side. Rendered after the body,
- * which takes the leftover width, so they end up in the empty space at the
- * right edge of the row. Kept closer together than the row's own gap, so they
- * read as one pair.
+ * A finished task: a faint green tint is the one cue, with the text stepped
+ * back to muted. The tint is a translucent layer over the row's own shade, so
+ * a selected done row still reads as selected.
  */
-.ronald-task-badges {
-    flex-shrink: 0;
-    display: flex;
-    gap: 3px;
-    margin-top: 1px;
+.ronald-task-search .suggestion-item.ronald-task-match.is-done {
+    background-image: linear-gradient(
+        rgba(var(--color-green-rgb), 0.14),
+        rgba(var(--color-green-rgb), 0.14)
+    );
 }
 
 /*
- * Which note the task is in: T, S, O or I for the GTD notes, a lowercase first
- * letter for any other task note; the tooltip has the full name.
+ * Which GTD note a task is in, as a stripe down the row's left edge. The
+ * colours run from warm to cool as urgency drops: today red, inbox amber
+ * (still to be triaged), overview green (ready to do), someday lavender.
+ * A task in any other task note has no stripe.
  *
- * Only an outline in faint text, no fill: it is there to be looked up, not to
- * compete with the task text or the depth badge next to it.
+ * An inset shadow rather than a border, so the stripe follows the row's
+ * rounded corners and the rows without one keep the same text alignment.
  */
-.ronald-task-note {
+.ronald-task-search {
+    --ronald-gtd-today: #e8412c;
+    --ronald-gtd-inbox: #f5b316;
+    --ronald-gtd-overview: #2e8b57;
+    --ronald-gtd-someday: #9b8ac4;
+}
+
+.ronald-task-match[data-gtd] {
+    box-shadow: inset 3px 0 0 var(--ronald-gtd-color);
+}
+
+.ronald-task-match[data-gtd='today'] {
+    --ronald-gtd-color: var(--ronald-gtd-today);
+}
+
+.ronald-task-match[data-gtd='inbox'] {
+    --ronald-gtd-color: var(--ronald-gtd-inbox);
+}
+
+.ronald-task-match[data-gtd='overview'] {
+    --ronald-gtd-color: var(--ronald-gtd-overview);
+}
+
+.ronald-task-match[data-gtd='someday'] {
+    --ronald-gtd-color: var(--ronald-gtd-someday);
+}
+
+/*
+ * A subtask's arrow, before its text. Top-level tasks have none, so the
+ * common case stays unmarked and a subtask stands out by its shape alone.
+ *
+ * In faint grey, so it reads as structure rather than content. Each level
+ * past the second nudges the arrow a step further in: enough to tell the
+ * levels apart, without the full indent of the note itself, which the phone
+ * has no room for. `renderSuggestion` clamps the depth to 4, so anything
+ * deeper shares the last step.
+ */
+.ronald-task-nest {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    border-radius: 4px;
-    box-shadow: inset 0 0 0 1px var(--background-modifier-border);
     color: var(--text-faint);
-    font-size: var(--font-smallest);
-    line-height: 1;
+    --icon-size: 12px;
+    --icon-stroke: 2px;
 }
 
-/* Nesting level: 1 is a top-level item, 2 sits under it, and so on. */
-.ronald-task-depth {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    border-radius: 4px;
-    background: var(--background-modifier-border);
-    color: var(--text-muted);
-    font-size: var(--font-smallest);
-    line-height: 1;
+.ronald-task-match[data-depth='3'] .ronald-task-nest {
+    margin-left: 8px;
+}
+
+.ronald-task-match[data-depth='4'] .ronald-task-nest {
+    margin-left: 16px;
 }
 
 /*
- * Depth badge: the number carries the nesting on its own — the row itself is
- * left unmarked, so nothing shifts or stripes as tasks nest.
- *
- * It stays in the badge's own greyscale and separates the levels by weight
- * rather than by hue: a top-level task is the quiet common case, level 2 lifts
- * to the theme's stronger border with normal-weight text, level 3 to its hover
- * shade in full contrast and bold. A colour here would read as a category and
- * would clash with the tag chips, which are the only thing in the row that is
- * allowed to be blue.
- *
- * `renderSuggestion` clamps to 3, so anything deeper — rare in practice —
- * shares the level 3 badge.
+ * The text and its tags on one line, the tags straight after the text. The
+ * row's top alignment would otherwise leave the shorter tags hanging high.
  */
-.ronald-task-match[data-depth='2'] .ronald-task-depth {
-    background: var(--background-modifier-border-hover);
-    color: var(--text-normal);
-}
-
-.ronald-task-match[data-depth='3'] .ronald-task-depth {
-    background: var(--background-modifier-hover);
-    color: var(--text-normal);
-    font-weight: var(--font-bold);
-    box-shadow: inset 0 0 0 1px var(--background-modifier-border-hover);
-}
-
-/* A finished task is muted everywhere else, so the badge steps back too. */
-.ronald-task-match.is-done[data-depth]:not([data-depth='1']) .ronald-task-depth {
-    background: var(--background-modifier-border);
-    color: var(--text-muted);
-    font-weight: inherit;
-    box-shadow: none;
-}
-
 .ronald-task-body {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    align-items: center;
+    gap: 4px;
     min-width: 0;
     flex: 1;
 }
@@ -469,11 +462,19 @@
 /*
  * One step below the row's own size: --font-small is relative, so on top of the
  * row's --font-small it lands at about 13px instead of 14px.
+ *
+ * Always a single line: a task too long for it is cut off with an ellipsis
+ * rather than wrapped, so every row is the same height. `min-width: 0` lets it
+ * shrink below the length of its text, which a flex item won't by default.
  */
 .ronald-task-text {
+    flex: 0 1 auto;
+    min-width: 0;
     font-size: var(--font-small);
-    overflow-wrap: anywhere;
     line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Not clickable, but recognisable as a link. */
@@ -482,22 +483,35 @@
 }
 
 .ronald-task-match.is-done .ronald-task-text {
-    text-decoration: line-through;
     color: var(--text-muted);
 }
 
+/*
+ * The tags keep their full width, so the text is what gets cut off — up to
+ * half the row, where a task with a long list of tags is clipped instead, so
+ * the text never disappears entirely.
+ */
 .ronald-task-meta {
+    flex-shrink: 0;
+    max-width: 50%;
+    overflow: hidden;
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
     line-height: 1.2;
 }
 
+/*
+ * As narrow as the font allows: the most condensed cut (a font without one
+ * stays at the results' 75%) and only a sliver of padding inside the pill.
+ */
 .ronald-task-tag {
+    flex-shrink: 0;
     font-size: var(--font-smallest);
-    padding: 1px 6px;
-    border-radius: 6px;
+    font-stretch: 50%;
+    white-space: nowrap;
+    padding: 0 3px;
+    border-radius: 4px;
     background: rgba(var(--color-blue-rgb), 0.15);
     color: var(--color-blue);
 }

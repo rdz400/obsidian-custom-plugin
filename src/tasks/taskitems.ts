@@ -3,7 +3,6 @@ import type { TFile } from 'obsidian';
 import { LINK_RE, TAG_RE } from '../shared/markdown';
 import { isDoneMarker, type ListLine } from '../shared/taskline';
 import type { GtdNote } from './gtdnotes';
-import type { TaskNoteBadge } from './tasknotes';
 
 /**
  * The tasks of the task notes as the task search shows them, and the edits
@@ -16,9 +15,10 @@ import type { TaskNoteBadge } from './tasknotes';
 /** One task line found in a task note, with everything shown for it. */
 export interface TaskItem {
     file: TFile;
-    /** Which note the task is in, as shown next to its nesting level. */
-    note: TaskNoteBadge;
-    /** Which GTD note the task is in, if it is in one; what the note chips filter on. */
+    /**
+     * Which GTD note the task is in, if it is in one: what the note chips
+     * filter on, and the colour of the row's left border.
+     */
     gtd: GtdNote['id'] | undefined;
     /** Line number at collection time; only a hint, the file may change before a write. */
     line: number;
@@ -118,7 +118,6 @@ export function findTaskLine(
  */
 export function noteTaskItems(
     file: TFile,
-    note: TaskNoteBadge,
     gtd: GtdNote['id'] | undefined,
     lines: readonly ListLine[],
 ): TaskItem[] {
@@ -128,7 +127,6 @@ export function noteTaskItems(
         if (marker === undefined) continue;
         tasks.push({
             file,
-            note,
             gtd,
             line,
             raw,

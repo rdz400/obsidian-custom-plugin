@@ -1,6 +1,7 @@
 import {
     App,
     Notice,
+    setIcon,
     SuggestModal,
 } from 'obsidian';
 
@@ -42,6 +43,12 @@ async function writeTaskMarker(
     return written;
 }
 
+/** How long a touch has to be held before it toggles the task, in ms. */
+const LONG_PRESS_MS = 500;
+
+/** How far a finger may drift during a long press before it counts as a scroll, in px. */
+const LONG_PRESS_SLOP = 10;
+
 /** The comparable form of a query: lowercased, with a leading "#" dropped. */
 function normaliseQuery(query: string): string {
     return query.toLowerCase().replace(/^#/, '');
@@ -81,11 +88,16 @@ export interface TaskSearchOptions {
  * in a second row, filters on the GTD note a task is in.
  *
  * Choosing a task opens its note at the right line — in the active tab, or in a
- * new one with Mod+Enter; ticking its checkbox writes the marker straight back
- * to the note without leaving the modal.
+ * new one with Mod+Enter. Mod+L, or a long press on a touch screen, ticks the
+ * task off (or back on) and writes the marker straight back to the note
+ * without leaving the modal.
  */
 export class TaskSearchModal extends SuggestModal<TaskItem> {
     private items: TaskItem[];
+    /** The task each rendered row stands for, so a key press can find the selected one. */
+    private readonly rowTasks = new WeakMap<HTMLElement, TaskItem>();
+    /** Tasks with a write in flight, so a second toggle waits for the first. */
+    private readonly pending = new Set<TaskItem>();
     private readonly filters: FilterBar;
     private readonly noteFilters: FilterBar;
     private readonly filterTags: readonly FilterChip[];
@@ -109,6 +121,7 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
         this.setPlaceholder('Search tasks…');
         this.modalEl.addClass('ronald-task-search');
         registerNewTabEnter(this);
+        this.registerToggleKey();
 
         this.filters = new FilterBar({
             chips: filterTags,
@@ -186,6 +199,26 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
             },
             { capture: true },
         );
+    }
+
+    /**
+     * Make Mod+L tick off the highlighted task, the key Obsidian itself uses
+     * to toggle a checkbox in the editor.
+     *
+     * The highlighted row is read from the DOM rather than from the modal's
+     * private chooser: it is the one Obsidian marks `is-selected`, whether
+     * the arrow keys or the mouse put it there. Returning false keeps the
+     * press from reaching the editor behind the modal.
+     */
+    private registerToggleKey(): void {
+        this.scope.register(['Mod'], 'l', () => {
+            const row = this.resultContainerEl.querySelector<HTMLElement>(
+                '.suggestion-item.is-selected',
+            );
+            const task = row ? this.rowTasks.get(row) : undefined;
+            if (row && task) void this.toggleTask(task, row);
+            return false;
+        });
     }
 
     /**
@@ -309,18 +342,28 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
         el.addClass('ronald-task-match');
         if (task.done) el.addClass('is-done');
 
-        // Drives the depth badge in CSS. Nesting has no fixed limit but the
-        // shades run out, so anything deeper is styled as the last level.
-        el.dataset.depth = String(Math.min(task.depth, 3));
+        // Drives how far the subtask arrow is indented in CSS. Nesting has no
+        // fixed limit, but past a few levels the steps would eat the text's
+        // room, so anything deeper is styled as the last level.
+        el.dataset.depth = String(Math.min(task.depth, 4));
 
-        const checkbox = el.createEl('input', {
-            type: 'checkbox',
-            cls: 'ronald-task-checkbox',
-        });
-        checkbox.checked = task.done;
-        this.wireCheckbox(checkbox, el, task);
+        // Drives the colour of the left border: which GTD note the task is in.
+        if (task.gtd !== undefined) el.dataset.gtd = task.gtd;
+
+        this.rowTasks.set(el, task);
+        this.wireLongPress(el, task);
 
         const body = el.createDiv({ cls: 'ronald-task-body' });
+
+        // A subtask starts with an arrow hooking in from the task above it.
+        // Top-level tasks, the common case, carry no mark at all.
+        if (task.depth > 1) {
+            const nest = body.createSpan({
+                cls: 'ronald-task-nest',
+                attr: { 'aria-label': `Subtask, level ${task.depth}` },
+            });
+            setIcon(nest, 'corner-down-right');
+        }
 
         // Wikilinks keep their place in the sentence and are styled as links.
         const line = body.createDiv({ cls: 'ronald-task-text' });
@@ -329,8 +372,9 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
             else line.appendText(part.text);
         }
 
-        // Links are left out: they are already styled inline in the text above.
-        // Nothing but tags shows here, so they go without their "#".
+        // On the same line, after the text (see `.ronald-task-body`). Links are
+        // left out: they are already styled inline in the text. Nothing but
+        // tags shows here, so they go without their "#".
         if (task.tags.length > 0) {
             const meta = body.createDiv({ cls: 'ronald-task-meta' });
 
@@ -338,66 +382,100 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
                 meta.createSpan({ cls: 'ronald-task-tag', text: tag });
             }
         }
-
-        // Last, so they sit in the empty space at the right edge of the row:
-        // which note the task is in, then how deeply it is nested.
-        const badges = el.createDiv({ cls: 'ronald-task-badges' });
-        badges.createSpan({
-            cls: 'ronald-task-note',
-            text: task.note.letter,
-            attr: { 'aria-label': `In ${task.note.label}` },
-        });
-        badges.createSpan({
-            cls: 'ronald-task-depth',
-            text: String(task.depth),
-            attr: { 'aria-label': `Nesting level ${task.depth}` },
-        });
     }
 
     /**
-     * Toggle the task in its source note when the checkbox is clicked.
+     * Toggle the task when its row is held down on a touch screen.
      *
-     * The click is kept away from the suggestion itself so ticking a box does
-     * not also open the note and close the modal. The UI is updated straight
-     * away and rolled back if the write fails, since waiting for the vault
-     * would leave the box visibly unresponsive.
+     * A finger that moves more than a few pixels is scrolling, and lifting
+     * early is an ordinary tap that opens the note, so both cancel the timer.
+     * The tap that follows a long press is swallowed in the capture phase,
+     * before Obsidian's own click handler on the result list can choose the
+     * row and close the modal. Not every browser sends that click, so the flag
+     * is also cleared on the next touch rather than left to eat a real tap.
+     *
+     * The mouse is left out: on a desktop Mod+L does the same, and holding the
+     * button down is how text gets selected.
      */
-    private wireCheckbox(
-        checkbox: HTMLInputElement,
-        el: HTMLElement,
-        task: TaskItem,
-    ): void {
-        const stop = (event: Event) => event.stopPropagation();
-        checkbox.addEventListener('mousedown', stop);
-        checkbox.addEventListener('click', async (event) => {
-            stop(event);
+    private wireLongPress(el: HTMLElement, task: TaskItem): void {
+        let timer: number | undefined;
+        let startX = 0;
+        let startY = 0;
+        let swallowClick = false;
 
-            // The browser has already flipped `checked`, so this is the state
-            // the user just asked for.
-            const desired = checkbox.checked;
-            el.toggleClass('is-done', desired);
+        const cancel = () => {
+            window.clearTimeout(timer);
+            timer = undefined;
+        };
 
-            checkbox.disabled = true;
-            let ok = false;
-            try {
-                ok = await writeTaskMarker(this.app, task, desired ? 'x' : ' ');
-            } finally {
-                checkbox.disabled = false;
-            }
-
-            if (ok) {
-                // Keep the in-memory task in sync so a second click still finds
-                // its line, and so a re-render shows the new state.
-                task.raw = setTaskMarker(task.raw, desired ? 'x' : ' ');
-                task.done = desired;
-            } else {
-                checkbox.checked = !desired;
-                el.toggleClass('is-done', !desired);
-                new Notice(
-                    `Could not update task in "${task.file.basename}": the note changed.`,
-                );
-            }
+        el.addEventListener('pointerdown', (event) => {
+            swallowClick = false;
+            if (event.pointerType === 'mouse') return;
+            startX = event.clientX;
+            startY = event.clientY;
+            cancel();
+            timer = window.setTimeout(() => {
+                timer = undefined;
+                swallowClick = true;
+                void this.toggleTask(task, el);
+            }, LONG_PRESS_MS);
         });
+        el.addEventListener('pointermove', (event) => {
+            if (timer === undefined) return;
+            const moved = Math.hypot(event.clientX - startX, event.clientY - startY);
+            if (moved > LONG_PRESS_SLOP) cancel();
+        });
+        el.addEventListener('pointerup', cancel);
+        el.addEventListener('pointercancel', cancel);
+
+        // Android answers a long press with a context menu of its own.
+        el.addEventListener('contextmenu', (event) => {
+            if (swallowClick || timer !== undefined) event.preventDefault();
+        });
+        el.addEventListener(
+            'click',
+            (event) => {
+                if (!swallowClick) return;
+                swallowClick = false;
+                event.preventDefault();
+                event.stopPropagation();
+            },
+            { capture: true },
+        );
+    }
+
+    /**
+     * Tick `task` off, or back on, in its source note, without leaving the modal.
+     *
+     * The row is updated straight away and rolled back if the write fails,
+     * since waiting for the vault would leave it visibly unresponsive. While
+     * a write is in flight further toggles of the same task are ignored, so a
+     * repeated key press cannot race it.
+     */
+    private async toggleTask(task: TaskItem, el: HTMLElement): Promise<void> {
+        if (this.pending.has(task)) return;
+        this.pending.add(task);
+
+        const desired = !task.done;
+        const marker = desired ? 'x' : ' ';
+        el.toggleClass('is-done', desired);
+
+        let ok = false;
+        try {
+            ok = await writeTaskMarker(this.app, task, marker);
+        } finally {
+            this.pending.delete(task);
+        }
+
+        if (ok) {
+            // Keep the in-memory task in sync so a second toggle still finds
+            // its line, and so a re-render shows the new state.
+            task.raw = setTaskMarker(task.raw, marker);
+            task.done = desired;
+        } else {
+            el.toggleClass('is-done', !desired);
+            new Notice(`Could not update task in "${task.file.basename}": the note changed.`);
+        }
     }
 
     onChooseSuggestion(task: TaskItem, event: MouseEvent | KeyboardEvent): void {

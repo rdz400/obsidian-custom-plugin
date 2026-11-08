@@ -8,7 +8,7 @@ import { findTaskLine, noteTaskItems, setTaskMarker, taskText, textParts } from 
 /** The tasks of `text`, as they would be read from a task note. */
 function tasksOf(text: string) {
     const lines = listLines(cacheOf(text).listItems, text.split('\n'));
-    return noteTaskItems(testFile('1-taken/huis.md'), { letter: 'h', label: 'huis' }, undefined, lines);
+    return noteTaskItems(testFile('1-taken/huis.md'), undefined, lines);
 }
 
 test('noteTaskItems collects tasks only, plain bullets passing their tags on', () => {
