@@ -330,11 +330,12 @@ export class TaskSearchModal extends SuggestModal<TaskItem> {
         }
 
         // Links are left out: they are already styled inline in the text above.
+        // Nothing but tags shows here, so they go without their "#".
         if (task.tags.length > 0) {
             const meta = body.createDiv({ cls: 'ronald-task-meta' });
 
             for (const tag of task.tags) {
-                meta.createSpan({ cls: 'ronald-task-tag', text: `#${tag}` });
+                meta.createSpan({ cls: 'ronald-task-tag', text: tag });
             }
         }
 
