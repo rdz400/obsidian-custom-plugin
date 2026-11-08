@@ -112,7 +112,12 @@
 
 /* Task search modal ("Search tasks" command). */
 
+/*
+ * The condensed cut of the interface font fits more of a task on one line, as
+ * in the time record history; a font without one just stays at its normal width.
+ */
 .ronald-task-search .prompt-results {
+    font-stretch: 75%;
     padding: 6px;
     display: flex;
     flex-direction: column;
