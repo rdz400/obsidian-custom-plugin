@@ -353,7 +353,8 @@
     align-items: flex-start;
     gap: 8px;
     background: var(--background-secondary);
-    border-radius: 6px;
+    /* Square on the left, so the GTD stripe there runs straight. */
+    border-radius: 0 6px 6px 0;
     padding: 6px 10px;
     font-size: var(--font-small);
 }
@@ -390,8 +391,9 @@
  * (still to be triaged), overview green (ready to do), someday lavender.
  * A task in any other task note has no stripe.
  *
- * An inset shadow rather than a border, so the stripe follows the row's
- * rounded corners and the rows without one keep the same text alignment.
+ * An inset shadow rather than a border, so the rows without one keep the
+ * same text alignment. The row's left corners are square, so the stripe is
+ * a straight bar.
  */
 .ronald-task-search {
     --ronald-gtd-today: #e8412c;
