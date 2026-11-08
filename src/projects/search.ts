@@ -364,7 +364,6 @@ export class ProjectSearchModal extends SuggestModal<ProjectItem> {
         el.addClass('ronald-project-match');
 
         const title = el.createDiv({ cls: 'ronald-project-title' });
-        setIcon(title.createSpan({ cls: 'ronald-project-icon' }), 'file-text');
         title.createSpan({ text: item.file.basename });
 
         // Before the status, so the status keeps the right edge of the row to

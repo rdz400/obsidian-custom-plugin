@@ -24,16 +24,6 @@
     gap: 8px;
 }
 
-.ronald-project-title .ronald-project-icon {
-    display: flex;
-    color: var(--text-muted);
-}
-
-.ronald-project-title .ronald-project-icon .svg-icon {
-    width: 16px;
-    height: 16px;
-}
-
 .ronald-project-status {
     display: flex;
     align-items: center;
