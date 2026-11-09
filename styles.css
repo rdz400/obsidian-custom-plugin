@@ -509,6 +509,16 @@
 }
 
 /*
+ * Blue on a faint blue ground is too dim to read at this size on a dark
+ * background, so dark mode lifts the text to a pale blue, mixed with the
+ * theme's own text colour so it suits a warm or a cool theme alike.
+ */
+.theme-dark .ronald-task-tag {
+    background: rgba(var(--color-blue-rgb), 0.2);
+    color: color-mix(in srgb, var(--color-blue) 55%, var(--text-normal));
+}
+
+/*
  * A tag row in the settings tab. Obsidian's list rows carry the drag handle and
  * delete button; the name column here holds only the shortcut hint, so it is
  * kept narrow and quiet and the two fields take the rest of the width.
