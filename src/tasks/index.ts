@@ -28,8 +28,9 @@
  *   opens the same search from a link; every parameter is optional.
  *
  * Getting to the notes
- * - "Switch to GTD note" (Mod+1…Mod+4 inside it) and "Open inbox" go to the
- *   tab already showing the note, or open it.
+ * - "Switch to GTD note" lists the GTD notes set in settings, without a
+ *   search field: a, s, d, f go straight to today, someday, overview, inbox.
+ *   It and "Open inbox" go to the tab already showing the note, or open it.
  * - "Open taken" opens every task note in its own tab.
  *
  * Tagging

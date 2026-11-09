@@ -1,28 +1,31 @@
-import { App, Notice, Platform, SuggestModal, TFile, WorkspaceLeaf } from 'obsidian';
+import { App, Notice, SuggestModal, TFile, WorkspaceLeaf } from 'obsidian';
 
-import { GTD_NOTES } from './gtdnotes';
+import { GTD_NOTES, type GtdNote } from './gtdnotes';
 import type { TaskSettings } from './settings';
 import { TabRecency } from '../shared/tabrecency';
 import { leafFilePath, switchToTab } from '../shared/tabs';
 
-/** A GTD note that is set in settings and exists, plus its shortcut digit. */
+/** The key that opens each GTD note in the switcher, all on the home row. */
+const KEYS: Record<GtdNote['id'], string> = { today: 'a', someday: 's', overview: 'd', inbox: 'f' };
+
+/** A GTD note that is set in settings and exists, plus the key that opens it. */
 interface GtdItem {
     name: string;
     file: TFile;
-    /** Its place in `GTD_NOTES`, from 1, so Mod+digit stays the same per note. */
-    digit: number;
+    /** The key that opens it in the switcher. */
+    key: string;
 }
 
 /**
  * The GTD notes that are set and exist, in `GTD_NOTES` order.
  *
- * Digits follow `GTD_NOTES` rather than this list, so an unset note leaves a
- * gap instead of shifting the shortcuts of the ones after it.
+ * Keys follow `GTD_NOTES` rather than this list, so an unset note leaves a
+ * gap instead of shifting the keys of the ones after it.
  */
 function collectGtdNotes(app: App, settings: TaskSettings): GtdItem[] {
-    return GTD_NOTES.flatMap((note, i) => {
+    return GTD_NOTES.flatMap((note) => {
         const file = app.vault.getFileByPath(settings[note.key]);
-        return file ? [{ name: note.name, file, digit: i + 1 }] : [];
+        return file ? [{ name: note.name, file, key: KEYS[note.id] }] : [];
     });
 }
 
@@ -58,14 +61,10 @@ async function goToNote(app: App, file: TFile, recency: TabRecency): Promise<voi
     await leaf.openFile(file);
 }
 
-/** How Mod+`digit` is written on this platform. */
-function shortcutLabel(digit: number): string {
-    return Platform.isMacOS ? `⌘${digit}` : `Ctrl+${digit}`;
-}
-
 /**
- * Pick a GTD note to go to. Mod+digit goes straight to the note with that
- * digit, so one hotkey for the modal stands in for one hotkey per note.
+ * Pick a GTD note to go to. With only a handful of notes there is nothing to
+ * search, so the search field is hidden: a, s, d or f goes straight to its
+ * note, and the arrow keys with Enter, or a tap, work too.
  */
 class GtdSwitcherModal extends SuggestModal<GtdItem> {
     constructor(
@@ -74,15 +73,11 @@ class GtdSwitcherModal extends SuggestModal<GtdItem> {
         private readonly recency: TabRecency,
     ) {
         super(app);
-        this.setPlaceholder('Go to note…');
-        this.setInstructions([
-            { command: '↵', purpose: 'to go to note' },
-            { command: shortcutLabel(1).replace('1', '1…'), purpose: 'to go to that note' },
-        ]);
+        // Hidden rather than removed: SuggestModal still reads it.
+        this.inputEl.parentElement?.hide();
+        this.setInstructions([{ command: Object.values(KEYS).join(' '), purpose: 'to go to that note' }]);
         for (const item of items) {
-            // Bound on the modal's scope, so it wins over Obsidian's own
-            // Mod+digit tab switching while the modal is open.
-            this.scope.register(['Mod'], String(item.digit), () => {
+            this.scope.register([], item.key, () => {
                 this.close();
                 void goToNote(this.app, item.file, this.recency);
                 return false;
@@ -90,13 +85,8 @@ class GtdSwitcherModal extends SuggestModal<GtdItem> {
         }
     }
 
-    getSuggestions(query: string): GtdItem[] {
-        const q = query.toLowerCase();
-        return this.items.filter(
-            (item) =>
-                item.name.toLowerCase().includes(q) ||
-                item.file.basename.toLowerCase().includes(q),
-        );
+    getSuggestions(): GtdItem[] {
+        return [...this.items];
     }
 
     renderSuggestion(item: GtdItem, el: HTMLElement): void {
@@ -108,7 +98,7 @@ class GtdSwitcherModal extends SuggestModal<GtdItem> {
         }
         el.createDiv({ cls: 'suggestion-aux' }).createEl('kbd', {
             cls: 'suggestion-hotkey',
-            text: shortcutLabel(item.digit),
+            text: item.key.toUpperCase(),
         });
     }
 

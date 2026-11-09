@@ -127,7 +127,7 @@ export function taskSettingSections({ plugin, save }: SettingSectionContext): Se
                 ...GTD_NOTES.flatMap((note) => [
                     {
                         name: `Note for ${note.name}`,
-                        desc: `Where "Move line(s) to ${note.name}" sends lines.`,
+                        desc: `Where "Move line(s) to ${note.name}" sends lines, and what "Switch to GTD note" opens.`,
                         control: {
                             type: 'file' as const,
                             key: note.key,
