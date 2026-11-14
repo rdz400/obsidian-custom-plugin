@@ -60,7 +60,7 @@ npm test
       main.ts           # Lifecycle: settings, tab history, one register call per feature
       settings/         # RonaldSettings (each feature's settings combined), the settings tab
       shared/           # Code features share: ui/ (modals, filter bar), editor/ (line helpers), task lines and task notes, tab history and tab helpers, vault, markdown, date, uri
-      tasks/            # Task notes, task search, tags, GTD notes and switcher, estimates, task count
+      tasks/            # Task notes, task search, new task modal, tags, GTD notes and switcher, estimates, task count
       projects/         # Project search (with open task counts), project commands and statuses
       links/            # Backlink and outgoing link searches, copy wikilink
       navigation/       # Outline, recent notes, tab switcher
@@ -73,6 +73,7 @@ npm test
     - `shared/` never imports from a feature folder.
     - Every feature uses only `shared/`, never another feature. That keeps each feature separable; `tasks/` in particular could become a plugin of its own later.
     - What two features both need (such as telling a task line, finding the task notes, or the tab history) belongs in `shared/`.
+    - When one feature needs an answer only another can give, because it rests on that feature's settings, `main.ts` passes it in as a function, as it passes the tab history: `registerTaskFeatures` takes the active projects from `activeProjectsOf` in `projects/`. The feature works without it, so it stays separable.
     - `settings/` imports each feature's `settings.ts`, and nothing else from the features.
     - Importing the `RonaldPlugin` type from `main.ts`, and `settings/section.ts` from a feature's `settings.ts`, is fine everywhere.
     - `npm run lint` enforces these rules (`no-restricted-imports`, set up from the `FEATURES` list in `eslint.config.mts`). A change to the rules is made there and here together.
@@ -153,7 +154,7 @@ In this example:
 - **Stable identifiers**: these are referenced from outside the code and must not be renamed:
     - Command IDs: hotkeys are bound to them.
     - Setting keys: they are the keys in `data.json`.
-    - URI actions (`ronald-tasks`, `ronald-projects`, `ronald-timerecord`, `ronald-timerecord-search`, `ronald-tijdsregistratie`) and their parameters: links in notes and shortcuts use them.
+    - URI actions (`ronald-tasks`, `ronald-new-task`, `ronald-projects`, `ronald-timerecord`, `ronald-timerecord-search`, `ronald-tijdsregistratie`) and their parameters: links in notes and shortcuts use them.
     - CSS classes (`ronald-…`): `styles.css` and snippets use them.
     - Moving code between folders never requires changing any of these.
 - **Removing a setting**: drop it from the feature's interface and defaults. Its key stays in the user's `data.json` (settings are loaded with `Object.assign`), so say in the commit that the old key can be removed.

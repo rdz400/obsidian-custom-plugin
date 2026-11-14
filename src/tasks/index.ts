@@ -27,6 +27,16 @@
  * - obsidian://ronald-tasks?query=bel&tags=prio,vandaag&notes=today,inbox&done=true
  *   opens the same search from a link; every parameter is optional.
  *
+ * Adding tasks
+ * - "New task" (also a ribbon icon) adds a task to the end of a GTD note,
+ *   inbox unless another is picked: Alt+A/S/D/F, or a tap, picks today,
+ *   someday, overview or inbox. Below the text are the chips of "Task filter
+ *   tags" (Mod+1…Mod+9), a field for other tags, an active project to link
+ *   to, and an estimate in minutes. Enter adds the task and closes; Mod+Enter
+ *   or the plus button adds it and clears the text for the next one.
+ * - obsidian://ronald-new-task?text=Bel%20Jan&note=today&tags=prio,werk&project=tuin&estimate=20
+ *   opens the same modal filled in; every parameter is optional.
+ *
  * Getting to the notes
  * - "Switch to GTD note" lists the GTD notes set in settings, without a
  *   search field: a, s, d, f go straight to today, someday, overview, inbox.
@@ -83,6 +93,7 @@
  * - undomove.ts       undo and redo of a move in the note it went to
  * - checkbox.ts       the checkbox cycle
  * - estimate/         time estimates
+ * - newtask/          "New task" and obsidian://ronald-new-task
  * - taskcount.ts      the task count in the status bar
  * - urihandler.ts     obsidian://ronald-tasks
  *
@@ -90,9 +101,11 @@
  * with the tags and links they inherit live in shared/, because the project
  * search counts open tasks too. So do the tab history and the tab
  * helpers the GTD switcher uses, which the tab switcher in navigation/ shares.
+ * Which projects are active is for projects/ to say: main.ts passes that in
+ * for the project field of "New task".
  */
 
-import type { Editor } from 'obsidian';
+import type { Editor, TFile } from 'obsidian';
 
 import type RonaldPlugin from '../main';
 import { isTaskNote } from '../shared/tasknotes';
@@ -103,6 +116,7 @@ import { registerGtdNoteCommands } from './gtdnotes';
 import { goToGtdNote, showGtdSwitcher } from './gtdswitcher';
 import { moveFinishedTasksToKlaar, openKlaar } from './klaar';
 import { moveTasksToGtdNotes } from './movetonotes';
+import { registerNewTask } from './newtask';
 import { searchTasks } from './search';
 import { moveTasksToTop } from './sorttasks';
 import { insertTag, removeTagFromTaskNotes, toggleTag } from './tags';
@@ -114,8 +128,14 @@ import { registerTasksUriHandler } from './urihandler';
 /**
  * Register the task features. `recency` is the plugin's tab history, which the
  * GTD switcher and "Open inbox" use to find a tab already showing the note.
+ * `projects` lists the active projects, for the project field of "New task";
+ * without it that field is left out.
  */
-export function registerTaskFeatures(plugin: RonaldPlugin, recency: TabRecency): void {
+export function registerTaskFeatures(
+    plugin: RonaldPlugin,
+    recency: TabRecency,
+    projects?: () => TFile[],
+): void {
     plugin.addCommand({
         id: 'open-klaar',
         name: 'Open klaar',
@@ -240,6 +260,7 @@ export function registerTaskFeatures(plugin: RonaldPlugin, recency: TabRecency):
     });
 
     registerTasksUriHandler(plugin, () => plugin.settings);
+    registerNewTask(plugin, projects);
 
     registerTaskCount(plugin);
     registerEstimates(plugin);

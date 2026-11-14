@@ -25,6 +25,8 @@
  *   0-werkruimte/bases/projecten.base.
  * - "Insert link to active project" inserts a link to an open project at the
  *   cursor; "Add project to frontmatter" adds one to the note's `project` list.
+ *   `activeProjects` lists those open projects; main.ts hands it to the tasks
+ *   feature, whose "New task" links a task to one.
  * - "Set project status in frontmatter" sets `status` to one from the
  *   settings; a status that closes the project also sets `eind` to today, and
  *   another status clears it.
@@ -44,16 +46,17 @@
  * Where the code is
  * -----------------
  * - search.ts      the project search and its task counts
- * - commands.ts    the other project commands
+ * - commands.ts    the other project commands, and `activeProjects`
  * - statuses.ts    the statuses and which ones close a project or are hidden
  * - settings.ts    the "Project statuses" setting
  * - urihandler.ts  obsidian://ronald-projects
  */
 
-import type { Editor } from 'obsidian';
+import type { Editor, TFile } from 'obsidian';
 
 import type RonaldPlugin from '../main';
 import {
+    activeProjects,
     addProjectToFrontmatter,
     insertProjectLink,
     moveProjectNotesToFolder,
@@ -62,6 +65,14 @@ import {
 } from './commands';
 import { searchProjects } from './search';
 import { registerProjectsUriHandler } from './urihandler';
+
+/**
+ * The active projects, read from the settings each time: what other features
+ * offer to link to. Passed on by main.ts, since no feature imports another.
+ */
+export function activeProjectsOf(plugin: RonaldPlugin): () => TFile[] {
+    return () => activeProjects(plugin.app, plugin.settings.projectStatuses);
+}
 
 /** Register the project features. */
 export function registerProjectFeatures(plugin: RonaldPlugin): void {

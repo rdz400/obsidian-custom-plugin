@@ -21,11 +21,12 @@ Requires the `VAULT_OBSIDIAN` environment variable to point to your vault direct
 
 ## URIs
 
-The plugin handles five `obsidian://` actions, for links in notes and for shortcuts outside Obsidian. It never builds these URIs itself; they are written by hand wherever they are used. Every parameter is optional, and the bare URI does what the matching command does.
+The plugin handles six `obsidian://` actions, for links in notes and for shortcuts outside Obsidian. It never builds these URIs itself; they are written by hand wherever they are used. Every parameter is optional, and the bare URI does what the matching command does.
 
 | URI | Does | Parameters |
 | --- | --- | --- |
 | `obsidian://ronald-tasks` | Opens **Search tasks** | `query`, `tags`, `notes`, `done` |
+| `obsidian://ronald-new-task` | Opens **New task**, filled in | `text`, `note`, `tags`, `project`, `estimate` |
 | `obsidian://ronald-projects` | Opens **Search projects** | `query`, `status`, `tasks` |
 | `obsidian://ronald-timerecord` | Opens **Add time record** | `message` |
 | `obsidian://ronald-timerecord-search` | Opens **Search time records** | `query`, `days` |
@@ -40,6 +41,20 @@ The plugin handles five `obsidian://` actions, for links in notes and for shortc
 
 ```
 obsidian://ronald-tasks?query=bel&tags=prio,vandaag&notes=today,inbox&done=true
+```
+
+### `ronald-new-task`
+
+Always opens the modal, so the task is checked before **Add** (or Enter) writes it to the end of the GTD note.
+
+- `text`: the task's text.
+- `note`: the GTD note to add to: `today`, `someday`, `overview` or `inbox`. Without it, or with another value, the inbox.
+- `tags`: comma-separated tags, such as `tags=prio,werk`. A tag in **Task filter tags** switches its chip on; any other goes in the **Other tags** field.
+- `project`: an active project, by its note's name. Part of the name will do when only one project has it, so `project=tuin-opknappen` finds `260901-tuin-opknappen`.
+- `estimate`: the estimate in minutes, such as `estimate=20`.
+
+```
+obsidian://ronald-new-task?text=Bel%20Jan&note=today&tags=prio,werk&project=tuin-opknappen&estimate=20
 ```
 
 ### `ronald-projects`
@@ -71,7 +86,7 @@ obsidian://ronald-timerecord-search?query=overleg&days=ma,donderdag
 
 ### How values are read
 
-In `tags`, `notes`, `status` and `days`, a leading `#` is dropped and capitals are folded to lower case, so `tags=#Prio` works. A value without a matching chip is ignored rather than reported. URL-encode spaces and special characters in `query` and `message` (`Overleg%20met%20Jan`).
+In `tags`, `notes`, `status` and `days`, a leading `#` is dropped and capitals are folded to lower case, so `tags=#Prio` works. A value without a matching chip is ignored rather than reported. URL-encode spaces and special characters in `query`, `message`, `text` and `project` (`Overleg%20met%20Jan`).
 
 ### Where the code is
 
@@ -80,11 +95,12 @@ Each action is handled in its feature's `urihandler.ts`, registered from that fe
 | Action | Handler | Opens |
 | --- | --- | --- |
 | `ronald-tasks` | `src/tasks/urihandler.ts` | `searchTasks` in `src/tasks/search.ts` |
+| `ronald-new-task` | `src/tasks/newtask/urihandler.ts` | `newTask` in `src/tasks/newtask/modal.ts` |
 | `ronald-projects` | `src/projects/urihandler.ts` | `searchProjects` in `src/projects/search.ts` |
 | `ronald-timerecord` | `src/timerecord/urihandler.ts` | `addTimeRecord` in `src/timerecord/addtimerecord.ts` |
 | `ronald-timerecord-search` | `src/timerecord/urihandler.ts` | `searchTimeRecords` in `src/timerecord/history/index.ts` |
 | `ronald-tijdsregistratie` | `src/timerecord/urihandler.ts` | `openTimeRecordNote` in `src/timerecord/timerecordnote.ts` |
 
-`src/shared/uri.ts` has `parseValues`, which splits the comma-separated chip parameters for the searches.
+`src/shared/uri.ts` has `parseValues`, which splits the comma-separated chip parameters for the searches and the tags of `ronald-new-task`.
 
 The action names and their parameters are stable identifiers (see `AGENTS.md`): links in notes and shortcuts depend on them, so renaming one breaks those links. A new parameter goes in the handler's `…UriParams` interface, the feature overview in its `index.ts`, and this section.

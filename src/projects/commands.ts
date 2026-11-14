@@ -64,17 +64,25 @@ export async function moveProjectNotesToFolder(app: App): Promise<void> {
     new Notice(`Moved ${moved} note(s) to ${targetFolder}`);
 }
 
+/**
+ * The notes of the projects that are still running: `type: project` with a
+ * status that doesn't close them. These are what the link pickers offer, here
+ * and in the tasks' "New task" modal.
+ */
+export function activeProjects(app: App, statuses: readonly ProjectStatus[]): TFile[] {
+    return app.vault.getMarkdownFiles().filter((file) => {
+        const fm = app.metadataCache.getFileCache(file)?.frontmatter;
+        return fm?.type === 'project' && isOpenStatus(statuses, fm.status);
+    });
+}
+
 /** Insert an internal link to a chosen active project at the cursor via a fuzzy-search modal. */
 export function insertProjectLink(
     app: App,
     editor: Editor,
     statuses: readonly ProjectStatus[],
 ): void {
-    const projects = app.vault.getMarkdownFiles().filter((file) => {
-        const fm = app.metadataCache.getFileCache(file)?.frontmatter;
-        if (fm?.type !== 'project') return false;
-        return isOpenStatus(statuses, fm.status);
-    });
+    const projects = activeProjects(app, statuses);
 
     new NoteSuggestModal(
         app,
@@ -98,11 +106,7 @@ export function addProjectToFrontmatter(app: App, statuses: readonly ProjectStat
     }
     const file = view.file;
 
-    const projects = app.vault.getMarkdownFiles().filter((f) => {
-        const fm = app.metadataCache.getFileCache(f)?.frontmatter;
-        if (fm?.type !== 'project') return false;
-        return isOpenStatus(statuses, fm.status);
-    });
+    const projects = activeProjects(app, statuses);
 
     new NoteSuggestModal(
         app,
