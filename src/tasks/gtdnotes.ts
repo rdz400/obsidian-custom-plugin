@@ -11,19 +11,21 @@ import { removeMoved } from './undomove';
 /**
  * The GTD notes lines can be sent to, each with its own command. `key` holds
  * the note's path in settings, `tagKey` the tag of the tasks that belong there,
- * `icon` the Lucide icon of its command.
+ * `icon` the Lucide icon of its command, `letter` the key that picks it in
+ * "Switch to GTD note" and, with Alt, in "New task"; all on the home row.
  */
 export const GTD_NOTES = [
-    { id: 'today', name: 'today', key: 'todayNote', tagKey: 'todayTag', icon: 'sun' },
-    { id: 'someday', name: 'someday', key: 'somedayNote', tagKey: 'somedayTag', icon: 'hourglass' },
-    { id: 'overview', name: 'overview', key: 'overviewNote', tagKey: 'overviewTag', icon: 'list-tree' },
-    { id: 'inbox', name: 'inbox', key: 'inboxNote', tagKey: 'inboxTag', icon: 'inbox' },
+    { id: 'today', name: 'today', key: 'todayNote', tagKey: 'todayTag', icon: 'sun', letter: 'a' },
+    { id: 'someday', name: 'someday', key: 'somedayNote', tagKey: 'somedayTag', icon: 'hourglass', letter: 's' },
+    { id: 'overview', name: 'overview', key: 'overviewNote', tagKey: 'overviewTag', icon: 'list-tree', letter: 'd' },
+    { id: 'inbox', name: 'inbox', key: 'inboxNote', tagKey: 'inboxTag', icon: 'inbox', letter: 'f' },
 ] as const satisfies readonly {
     id: string;
     name: string;
     key: keyof TaskSettings;
     tagKey: keyof TaskSettings;
     icon: string;
+    letter: string;
 }[];
 
 /** One of the GTD notes: today, someday, overview or inbox. */

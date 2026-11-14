@@ -1,5 +1,7 @@
 import { App, FuzzySuggestModal, SuggestModal, TFile } from 'obsidian';
 
+import { templateMatcher } from '../vault';
+
 export class TagSuggestModal extends SuggestModal<string> {
     private tags: string[];
     private onChoose: (tag: string) => void;
@@ -48,6 +50,10 @@ export class StringSuggestModal extends SuggestModal<string> {
     }
 }
 
+/**
+ * Pick a note: from `items`, or from every note in the vault. Templates are
+ * never offered; they are not notes to link to or write into.
+ */
 export class NoteSuggestModal extends FuzzySuggestModal<TFile> {
     private onChoose: (file: TFile) => void;
     private items: TFile[];
@@ -55,7 +61,8 @@ export class NoteSuggestModal extends FuzzySuggestModal<TFile> {
     constructor(app: App, onChoose: (file: TFile) => void, items?: TFile[]) {
         super(app);
         this.onChoose = onChoose;
-        this.items = items ?? app.vault.getMarkdownFiles();
+        const isTemplate = templateMatcher(app);
+        this.items = (items ?? app.vault.getMarkdownFiles()).filter((file) => !isTemplate(file));
     }
 
     getItems(): TFile[] {

@@ -10,6 +10,7 @@ import {
     renderTypePill,
 } from '../shared/ui/notetype';
 import { openFileFromSearch, registerNewTabEnter } from '../shared/ui/openfile';
+import { templateMatcher } from '../shared/vault';
 
 /** A note linking to the target note, plus what is shown for it. */
 export interface BacklinkItem {
@@ -60,9 +61,11 @@ function linkResolvesTo(
  */
 export function collectBacklinks(app: App, target: TFile): BacklinkItem[] {
     const items: BacklinkItem[] = [];
+    // A template's links are a pattern for new notes, not a mention.
+    const isTemplate = templateMatcher(app);
 
     for (const file of app.vault.getMarkdownFiles()) {
-        if (file.path === target.path) continue;
+        if (file.path === target.path || isTemplate(file)) continue;
 
         const cache = app.metadataCache.getFileCache(file);
         if (!cache) continue;

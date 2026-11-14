@@ -846,6 +846,60 @@
     flex-shrink: 0;
 }
 
+/* New task modal ("New task" command). */
+
+.ronald-new-task-modal {
+    width: min(520px, 100%);
+}
+
+.ronald-new-task-modal .modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ronald-new-task-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ronald-new-task-row input {
+    flex: 1;
+    min-width: 0;
+}
+
+.ronald-new-task-row button {
+    flex-shrink: 0;
+}
+
+/* Minutes are two or three digits; the free fields get the rest of the row. */
+.ronald-new-task-row input.ronald-new-task-estimate {
+    flex: 0 0 4.5em;
+}
+
+/* The chip rows sit in the modal's own flow, not between a search and its results. */
+.ronald-new-task-modal .ronald-task-filters {
+    padding: 0;
+    border-bottom: none;
+}
+
+/* A chip with no count badge: even padding on both sides. */
+.ronald-new-task-modal .ronald-task-filter {
+    padding: 2px 10px;
+}
+
+/* On the phone the chips are tapped instead of Alt+letter or Mod+digit: a bigger target. */
+.is-mobile .ronald-new-task-modal .ronald-task-filter {
+    padding: 6px 12px;
+    font-size: var(--font-ui-small);
+}
+
+.ronald-new-task-hint {
+    font-size: var(--font-smallest);
+    color: var(--text-faint);
+}
+
 /* Time record history ("Search time records" command). */
 
 /*

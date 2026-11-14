@@ -21,7 +21,7 @@
  *   an explicit end later on the line keeps the plain inline code look. The
  *   colour, and how strong its tint gets, are set in `styles.css`.
  * - "Search time records" searches every note with that type, so also records
- *   moved to an archive. The latest record comes first. Each query word must match
+ *   moved to an archive, but not a template. The latest record comes first. Each query word must match
  *   the text, the start of the time, or the date: "overleg maandag", "okt 2026".
  *   The weekday chips, or Mod+1 (Monday) to Mod+7 (Sunday), show only those days.
  *   A row shows how long the record took, if it has an explicit end, and the

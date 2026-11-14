@@ -5,7 +5,7 @@ import { registerLinkFeatures } from './links';
 import { registerNaming } from './naming';
 import { registerNavigation } from './navigation';
 import { TabRecency } from './shared/tabrecency';
-import { registerProjectFeatures } from './projects';
+import { activeProjectsOf, registerProjectFeatures } from './projects';
 import {
     DEFAULT_SETTINGS,
     RonaldSettingTab,
@@ -26,7 +26,9 @@ export default class RonaldPlugin extends Plugin {
         this.tabRecency.register(this);
 
         registerEditingCommands(this);
-        registerTaskFeatures(this, this.tabRecency);
+        // The tasks' "New task" links to a project; which are active is for
+        // projects/ to say, so it is handed over here.
+        registerTaskFeatures(this, this.tabRecency, activeProjectsOf(this));
         registerProjectFeatures(this);
         registerLinkFeatures(this);
         registerNavigation(this, this.tabRecency);
