@@ -1,12 +1,9 @@
 import { App, Notice, SuggestModal, TFile, WorkspaceLeaf } from 'obsidian';
 
-import { GTD_NOTES, type GtdNote } from './gtdnotes';
+import { GTD_NOTES } from './gtdnotes';
 import type { TaskSettings } from './settings';
 import { TabRecency } from '../shared/tabrecency';
 import { leafFilePath, switchToTab } from '../shared/tabs';
-
-/** The key that opens each GTD note in the switcher, all on the home row. */
-const KEYS: Record<GtdNote['id'], string> = { today: 'a', someday: 's', overview: 'd', inbox: 'f' };
 
 /** A GTD note that is set in settings and exists, plus the key that opens it. */
 interface GtdItem {
@@ -19,13 +16,13 @@ interface GtdItem {
 /**
  * The GTD notes that are set and exist, in `GTD_NOTES` order.
  *
- * Keys follow `GTD_NOTES` rather than this list, so an unset note leaves a
+ * Keys come from `GTD_NOTES` rather than this list, so an unset note leaves a
  * gap instead of shifting the keys of the ones after it.
  */
 function collectGtdNotes(app: App, settings: TaskSettings): GtdItem[] {
     return GTD_NOTES.flatMap((note) => {
         const file = app.vault.getFileByPath(settings[note.key]);
-        return file ? [{ name: note.name, file, key: KEYS[note.id] }] : [];
+        return file ? [{ name: note.name, file, key: note.letter }] : [];
     });
 }
 
@@ -75,7 +72,8 @@ class GtdSwitcherModal extends SuggestModal<GtdItem> {
         super(app);
         // Hidden rather than removed: SuggestModal still reads it.
         this.inputEl.parentElement?.hide();
-        this.setInstructions([{ command: Object.values(KEYS).join(' '), purpose: 'to go to that note' }]);
+        const letters = GTD_NOTES.map((note) => note.letter).join(' ');
+        this.setInstructions([{ command: letters, purpose: 'to go to that note' }]);
         for (const item of items) {
             this.scope.register([], item.key, () => {
                 this.close();
