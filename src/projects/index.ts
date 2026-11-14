@@ -25,7 +25,8 @@
  *   0-werkruimte/bases/projecten.base.
  * - "Insert link to active project" inserts a link to an open project at the
  *   cursor; "Add project to frontmatter" adds one to the note's `project` list.
- *   `activeProjects` lists those open projects; main.ts hands it to the tasks
+ *   Neither offers the project template. `activeProjects` lists those open
+ *   projects; main.ts hands it to the tasks
  *   feature, whose "New task" links a task to one.
  * - "Set project status in frontmatter" sets `status` to one from the
  *   settings; a status that closes the project also sets `eind` to today, and

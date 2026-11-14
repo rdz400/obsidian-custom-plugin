@@ -8,7 +8,7 @@
  * How to use it
  * -------------
  * - "Search notes linking to this note" lists the notes that link here, the
- *   ones with the most links first. Enter opens a note at its first link here,
+ *   ones with the most links first; templates are left out. Enter opens a note at its first link here,
  *   Mod+Enter in a new tab.
  * - "Search links in this note" lists everywhere this note links to, each
  *   destination once: notes, web links, and links to notes that don't exist

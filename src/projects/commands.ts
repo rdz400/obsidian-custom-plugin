@@ -2,6 +2,7 @@ import { App, Editor, MarkdownView, Notice, TFile, WorkspaceLeaf } from 'obsidia
 
 import { formatDate } from '../shared/date';
 import { NoteSuggestModal, StringSuggestModal } from '../shared/ui/modals';
+import { templateMatcher } from '../shared/vault';
 import { findStatus, isOpenStatus, type ProjectStatus } from './statuses';
 
 /** The base listing the projects, opened by "Open projecten". */
@@ -66,11 +67,13 @@ export async function moveProjectNotesToFolder(app: App): Promise<void> {
 
 /**
  * The notes of the projects that are still running: `type: project` with a
- * status that doesn't close them. These are what the link pickers offer, here
- * and in the tasks' "New task" modal.
+ * status that doesn't close them, leaving out the project template. These are
+ * what the link pickers offer, here and in the tasks' "New task" modal.
  */
 export function activeProjects(app: App, statuses: readonly ProjectStatus[]): TFile[] {
+    const isTemplate = templateMatcher(app);
     return app.vault.getMarkdownFiles().filter((file) => {
+        if (isTemplate(file)) return false;
         const fm = app.metadataCache.getFileCache(file)?.frontmatter;
         return fm?.type === 'project' && isOpenStatus(statuses, fm.status);
     });
