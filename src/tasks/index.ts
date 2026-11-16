@@ -40,7 +40,9 @@
  * Getting to the notes
  * - "Switch to GTD note" lists the GTD notes set in settings, without a
  *   search field: a, s, d, f go straight to today, someday, overview, inbox.
- *   It and "Open inbox" go to the tab already showing the note, or open it.
+ * - "Open today" (and someday, overview, inbox), each also a ribbon icon,
+ *   opens that GTD note. These and the switcher go to the tab already
+ *   showing the note, or open it.
  * - "Open taken" opens every task note in its own tab.
  *
  * Tagging
@@ -83,7 +85,7 @@
  * - search.ts         the task search
  * - gtdnotes.ts       the GTD notes and "Move line(s) to …"
  * - listblocks.ts     taking list items out with their subitems, for "Move line(s) to …"
- * - gtdswitcher.ts    "Switch to GTD note" and "Open inbox"
+ * - gtdswitcher.ts    "Switch to GTD note" and "Open today" (and the others)
  * - movetonotes.ts    "Move tagged tasks to their GTD notes"
  * - sorttasks.ts      "Move tasks with a tag to top"
  * - reorder.ts        finding top-level tasks with their subtasks, for both of the above
@@ -112,7 +114,7 @@ import { isTaskNote } from '../shared/tasknotes';
 import type { TabRecency } from '../shared/tabrecency';
 import { toggleCheckBoxAdvanced } from './checkbox';
 import { registerEstimates } from './estimate';
-import { registerGtdNoteCommands } from './gtdnotes';
+import { GTD_NOTES, registerGtdNoteCommands } from './gtdnotes';
 import { goToGtdNote, showGtdSwitcher } from './gtdswitcher';
 import { moveFinishedTasksToKlaar, openKlaar } from './klaar';
 import { moveTasksToGtdNotes } from './movetonotes';
@@ -127,7 +129,8 @@ import { registerTasksUriHandler } from './urihandler';
 
 /**
  * Register the task features. `recency` is the plugin's tab history, which the
- * GTD switcher and "Open inbox" use to find a tab already showing the note.
+ * GTD switcher and the "Open …" commands for the GTD notes use to find a tab
+ * already showing the note.
  * `projects` lists the active projects, for the project field of "New task";
  * without it that field is left out.
  */
@@ -143,19 +146,20 @@ export function registerTaskFeatures(
         callback: () => openKlaar(plugin.app),
     });
 
-    // The inbox is the GTD note set in settings, opened the way the GTD
-    // switcher opens it, so both always land on the same note.
-    const openInbox = () => goToGtdNote(plugin.app, plugin.settings, recency, 'inbox');
-
-    plugin.addCommand({
-        id: 'open-inbox',
-        name: 'Open inbox',
-        icon: 'inbox',
-        callback: () => void openInbox(),
-    });
-
     plugin.addRibbonIcon('check-check', 'Open klaar', () => openKlaar(plugin.app));
-    plugin.addRibbonIcon('inbox', 'Open inbox', () => void openInbox());
+
+    // Each GTD note is the note set in settings, opened the way the GTD
+    // switcher opens it, so both always land on the same note.
+    for (const note of GTD_NOTES) {
+        const open = () => void goToGtdNote(plugin.app, plugin.settings, recency, note.id);
+        plugin.addCommand({
+            id: `open-${note.id}`,
+            name: `Open ${note.name}`,
+            icon: note.icon,
+            callback: open,
+        });
+        plugin.addRibbonIcon(note.icon, `Open ${note.name}`, open);
+    }
 
     plugin.addCommand({
         id: 'open-taken',
