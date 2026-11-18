@@ -9,14 +9,22 @@ interface Line {
     task: boolean;
 }
 
-/** A top-level task and its subtasks: lines [from, to], both inclusive. */
+/**
+ * A top-level task and its subtasks: lines [from, to], both inclusive.
+ * `finished` when every checkbox in it, the root's included, is `[x]`.
+ */
 interface Block {
     root: ListItemCache;
     from: number;
     to: number;
+    finished: boolean;
 }
 
 const isBlank = (line: Line | undefined) => line !== undefined && line.text.trim() === '';
+
+/** A task whose checkbox isn't finished: anything but `[x]` or `[X]`. Plain bullets aren't. */
+const isOpenTask = (item: ListItemCache) =>
+    item.task !== undefined && item.task !== 'x' && item.task !== 'X';
 
 /**
  * Every top-level task with its subtree.
@@ -33,8 +41,13 @@ function hierarchies(cache: TaskCache): Block[] {
         const root = item.parent < 0 ? line : rootLine.get(item.parent) ?? line;
         rootLine.set(line, root);
         const block = blocks.get(root);
-        if (block) block.to = Math.max(block.to, item.position.end.line);
-        else blocks.set(root, { root: item, from: line, to: item.position.end.line });
+        if (block) {
+            block.to = Math.max(block.to, item.position.end.line);
+            if (isOpenTask(item)) block.finished = false;
+        } else {
+            const finished = !isOpenTask(item);
+            blocks.set(root, { root: item, from: line, to: item.position.end.line, finished });
+        }
     }
     return [...blocks.values()].filter(
         (b) => b.root.task !== undefined && b.root.position.start.col === 0,
@@ -127,19 +140,20 @@ export function moveTaggedToTop(
 
 /**
  * Take out the top-level tasks, with their subtasks, that `destination` sends
- * somewhere, given the root task's tags in the order they are written; it
- * returns undefined for a task that stays. `taken` holds, per destination, the
+ * somewhere, given the root task's tags in the order they are written and
+ * whether the task and every checkbox below it are finished; it returns
+ * undefined for a task that stays. `taken` holds, per destination, the
  * tasks' text in note order and how many there are. A `---` rule left heading
  * the body, as the one closing off tasks moved to the top would be, goes too.
  */
 export function takeByDestination<D>(
     text: string,
     cache: TaskCache,
-    destination: (tags: string[]) => D | undefined,
+    destination: (tags: string[], finished: boolean) => D | undefined,
 ): { text: string; taken: Map<D, { text: string; moved: number }> } {
     const lines = noteLines(text, cache);
     const routed = hierarchies(cache).flatMap((block) => {
-        const to = destination(rootTags(block, cache));
+        const to = destination(rootTags(block, cache), block.finished);
         return to === undefined ? [] : [{ block, to }];
     });
 

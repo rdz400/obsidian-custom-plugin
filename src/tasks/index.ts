@@ -63,8 +63,13 @@
  * - "Move finished tasks to klaar" moves finished tasks whose subtasks are
  *   all finished too to the end of the note "klaar", under a heading linking
  *   today's daily note. "Open klaar" opens that note.
+ * - "Move open tasks to overview" (in the today note) clears today at the end
+ *   of the day: every task with its subtasks, except the finished ones that
+ *   are for klaar, goes to the end of overview under "## Uit vandaag" and a
+ *   link to today's daily note, without the today tag.
  * - Undo after any of these moves, except "to top", puts the tasks back and
- *   takes them out of the note they went to again; redo moves them again.
+ *   takes them out of the note they went to again, whether it is pressed in
+ *   the note they came from or in one they went to; redo moves them again.
  *
  * In the editor
  * - "Toggle checkbox status advanced" cycles a line through
@@ -92,7 +97,11 @@
  * - tags.ts           the tag commands
  * - taglines.ts       finding, adding and removing a tag on a line, for those
  * - klaar.ts          the "klaar" note
- * - undomove.ts       undo and redo of a move in the note it went to
+ * - cleartoday.ts     "Move open tasks to overview"
+ * - leftovers.ts      the open tasks to take out of today, for that
+ * - dayheading.ts     the heading linking today's daily note that klaar and
+ *                     overview add moved tasks under
+ * - undomove.ts       a move as one undo step in every note it touched
  * - checkbox.ts       the checkbox cycle
  * - estimate/         time estimates
  * - newtask/          "New task" and obsidian://ronald-new-task
@@ -113,6 +122,7 @@ import type RonaldPlugin from '../main';
 import { isTaskNote } from '../shared/tasknotes';
 import type { TabRecency } from '../shared/tabrecency';
 import { toggleCheckBoxAdvanced } from './checkbox';
+import { moveOpenTasksToOverview } from './cleartoday';
 import { registerEstimates } from './estimate';
 import { GTD_NOTES, registerGtdNoteCommands } from './gtdnotes';
 import { goToGtdNote, showGtdSwitcher } from './gtdswitcher';
@@ -216,9 +226,28 @@ export function registerTaskFeatures(
         },
     });
 
+    plugin.addCommand({
+        id: 'move-open-tasks-to-overview',
+        name: 'Move open tasks to overview',
+        icon: 'sunset',
+        // Only offered in the today note, and only while overview is another
+        // note that exists; both read from settings each time.
+        editorCheckCallback: (checking, editor, ctx) => {
+            const { todayNote, overviewNote, todayTag } = plugin.settings;
+            const overview = plugin.app.vault.getFileByPath(overviewNote);
+            if (!ctx.file || ctx.file.path !== todayNote || !overview || overview === ctx.file) {
+                return false;
+            }
+            if (!checking) {
+                void moveOpenTasksToOverview(plugin.app, ctx.file, editor, overview, todayTag);
+            }
+            return true;
+        },
+    });
+
     registerGtdNoteCommands(plugin);
     registerTaskNoteRenames(plugin);
-    plugin.registerEditorExtension(undoableMoves(plugin.app));
+    plugin.registerEditorExtension(undoableMoves());
 
     plugin.addCommand({
         id: 'toggle-checkbox-advanced',
