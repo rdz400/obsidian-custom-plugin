@@ -26,7 +26,8 @@
  *   The weekday chips, or Mod+1 (Monday) to Mod+7 (Sunday), show only those days.
  *   A row shows how long the record took, if it has an explicit end, and the
  *   time to the next record of that day. Enter opens the note at the record,
- *   Mod+Enter in a new tab.
+ *   Mod+Enter in a new tab, Alt+Enter or Alt+click in a new tab in the
+ *   background, leaving the search open.
  * - obsidian://ronald-timerecord-search opens that search;
  *   obsidian://ronald-timerecord-search?query=overleg&days=ma,donderdag opens it
  *   with that text and those weekday chips. A day is a chip's label or a full

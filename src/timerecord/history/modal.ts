@@ -1,7 +1,12 @@
-import { App, SuggestModal, setIcon } from 'obsidian';
+import { App, type OpenViewState, SuggestModal, setIcon } from 'obsidian';
 
 import { FilterBar } from '../../shared/ui/filterbar';
-import { openFileFromSearch, registerNewTabEnter } from '../../shared/ui/openfile';
+import {
+    openFileFromSearch,
+    registerAltEnter,
+    registerNewTabEnter,
+    wantsAltAction,
+} from '../../shared/ui/openfile';
 import { heatClasses } from '../heatmap/heatmap';
 import type { NoteEntry } from './collect';
 import { formatDuration } from './durations';
@@ -27,7 +32,8 @@ export interface TimeHistoryPreset {
 /**
  * Search the time record history. Typing narrows the list, and so do the weekday
  * chips or Mod+1 (Monday) to Mod+7 (Sunday). Enter opens the note at the record,
- * Mod+Enter does so in a new tab.
+ * Mod+Enter does so in a new tab, and Alt+Enter or Alt+click in a new tab behind
+ * the search, which stays open for the next one.
  */
 export class TimeHistoryModal extends SuggestModal<NoteEntry> {
     private readonly search: (query: string) => NoteEntry[];
@@ -44,6 +50,7 @@ export class TimeHistoryModal extends SuggestModal<NoteEntry> {
         this.setPlaceholder('Search by text, weekday or date…');
         this.modalEl.addClass('ronald-time-history');
         registerNewTabEnter(this);
+        registerAltEnter(this);
 
         this.weekdays = new FilterBar({
             chips: WEEKDAY_CHIPS,
@@ -117,12 +124,31 @@ export class TimeHistoryModal extends SuggestModal<NoteEntry> {
         renderDurations(entry, el);
     }
 
-    onChooseSuggestion(entry: NoteEntry, event: MouseEvent | KeyboardEvent): void {
-        const { line } = entry.record;
-        openFileFromSearch(this.app, entry.note, event, {
-            eState: { line, cursor: { from: { line, ch: 0 } } },
+    /**
+     * With Alt, open the record behind the search instead of choosing it. This is
+     * where Enter and a click arrive, and the base class closes the modal here
+     * before calling `onChooseSuggestion`, so skipping it is what keeps it open.
+     */
+    selectSuggestion(entry: NoteEntry, event: MouseEvent | KeyboardEvent): void {
+        if (!wantsAltAction(event)) {
+            super.selectSuggestion(entry, event);
+            return;
+        }
+        // `active: false` leaves the new tab in the background and focus in the search.
+        void this.app.workspace.getLeaf('tab').openFile(entry.note, {
+            ...recordState(entry),
+            active: false,
         });
     }
+
+    onChooseSuggestion(entry: NoteEntry, event: MouseEvent | KeyboardEvent): void {
+        openFileFromSearch(this.app, entry.note, event, recordState(entry));
+    }
+}
+
+/** What opens a note with the cursor at the start of the record's line. */
+function recordState({ record: { line } }: NoteEntry): OpenViewState {
+    return { eState: { line, cursor: { from: { line, ch: 0 } } } };
 }
 
 /**
