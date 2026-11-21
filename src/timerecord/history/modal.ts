@@ -92,8 +92,8 @@ export class TimeHistoryModal extends SuggestModal<NoteEntry> {
 
     /**
      * Re-run the current query so the list reflects a changed filter. `onInput`
-     * is what Obsidian's own input listener calls; dispatching an `input` event
-     * instead adds a second set of results to the list.
+     * is what Obsidian's own input listener calls; it isn't in the API's types,
+     * hence the cast.
      */
     private rerunSearch(): void {
         (this as unknown as { onInput(): void }).onInput();
