@@ -805,8 +805,19 @@
 
 /* Time record modal ("Add time record" command). */
 
+/*
+ * Anchored at the top rather than centred, so the modal grows only downwards
+ * as suggestions come and go, and the input stays where it is.
+ */
 .ronald-time-record-modal {
     width: min(460px, 100%);
+    align-self: flex-start;
+    margin-top: 20vh;
+}
+
+/* On the phone the keyboard takes the lower half: stay near the top. */
+.is-phone .ronald-time-record-modal {
+    margin-top: calc(var(--safe-area-inset-top) + var(--size-4-4));
 }
 
 .ronald-time-record-modal .modal-content {
@@ -846,7 +857,7 @@
     flex-shrink: 0;
 }
 
-/* Earlier records that fit, above the input so the phone keyboard never covers them. */
+/* Earlier records that fit, under the input so it stays put while the list changes. */
 .ronald-time-record-suggestions {
     display: flex;
     flex-direction: column;

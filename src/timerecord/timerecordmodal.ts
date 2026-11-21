@@ -26,14 +26,16 @@ export interface TimeRecordModalOptions {
  * The layout is built around the phone keyboard, which comes up as soon as the
  * input is focused. The OS scrolls only the focused input into view, so
  * anything below it ends up behind the keyboard. That is why the **Add** button
- * shares the input's row, and why the suggestions are listed above it.
+ * shares the input's row.
  *
- * While typing, earlier records that fit are suggested, the most used first.
+ * While typing, earlier records that fit are suggested under the input, the
+ * most used first. Under it rather than above, so the input stays where it is
+ * while the list grows and shrinks.
  * None is picked by itself: Enter adds what was typed. Arrow keys pick one, and
  * Enter then adds that; Tab, or a tap, puts it in the field to change first;
  * Mod+Enter adds the first straight away. A suggestion brings its chips along.
  *
- * Under the input are the tag chips from settings, toggled with a tap or
+ * Under the suggestions are the tag chips from settings, toggled with a tap or
  * Mod+1…9; the tags that are on go at the end of the line.
  */
 export class TimeRecordModal extends Modal {
@@ -62,14 +64,14 @@ export class TimeRecordModal extends Modal {
         setIcon(timeRow.createSpan({ cls: 'ronald-time-record-icon' }), 'clock');
         timeRow.createSpan({ cls: 'ronald-time-record-time', text: this.options.time });
 
+        this.renderMessageRow(contentEl.createDiv({ cls: 'ronald-time-record-row' }));
+
         this.listEl = contentEl.createDiv({
             cls: 'ronald-time-record-suggestions',
             attr: { role: 'listbox' },
         });
         this.listEl.hidden = true;
         keepFocus(this.listEl);
-
-        this.renderMessageRow(contentEl.createDiv({ cls: 'ronald-time-record-row' }));
 
         if (this.options.tags.length > 0) {
             contentEl.appendChild(this.tagBar.el);
