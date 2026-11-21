@@ -1,8 +1,8 @@
 import { App, ListItemCache, MarkdownView, Notice, type TFile } from 'obsidian';
 
-import { formatDate } from '../shared/date';
 import { freshCache } from '../shared/editor/freshcache';
-import { removeMoved } from './undomove';
+import { todayLink, underHeading } from './dayheading';
+import { Move } from './undomove';
 
 /** The note finished tasks are moved to, and opened by "Open klaar". */
 const KLAAR_NOTE = 'klaar';
@@ -18,34 +18,6 @@ function findKlaarNote(app: App): TFile | null {
 /** A finished checkbox is `[x]` or `[X]`. */
 function isDoneTask(item: ListItemCache): boolean {
     return item.task === 'x' || item.task === 'X';
-}
-
-/** Date format of the daily note, taken from the core "Daily notes" plugin. */
-const DEFAULT_DAILY_FORMAT = 'YYYYMMDD';
-
-function getDailyNoteFormat(app: App): string {
-    const instance = (app as any).internalPlugins?.getPluginById('daily-notes')?.instance;
-    const format = instance?.options?.format;
-    return typeof format === 'string' && format.length > 0 ? format : DEFAULT_DAILY_FORMAT;
-}
-
-/** The `## [[20260725]]` heading that finished tasks of today belong under. */
-function todayHeading(app: App): string {
-    return `## [[${formatDate(new Date(), getDailyNoteFormat(app))}]]`;
-}
-
-/**
- * Return `content` guaranteed to end with a heading for today: if the last `##`
- * heading isn't today's, append a new one.
- */
-function ensureTodayHeading(content: string, heading: string): string {
-    const headings = content.match(/^##\s+.*$/gm);
-    const last = headings?.[headings.length - 1];
-    // Compare loosely so trailing whitespace in the file doesn't force a duplicate.
-    if (last?.trim() === heading) return content;
-
-    const separator = content.length === 0 || content.endsWith('\n\n') ? '' : content.endsWith('\n') ? '\n' : '\n\n';
-    return content + separator + heading + '\n\n';
 }
 
 /**
@@ -168,9 +140,9 @@ export async function moveFinishedTasksToKlaar(app: App): Promise<void> {
     // Append to "klaar" first; only remove from the source if that succeeds.
     // Tasks go under a `## [[<daily note>]]` heading for today, which is added
     // when the note doesn't already end with one.
-    const content = await app.vault.read(target);
-    const added = ensureTodayHeading(content, todayHeading(app)).slice(content.length) + moved + '\n';
-    await app.vault.modify(target, content + added);
+    const move = new Move(app, sourceFile);
+    const heading = `## ${todayLink(app)}`;
+    await move.append(target, (content) => underHeading(content, heading, moved));
 
     // Edits while writing would shift the lines; they are in "klaar" already.
     if (editor.getValue() !== text) {
@@ -180,7 +152,7 @@ export async function moveFinishedTasksToKlaar(app: App): Promise<void> {
     // One edit, so a single undo puts every task back and takes them (and a
     // heading added for them) out of "klaar" again.
     const kept = text.split('\n').filter((_, i) => !blocks.some((b) => i >= b.from && i <= b.to));
-    removeMoved(editor, kept.join('\n'), [{ file: target, text: added }]);
+    move.finish(editor, kept.join('\n'), moved);
 
     new Notice(`Moved ${blocks.length} task(s) to ${target.basename}`);
 }

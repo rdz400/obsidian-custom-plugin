@@ -20,6 +20,12 @@ export function templateMatcher(app: App): (file: TFile) => boolean {
     return (file) => file.path === folder || file.path.startsWith(`${folder}/`);
 }
 
+/** What to add to `content` to end it with `text` on lines of its own. */
+export function textToAppend(content: string, text: string): string {
+    const separator = content.length > 0 && !content.endsWith('\n') ? '\n' : '';
+    return separator + text + '\n';
+}
+
 /**
  * Append `text` to the end of `file`, on lines of its own. Returns what was
  * added to the note, newlines and all, so it can be taken out again exactly.
@@ -27,8 +33,7 @@ export function templateMatcher(app: App): (file: TFile) => boolean {
 export async function appendToNote(app: App, file: TFile, text: string): Promise<string> {
     let added = '';
     await app.vault.process(file, (content) => {
-        const separator = content.length > 0 && !content.endsWith('\n') ? '\n' : '';
-        added = separator + text + '\n';
+        added = textToAppend(content, text);
         return content + added;
     });
     return added;

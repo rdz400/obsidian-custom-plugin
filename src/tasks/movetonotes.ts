@@ -3,10 +3,10 @@ import { App, Editor, Notice, TFile } from 'obsidian';
 import { restoreCursor } from '../shared/editor/lines';
 import { freshCache } from '../shared/editor/freshcache';
 import type { TaskSettings } from './settings';
-import { appendToNote } from '../shared/vault';
+import { textToAppend } from '../shared/vault';
 import { GTD_NOTES } from './gtdnotes';
 import { takeByDestination } from './reorder';
-import { type Appended, removeMoved } from './undomove';
+import { Move } from './undomove';
 
 type GtdNote = (typeof GTD_NOTES)[number];
 
@@ -63,10 +63,9 @@ export async function moveTasksToGtdNotes(
         return;
     }
 
-    const appended: Appended[] = [];
+    const move = new Move(app, file);
     for (const [note, taken] of result.taken) {
-        const file = targets.get(note)!;
-        appended.push({ file, text: await appendToNote(app, file, taken.text) });
+        await move.append(targets.get(note)!, (content) => textToAppend(content, taken.text));
     }
 
     const summary = [...result.taken]
@@ -79,7 +78,7 @@ export async function moveTasksToGtdNotes(
         return;
     }
     const origin = editor.getCursor('from');
-    removeMoved(editor, result.text, appended);
+    move.finish(editor, result.text, [...result.taken.values()].map((t) => t.text).join('\n'));
     restoreCursor(editor, origin);
     new Notice(`Moved tasks: ${summary}`);
 }
