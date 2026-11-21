@@ -846,6 +846,71 @@
     flex-shrink: 0;
 }
 
+/* Earlier records that fit, above the input so the phone keyboard never covers them. */
+.ronald-time-record-suggestions {
+    display: flex;
+    flex-direction: column;
+    margin-left: 28px;
+}
+
+.ronald-time-record-suggestion {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: var(--radius-s);
+    cursor: pointer;
+}
+
+.ronald-time-record-suggestion:hover,
+.ronald-time-record-suggestion.is-selected {
+    background: var(--background-modifier-hover);
+}
+
+.ronald-time-record-suggestion.is-selected {
+    color: var(--text-accent);
+}
+
+.is-mobile .ronald-time-record-suggestion {
+    padding: 8px;
+}
+
+.ronald-time-record-suggestion-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ronald-time-record-suggestion-tags {
+    flex-shrink: 0;
+    font-size: var(--font-smallest);
+    color: var(--text-faint);
+}
+
+/* The chip row sits in the modal's own flow, lined up with the input. */
+.ronald-time-record-modal .ronald-task-filters {
+    padding: 0 0 0 28px;
+    border-bottom: none;
+}
+
+/* A chip with no count badge: even padding on both sides. */
+.ronald-time-record-modal .ronald-task-filter {
+    padding: 2px 10px;
+}
+
+/* On the phone the chips are tapped instead of Mod+digit: a bigger target. */
+.is-mobile .ronald-time-record-modal .ronald-task-filter {
+    padding: 6px 12px;
+    font-size: var(--font-ui-small);
+}
+
+.ronald-time-record-hint {
+    font-size: var(--font-smallest);
+    color: var(--text-faint);
+}
+
 /* New task modal ("New task" command). */
 
 .ronald-new-task-modal {

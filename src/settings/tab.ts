@@ -5,6 +5,7 @@ import type RonaldPlugin from '../main';
 import { navigationSettingSections } from '../navigation/settings';
 import { projectSettingSections } from '../projects/settings';
 import { normaliseTaskSetting, taskSettingSections } from '../tasks/settings';
+import { timeRecordSettingSections } from '../timerecord/settings';
 import type { SettingSectionContext } from './section';
 
 /** One tab for the whole plugin, each feature adding its own sections. */
@@ -23,6 +24,7 @@ export class RonaldSettingTab extends PluginSettingTab {
             ...projectSettingSections(context),
             ...linkSettingSections(context),
             ...navigationSettingSections(context),
+            ...timeRecordSettingSections(context),
         ];
     }
 

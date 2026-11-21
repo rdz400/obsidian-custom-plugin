@@ -9,7 +9,16 @@
  * How to use it
  * -------------
  * - "Add time record to "tijdsregistratie" note" (also a ribbon icon) asks
- *   for a message and adds it with the current time.
+ *   for a message and adds it with the current time. While typing, earlier
+ *   records that fit are listed above the field, the most used (and recently
+ *   used) first; each word typed must start a word of the record. Enter adds
+ *   what was typed, never a suggestion by itself; ↑/↓ pick one, and Enter then
+ *   adds that; Tab or a tap puts it in the field to change first; Mod+Enter
+ *   adds the first suggestion straight away.
+ * - Below the field are chips for the tags in **Settings → Tags to add to a
+ *   time record**, toggled with a tap or Mod+1…9; the tags that are on go at
+ *   the end of the line: "- `14:05:12` Overleg met Jan #werk". A suggestion
+ *   turns on the chips its record had.
  * - "Open "tijdsregistratie" note" opens the note at its last line.
  * - obsidian://ronald-timerecord does the same as the first command;
  *   obsidian://ronald-timerecord?message=Lunch adds that record without
@@ -48,6 +57,9 @@
  * -----------------
  * - addtimerecord.ts     adding a record
  * - recordline.ts        what a record line is, and reading one
+ * - recordtags.ts        taking chip tags off a record's text, and adding them
+ * - settings.ts          the tags offered as chips
+ * - suggestions.ts       earlier records: ranking them and matching what is typed
  * - timerecordmodal.ts   the dialog that asks for the message
  * - timerecordnote.ts    finding and opening the note, telling a time record note
  * - urihandler.ts        the three URIs
@@ -63,8 +75,7 @@
  *                        the dialog (modal.ts)
  */
 
-import type { Plugin } from 'obsidian';
-
+import type RonaldPlugin from '../main';
 import { addTimeRecord } from './addtimerecord';
 import { registerTimeHeatmap } from './heatmap';
 import { registerTimeHistory } from './history';
@@ -76,7 +87,7 @@ import {
 } from './urihandler';
 
 /** Register the time record commands, URIs, the colouring of times and the history. */
-export function registerTimeRecords(plugin: Plugin): void {
+export function registerTimeRecords(plugin: RonaldPlugin): void {
     plugin.addCommand({
         id: 'open-tijdsregistratie-note',
         name: 'Open "tijdsregistratie" note',
@@ -88,10 +99,12 @@ export function registerTimeRecords(plugin: Plugin): void {
         id: 'add-time-record',
         name: 'Add time record to "tijdsregistratie" note',
         icon: 'timer',
-        callback: () => addTimeRecord(plugin.app),
+        callback: () => addTimeRecord(plugin.app, plugin.settings),
     });
 
-    plugin.addRibbonIcon('timer', 'Add time record', () => addTimeRecord(plugin.app));
+    plugin.addRibbonIcon('timer', 'Add time record', () =>
+        addTimeRecord(plugin.app, plugin.settings),
+    );
 
     registerTijdsregistratieUriHandler(plugin);
     registerTimeRecordUriHandler(plugin);
