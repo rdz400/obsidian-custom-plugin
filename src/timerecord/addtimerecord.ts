@@ -1,5 +1,7 @@
 import { App, Notice, moment } from 'obsidian';
 
+import { collectHistory } from './history/collect';
+import type { TimeRecordSettings } from './settings';
 import { TimeRecordModal } from './timerecordmodal';
 import { getTimeRecordNote } from './timerecordnote';
 
@@ -27,9 +29,11 @@ function appendLine(text: string, line: string): string {
  * a blank one counts as none.
  *
  * The note is looked up before the modal opens, so a vault without one says so
- * straight away rather than after the message has been typed.
+ * straight away rather than after the message has been typed. The earlier
+ * records the modal suggests are read once it is open, from every note of the
+ * type, so that it never waits for them.
  */
-export function addTimeRecord(app: App, message?: string): void {
+export function addTimeRecord(app: App, settings: TimeRecordSettings, message?: string): void {
     const note = getTimeRecordNote(app);
     if (!note) return;
 
@@ -50,5 +54,11 @@ export function addTimeRecord(app: App, message?: string): void {
         return;
     }
 
-    new TimeRecordModal(app, time, (text) => void add(text)).open();
+    const tags = [...new Set(settings.timeRecordTags.filter((tag) => tag.length > 0))];
+    new TimeRecordModal(app, {
+        time,
+        tags,
+        loadPast: async () => (await collectHistory(app)).map((entry) => entry.record.text),
+        onSubmit: (text) => void add(text),
+    }).open();
 }

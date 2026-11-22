@@ -1,5 +1,6 @@
-import { Plugin } from 'obsidian';
+import type { Plugin } from 'obsidian';
 
+import type RonaldPlugin from '../main';
 import { addTimeRecord } from './addtimerecord';
 import { searchTimeRecords } from './history';
 import { parseWeekdays } from './history/weekdayfilter';
@@ -47,10 +48,10 @@ export function registerTijdsregistratieUriHandler(plugin: Plugin): void {
  * with `message=…` the record is added straight away, which suits a shortcut
  * bound to one fixed event.
  */
-export function registerTimeRecordUriHandler(plugin: Plugin): void {
+export function registerTimeRecordUriHandler(plugin: RonaldPlugin): void {
     plugin.registerObsidianProtocolHandler(TIME_RECORD_URI_ACTION, (params) => {
         const { message } = params as Partial<TimeRecordUriParams>;
-        addTimeRecord(plugin.app, message);
+        addTimeRecord(plugin.app, plugin.settings, message);
     });
 }
 
