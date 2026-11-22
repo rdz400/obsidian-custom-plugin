@@ -70,6 +70,8 @@
  * and has no weekday to search on. Several of those in a row are numbered in the
  * note's order: "vóór 24 oktober 2026 (dag 2 van 2)".
  *
+ * The search is written down in full in docs/specs/timerecordsearch.md.
+ *
  * Where the code is
  * -----------------
  * - addtimerecord.ts     adding a record
