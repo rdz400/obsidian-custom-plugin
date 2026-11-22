@@ -1,4 +1,4 @@
-import type { ListItemCache, Loc, Pos, TagCache, TFile } from 'obsidian';
+import type { HeadingCache, ListItemCache, Loc, Pos, TagCache, TFile } from 'obsidian';
 
 /**
  * For tests only: a stand-in for the note at `path`, with the fields the task
@@ -23,18 +23,20 @@ export function testFile(path: string): TFile {
  *
  * Covers what the tests write: list items nested by indentation, with or
  * without a checkbox, whose text may run on in indented lines right below;
- * inline tags; and frontmatter at the top. A top-level item's `parent` is -1,
- * where Obsidian puts the negated line of the section; the code only checks
- * that it is negative.
+ * inline tags; `#` headings; and frontmatter at the top. A top-level item's
+ * `parent` is -1, where Obsidian puts the negated line of the section; the
+ * code only checks that it is negative.
  */
 export interface TestCache {
     listItems: ListItemCache[];
     tags: TagCache[];
+    headings: HeadingCache[];
     frontmatterPosition?: Pos;
 }
 
 const LIST_ITEM_RE = /^(\s*)[-*+] (?:\[(.)\] ?)?/;
 const TAG_RE = /#[\w/-]+/g;
+const HEADING_RE = /^(#{1,6}) +(.*)$/;
 
 function loc(line: number, col: number): Loc {
     return { line, col, offset: 0 };
@@ -42,7 +44,7 @@ function loc(line: number, col: number): Loc {
 
 export function cacheOf(text: string): TestCache {
     const lines = text.split('\n');
-    const cache: TestCache = { listItems: [], tags: [] };
+    const cache: TestCache = { listItems: [], tags: [], headings: [] };
 
     let bodyStart = 0;
     if (lines[0] === '---') {
@@ -62,6 +64,16 @@ export function cacheOf(text: string): TestCache {
                 tag: match[0],
                 position: { start: loc(line, match.index), end: loc(line, match.index + match[0].length) },
             });
+        }
+
+        const heading = HEADING_RE.exec(raw);
+        if (heading) {
+            cache.headings.push({
+                heading: heading[2] ?? '',
+                level: heading[1]!.length,
+                position: { start: loc(line, 0), end: loc(line, raw.length) },
+            });
+            continue;
         }
 
         const item = LIST_ITEM_RE.exec(raw);

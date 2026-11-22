@@ -792,6 +792,17 @@
     color: var(--text-muted);
 }
 
+/*
+ * The key that picks a heading in "Move line(s) to heading", at the right end
+ * of its row. It doesn't shrink, so a long heading is cut off instead.
+ */
+.ronald-heading-key {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: var(--font-smallest);
+    color: var(--text-faint);
+}
+
 /* The rename plan in the naming convention confirmation modal. */
 .ronald-rename-plan {
     max-height: 50vh;
