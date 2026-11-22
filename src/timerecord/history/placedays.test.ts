@@ -6,8 +6,8 @@ import type { WrittenDay } from './parsedays';
 import { latestDay, placeDays, placementLabel, placementWords } from './placedays';
 
 const nov = (day: number) => calendarDay(2026, 11, day)!;
-const dated = (day: number): WrittenDay => ({ date: nov(day), records: [] });
-const undated: WrittenDay = { date: null, records: [] };
+const dated = (day: number): WrittenDay => ({ date: nov(day), line: null, records: [] });
+const undated: WrittenDay = { date: null, line: null, records: [] };
 
 const placementsOf = (days: WrittenDay[]) => placeDays(days).map((day) => day.placement);
 
@@ -74,6 +74,13 @@ test('a note without dates, or with dates out of order, says nothing', () => {
     const unknown = { kind: 'between', after: null, before: null, nth: 1, of: 1 };
     assert.deepEqual(placementsOf([undated]), [unknown]);
     assert.deepEqual(placementsOf([dated(6), undated, dated(4)])[1], unknown);
+});
+
+test('a date no later than the one before it is out of order', () => {
+    const flags = (days: WrittenDay[]) => placeDays(days).map((day) => day.outOfOrder);
+    assert.deepEqual(flags([dated(4), dated(6), dated(5), dated(7)]), [false, false, true, false]);
+    assert.deepEqual(flags([dated(4), undated, dated(4)]), [false, false, true]);
+    assert.deepEqual(flags([dated(4), undated, dated(6)]), [false, false, false]);
 });
 
 test('latestDay finds the latest date, inferred ones included', () => {

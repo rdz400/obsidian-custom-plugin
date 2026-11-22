@@ -7,7 +7,8 @@ export interface TimeRecordSettings {
     /**
      * Tags offered as chips in the "Add time record" modal, in the order they
      * are shown and numbered as Mod+1…Mod+9. A chip that is on adds its tag at
-     * the end of the record's line.
+     * the end of the record's line. "Search time records" offers the same tags
+     * as chips to filter on, on Alt+1…Alt+9.
      */
     timeRecordTags: string[];
 }

@@ -9,7 +9,6 @@ const record = (start: number, end: number | null = null): RecordLine => ({
     start,
     end,
     text: '',
-    nested: false,
 });
 
 test('tookSeconds is the time to the explicit end', () => {
@@ -22,16 +21,20 @@ test('tookSeconds runs past midnight when the end is earlier than the start', ()
 });
 
 test('gapSeconds is the time to the next record', () => {
-    assert.equal(gapSeconds(record(100), record(160)), 60);
-    assert.equal(gapSeconds(record(100), record(100)), 0);
+    assert.equal(gapSeconds(100, 160), 60);
+    assert.equal(gapSeconds(100, 100), 0);
+});
+
+test('gapSeconds runs on past midnight on the day\'s clock', () => {
+    assert.equal(gapSeconds(23 * 3600 + 50 * 60, 24 * 3600 + 30 * 60), 40 * 60);
 });
 
 test('gapSeconds is null for the last record of a day', () => {
-    assert.equal(gapSeconds(record(100), undefined), null);
+    assert.equal(gapSeconds(100, undefined), null);
 });
 
 test('gapSeconds is null when the next time falls behind by seconds', () => {
-    assert.equal(gapSeconds(record(130), record(120)), null);
+    assert.equal(gapSeconds(130, 120), null);
 });
 
 test('formatDuration shows the seconds', () => {

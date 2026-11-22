@@ -9,6 +9,8 @@ export interface TimeRecord extends RecordLine {
 /** A stretch of a note that is one day, with the date it says it is, if any. */
 export interface WrittenDay {
     date: CalendarDay | null;
+    /** The line of the heading or `---` that starts the day, or null at the top of the note. */
+    line: number | null;
     records: TimeRecord[];
 }
 
@@ -23,27 +25,15 @@ function bodyStart(lines: readonly string[]): number {
 }
 
 /**
- * The whole minute of a time. Days are compared by the minute so that "11:05"
- * after "11:05:30" isn't taken for the clock running backwards.
- */
-function minuteOf(seconds: number): number {
-    return Math.floor(seconds / 60);
-}
-
-/**
  * Split a time record note into its days, in the order they are written.
  *
  * A new day starts at:
  * - a level 2 heading, or a heading of any level that names a date;
- * - a `---` line, used where a heading was left out;
- * - a top-level record whose time is earlier than the top-level record before
- *   it. The clock doesn't run backwards within a day, so this also catches a
- *   split nobody marked. A forgotten split where the time happens to go forward
- *   can't be told from a long pause.
+ * - a `---` line, used where a heading was left out.
  *
- * Nested records don't count for that last one. They keep their own time under
- * the record above them and can run past the next top-level record, which then
- * has an earlier time on the same day.
+ * Nothing else does: records are written in order, so a time earlier than the
+ * one above it is a long day running past midnight, or else a mistake that the
+ * history shows as one (see `dayTimes`). It never starts a day of its own.
  *
  * A stretch without records is kept only if it has a date, since that still
  * says where the days around it lie. Two `---` in a row, or a `---` right above
@@ -52,10 +42,10 @@ function minuteOf(seconds: number): number {
 export function parseDays(text: string): WrittenDay[] {
     const lines = text.split(/\r?\n/);
 
-    let current: WrittenDay = { date: null, records: [] };
+    let current: WrittenDay = { date: null, line: null, records: [] };
     const days = [current];
-    const startDay = (date: CalendarDay | null) => {
-        current = { date, records: [] };
+    const startDay = (date: CalendarDay | null, line: number) => {
+        current = { date, line, records: [] };
         days.push(current);
     };
 
@@ -63,25 +53,19 @@ export function parseDays(text: string): WrittenDay[] {
         const content = lines[line]!;
 
         if (RULE_RE.test(content)) {
-            startDay(null);
+            startDay(null, line);
             continue;
         }
 
         const heading = HEADING_RE.exec(content);
         if (heading) {
             const date = headingDate(heading[2]!);
-            if (date !== null || heading[1]!.length === 2) startDay(date);
+            if (date !== null || heading[1]!.length === 2) startDay(date, line);
             continue;
         }
 
         const record = parseRecordLine(content);
-        if (!record) continue;
-
-        if (!record.nested) {
-            const previous = current.records.filter((earlier) => !earlier.nested).pop();
-            if (previous && minuteOf(record.start) < minuteOf(previous.start)) startDay(null);
-        }
-        current.records.push({ ...record, line });
+        if (record) current.records.push({ ...record, line });
     }
 
     return days.filter((day) => day.date !== null || day.records.length > 0);

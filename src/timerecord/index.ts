@@ -32,9 +32,18 @@
  * - "Search time records" searches every note with that type, so also records
  *   moved to an archive, but not a template. The latest record comes first. Each query word must match
  *   the text, the start of the time, or the date: "overleg maandag", "okt 2026".
- *   The weekday chips, or Mod+1 (Monday) to Mod+7 (Sunday), show only those days.
+ *   The weekday chips, or Mod+1 (Monday) to Mod+7 (Sunday), show only those days;
+ *   "<12" and "≥12" next to them, or Mod+8 and Mod+9, only records before or
+ *   from noon. A record past midnight on a long day counts as after noon. A
+ *   second row has a chip for each tag in **Settings → Tags to add to a time
+ *   record**, or Alt+1…9, showing the records with any of those tags (or a tag
+ *   nested under one). Tags in a record show as tags.
  *   A row shows how long the record took, if it has an explicit end, and the
- *   time to the next record of that day. Enter opens the note at the record,
+ *   time to the next record of that day. Once a query or a chip narrows the
+ *   list, the end of the chips shows the total time of all it found (more than
+ *   the 300 rows shown, if there are), counting each record's explicit end, or
+ *   else the time to the next record; the last record of a day counts nothing.
+ *   Enter opens the note at the record,
  *   Mod+Enter in a new tab, Alt+Enter or Alt+click in a new tab in the
  *   background, leaving the search open.
  * - obsidian://ronald-timerecord-search opens that search;
@@ -45,9 +54,17 @@
  * Days in the history
  * -------------------
  * A level 2 heading starts a day, ideally "## [[20261104]]". So does any heading
- * with a date, a `---` line, and a top-level record with an earlier time than the
- * top-level record before it; nested records keep their own time and don't count
- * for that. A day without a date in its heading gets one only when no other is possible:
+ * with a date, and a `---` line. Nothing else does.
+ *
+ * Records are always written in order, nested ones too: each is at least as late
+ * as the one above it. A long day may run past midnight once: a time earlier
+ * than the one above it, and earlier than the day's first, is the next night,
+ * and still belongs to the day it is written under. Any other step back in time
+ * is out of order, and so is a date no later than the date above it. Those rows
+ * and day headings get a red mark and no durations, and opening the search
+ * says in a notice where the first one is and how many there are.
+ *
+ * A day without a date in its heading gets one only when no other is possible:
  * a single such day between the 4th and the 6th was the 5th, shown as
  * "~ donderdag 5 november 2026". Any other is headed with what it lies between,
  * and has no weekday to search on. Several of those in a row are numbered in the
@@ -57,7 +74,7 @@
  * -----------------
  * - addtimerecord.ts     adding a record
  * - recordline.ts        what a record line is, and reading one
- * - recordtags.ts        taking chip tags off a record's text, and adding them
+ * - recordtags.ts        the chip tags: taking them off a record's text, and adding them
  * - settings.ts          the tags offered as chips
  * - suggestions.ts       earlier records: ranking them and matching what is typed
  * - timerecordmodal.ts   the dialog that asks for the message
@@ -69,10 +86,12 @@
  * - history/             searching the records: the command (index.ts), reading
  *                        the notes (collect.ts), a note's text to days
  *                        (parsedays.ts), what is known of their dates
- *                        (placedays.ts), dates (calendar.ts), durations
- *                        (durations.ts), the rows of the list (entries.ts), the
- *                        query (search.ts), the weekday chips (weekdayfilter.ts),
- *                        the dialog (modal.ts)
+ *                        (placedays.ts), the order within a day (order.ts),
+ *                        dates (calendar.ts), durations (durations.ts), the rows
+ *                        of the list and their total (entries.ts), the query
+ *                        (search.ts), the chips for weekdays (weekdayfilter.ts),
+ *                        the time of day (daypartfilter.ts) and tags
+ *                        (tagfilter.ts), the dialog (modal.ts)
  */
 
 import type RonaldPlugin from '../main';

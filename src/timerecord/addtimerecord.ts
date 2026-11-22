@@ -2,6 +2,7 @@ import { App, Notice, moment } from 'obsidian';
 
 import { collectHistory } from './history/collect';
 import type { TimeRecordSettings } from './settings';
+import { chipTags } from './recordtags';
 import { TimeRecordModal } from './timerecordmodal';
 import { getTimeRecordNote } from './timerecordnote';
 
@@ -54,11 +55,10 @@ export function addTimeRecord(app: App, settings: TimeRecordSettings, message?: 
         return;
     }
 
-    const tags = [...new Set(settings.timeRecordTags.filter((tag) => tag.length > 0))];
     new TimeRecordModal(app, {
         time,
-        tags,
-        loadPast: async () => (await collectHistory(app)).map((entry) => entry.record.text),
+        tags: chipTags(settings.timeRecordTags),
+        loadPast: async () => (await collectHistory(app)).entries.map((entry) => entry.record.text),
         onSubmit: (text) => void add(text),
     }).open();
 }

@@ -61,10 +61,10 @@ export function registerTimeRecordUriHandler(plugin: RonaldPlugin): void {
  * Every parameter is optional: the bare URI opens the search exactly as the
  * "Search time records" command does.
  */
-export function registerTimeRecordSearchUriHandler(plugin: Plugin): void {
+export function registerTimeRecordSearchUriHandler(plugin: RonaldPlugin): void {
     plugin.registerObsidianProtocolHandler(TIME_RECORD_SEARCH_URI_ACTION, (params) => {
         const { query, days } = params as Partial<TimeRecordSearchUriParams>;
 
-        void searchTimeRecords(plugin.app, { query, weekdays: parseWeekdays(days) });
+        void searchTimeRecords(plugin.app, plugin.settings, { query, weekdays: parseWeekdays(days) });
     });
 }

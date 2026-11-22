@@ -22,6 +22,10 @@ export type DayPlacement =
 /** A day of a note, with what is known about its date. */
 export interface PlacedDay {
     placement: DayPlacement;
+    /** The line of the heading or `---` that starts the day, or null at the top of the note. */
+    line: number | null;
+    /** Whether its written date is no later than the one of the dated day before it. */
+    outOfOrder: boolean;
     records: TimeRecord[];
 }
 
@@ -30,7 +34,8 @@ export interface PlacedDay {
  *
  * When they exactly fill the gap there is only one way to divide the dates. Any
  * other dates would be a guess, so those days only say what they lie between.
- * Dates running backwards say nothing at all.
+ * Between dates running backwards, which the later one is flagged for, there is
+ * nothing to say at all.
  */
 function placeRun(
     count: number,
@@ -59,10 +64,13 @@ function placeRun(
 /**
  * Work out what can be known about the date of each day in a note.
  *
- * The days are in the note's order, which is taken to be chronological, and no
- * day appears twice. So one undated day between 4 and 6 November can only be
- * the 5th. An undated day before 24 October could be any day before it, because
- * not every day gets records.
+ * The days are in the note's order, which is chronological, and no day appears
+ * twice. So one undated day between 4 and 6 November can only be the 5th. An
+ * undated day before 24 October could be any day before it, because not every
+ * day gets records.
+ *
+ * A date no later than the one before it breaks that order, and is flagged as
+ * out of order. Like a record, it is compared with the date right above it.
  */
 export function placeDays(days: readonly WrittenDay[]): PlacedDay[] {
     const placed: PlacedDay[] = [];
@@ -71,8 +79,8 @@ export function placeDays(days: readonly WrittenDay[]): PlacedDay[] {
 
     const closeRun = (before: CalendarDay | null) => {
         const placements = placeRun(run.length, after, before);
-        run.forEach((day, index) => {
-            placed.push({ placement: placements[index]!, records: day.records });
+        run.forEach(({ line, records }, index) => {
+            placed.push({ placement: placements[index]!, line, outOfOrder: false, records });
         });
         run = [];
     };
@@ -83,7 +91,12 @@ export function placeDays(days: readonly WrittenDay[]): PlacedDay[] {
             continue;
         }
         closeRun(day.date);
-        placed.push({ placement: { kind: 'written', day: day.date }, records: day.records });
+        placed.push({
+            placement: { kind: 'written', day: day.date },
+            line: day.line,
+            outOfOrder: after !== null && day.date <= after,
+            records: day.records,
+        });
         after = day.date;
     }
     closeRun(null);

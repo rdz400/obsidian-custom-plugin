@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { splitTags, withTags } from './recordtags';
+import { chipTags, splitTags, withTags } from './recordtags';
 
 const known = new Set(['werk', 'prive']);
 
@@ -36,4 +36,8 @@ test('withTags skips a tag the text has already, and a tag given twice', () => {
 
 test('withTags without tags gives the text', () => {
     assert.equal(withTags('Overleg', []), 'Overleg');
+});
+
+test('chipTags drops blank and repeated tags, keeping the order', () => {
+    assert.deepEqual(chipTags(['werk', '', 'thuis', 'werk']), ['werk', 'thuis']);
 });
