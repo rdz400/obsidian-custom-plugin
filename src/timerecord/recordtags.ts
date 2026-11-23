@@ -33,3 +33,8 @@ export function withTags(text: string, tags: readonly string[]): string {
     const added = [...new Set(tags)].filter((tag) => !own.includes(tag));
     return [text.trim(), ...added.map((tag) => `#${tag}`)].join(' ');
 }
+
+/** The tags from settings that get a chip: no blanks, each once, in their order. */
+export function chipTags(tags: readonly string[]): string[] {
+    return [...new Set(tags.filter((tag) => tag.length > 0))];
+}

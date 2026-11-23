@@ -55,8 +55,6 @@ export interface RecordLine {
     end: number | null;
     /** What the record is about: the rest of the line, without the end time. */
     text: string;
-    /** Whether the line is indented, under a record above it. */
-    nested: boolean;
 }
 
 /** Read a record line, or null when the line doesn't open a record. */
@@ -73,7 +71,6 @@ export function parseRecordLine(line: string): RecordLine | null {
         start: clockSeconds(time),
         end: end ? clockSeconds(end[1]!) : null,
         text: (end ? rest.slice(0, end.index) : rest).trim(),
-        nested: /^\s/.test(line),
     };
 }
 

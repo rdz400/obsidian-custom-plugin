@@ -95,7 +95,8 @@
  * between them.
  */
 .ronald-project-search .ronald-task-filters:has(+ .ronald-task-filters),
-.ronald-task-search .ronald-task-filters:has(+ .ronald-task-filters) {
+.ronald-task-search .ronald-task-filters:has(+ .ronald-task-filters),
+.ronald-time-history .ronald-task-filters:has(+ .ronald-task-filters) {
     border-bottom: none;
     padding-bottom: 0;
 }
@@ -791,6 +792,17 @@
     color: var(--text-muted);
 }
 
+/*
+ * The key that picks a heading in "Move line(s) to heading", at the right end
+ * of its row. It doesn't shrink, so a long heading is cut off instead.
+ */
+.ronald-heading-key {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: var(--font-smallest);
+    color: var(--text-faint);
+}
+
 /* The rename plan in the naming convention confirmation modal. */
 .ronald-rename-plan {
     max-height: 50vh;
@@ -979,13 +991,33 @@
 /* Time record history ("Search time records" command). */
 
 /*
- * No padding above the list, or rows show in the gap above a sticking heading.
- * The condensed cut of the interface font fits more of a record on one line; a
- * font without one just stays at its normal width.
+ * No padding above the list, or rows show in the gap above a sticking heading,
+ * and none at the sides: the rows keep a narrow margin of their own, which
+ * leaves the record's text as much of the width as it can get. The condensed
+ * cut of the interface font fits more of a record on one line; a font without
+ * one just stays at its normal width.
  */
 .ronald-time-history .prompt-results {
-    padding-top: 0;
+    padding: 0 0 var(--size-4-2);
     font-stretch: 75%;
+}
+
+/* The chips line up with the rows below them. */
+.ronald-time-history .ronald-task-filters {
+    padding-inline: 6px;
+}
+
+/*
+ * The total of what the search found, at the end of the last chip row, so it
+ * takes no line of its own. It wraps to the next line before a chip does.
+ */
+.ronald-time-history-total {
+    align-self: center;
+    margin-left: auto;
+    font-size: var(--font-smallest);
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+    white-space: nowrap;
 }
 
 /*
@@ -996,7 +1028,10 @@
     position: sticky;
     top: 0;
     z-index: 1;
-    padding: 6px var(--size-4-3) 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 6px 4px;
     background: var(--modal-background);
     font-size: var(--font-smallest);
     font-weight: var(--font-medium);
@@ -1013,7 +1048,7 @@
     align-items: baseline;
     gap: 8px;
     margin: 0;
-    padding: 2px var(--size-4-3);
+    padding: 2px 6px;
     /* Square, or the corners of a selected row bend the line between rows. */
     border-radius: 0;
     font-size: var(--font-small);
@@ -1046,6 +1081,30 @@
     flex: 1;
     min-width: 0;
     overflow-wrap: anywhere;
+}
+
+/* A tag in a record looks the way it does in the note. */
+.ronald-time-history-tag {
+    padding: 0 var(--tag-padding-x);
+    border: var(--tag-border-width) solid var(--tag-border-color);
+    border-radius: var(--tag-radius);
+    background: var(--tag-background);
+    font-size: 0.9em;
+    font-weight: var(--tag-weight);
+    color: var(--tag-color);
+    white-space: nowrap;
+}
+
+/* A record or date that breaks the note's order: in the place of its durations. */
+.ronald-time-history-out-of-order {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--text-error);
+}
+
+.ronald-time-history-out-of-order .svg-icon {
+    width: 13px;
+    height: 13px;
 }
 
 .ronald-time-history-durations {

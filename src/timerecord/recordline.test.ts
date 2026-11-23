@@ -38,17 +38,15 @@ test('parseRecordLine reads the time and the text', () => {
         start: 8 * 3600 + 30 * 60 + 21,
         end: null,
         text: 'Start dag',
-        nested: false,
     });
 });
 
-test('parseRecordLine reads an indented line the same way, and marks it nested', () => {
+test('parseRecordLine reads an indented line the same way', () => {
     assert.deepEqual(parseRecordLine('    - `10:52:22` Lezen `11:17:58`'), {
         time: '10:52:22',
         start: 10 * 3600 + 52 * 60 + 22,
         end: 11 * 3600 + 17 * 60 + 58,
         text: 'Lezen',
-        nested: true,
     });
 });
 

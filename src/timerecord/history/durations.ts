@@ -12,13 +12,14 @@ export function tookSeconds({ start, end }: RecordLine): number | null {
 }
 
 /**
- * The time from a record to the next one on the same day, or null when it is
- * the day's last. Also null when the next one has an earlier time, as the record
- * after the last nested one can have; see `parseDays`.
+ * The time from a record to the next one on the same day, both in seconds on
+ * the day's clock (see `dayTimes`), so it runs on past midnight. Null when there
+ * is no next one, and when the next one is a few seconds earlier: records are
+ * in order by the minute, as a time can be written without seconds.
  */
-export function gapSeconds(record: RecordLine, next: RecordLine | undefined): number | null {
-    if (!next || next.start < record.start) return null;
-    return next.start - record.start;
+export function gapSeconds(from: number, to: number | undefined): number | null {
+    if (to === undefined || to < from) return null;
+    return to - from;
 }
 
 /**

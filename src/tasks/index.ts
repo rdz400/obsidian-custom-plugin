@@ -56,6 +56,11 @@
  * Moving tasks
  * - "Move line(s) to today" (and someday, overview, inbox) sends the selected
  *   list items, with their subtasks, to the end of that GTD note.
+ * - "Move line(s) to heading" (in a note with headings) asks for a heading in
+ *   the same note and moves the selected list items, with their subtasks, to
+ *   the end of its section, which ends at the next heading of any level.
+ *   Option/Alt with a home row key (A, S, D … L) picks one of the first nine
+ *   headings; typing narrows the list. One undo puts them back.
  * - "Move tagged tasks to their GTD notes" (in a task note) sends every
  *   top-level task with a GTD tag to that tag's note.
  * - "Move tasks with a tag to top" (in a task note) asks for a tag and puts
@@ -90,6 +95,8 @@
  * - search.ts         the task search
  * - gtdnotes.ts       the GTD notes and "Move line(s) to …"
  * - listblocks.ts     taking list items out with their subitems, for "Move line(s) to …"
+ * - headingmodal.ts   "Move line(s) to heading" and the modal that asks which
+ * - headingmove.ts    moving list items under a heading, for that
  * - gtdswitcher.ts    "Switch to GTD note" and "Open today" (and the others)
  * - movetonotes.ts    "Move tagged tasks to their GTD notes"
  * - sorttasks.ts      "Move tasks with a tag to top"
@@ -126,6 +133,7 @@ import { moveOpenTasksToOverview } from './cleartoday';
 import { registerEstimates } from './estimate';
 import { GTD_NOTES, registerGtdNoteCommands } from './gtdnotes';
 import { goToGtdNote, showGtdSwitcher } from './gtdswitcher';
+import { moveLinesToHeading } from './headingmodal';
 import { moveFinishedTasksToKlaar, openKlaar } from './klaar';
 import { moveTasksToGtdNotes } from './movetonotes';
 import { registerNewTask } from './newtask';
@@ -246,6 +254,21 @@ export function registerTaskFeatures(
     });
 
     registerGtdNoteCommands(plugin);
+
+    plugin.addCommand({
+        id: 'move-lines-to-heading',
+        name: 'Move line(s) to heading',
+        icon: 'heading',
+        // Only offered in a note with headings.
+        editorCheckCallback: (checking, editor, ctx) => {
+            if (!ctx.file || !plugin.app.metadataCache.getFileCache(ctx.file)?.headings?.length) {
+                return false;
+            }
+            if (!checking) void moveLinesToHeading(plugin.app, ctx.file, editor);
+            return true;
+        },
+    });
+
     registerTaskNoteRenames(plugin);
     plugin.registerEditorExtension(undoableMoves());
 
